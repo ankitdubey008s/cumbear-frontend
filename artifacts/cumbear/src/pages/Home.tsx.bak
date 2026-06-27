@@ -1,0 +1,270 @@
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
+import { BottomNav } from "@/components/layout/BottomNav";
+import { cn } from "@/lib/utils";
+import { Search, SlidersHorizontal, Eye } from "lucide-react";
+
+const CATEGORIES_SCROLL = [
+  "All", "Milf", "Amateur", "Stepmom", "Stepsis", "3some", "Hardcore", "Caught",
+  "Cheating", "Bed share", "Neighbour", "Creators", "XXX", "Anal", "Cum", "Colombian", "Thai"
+];
+
+const PREMIUM_PROVIDERS = [
+  "Pornhub", "xHamster", "Eporner", "Dinotube", "Redtube", "Youporn", "Brazzers", 
+  "Naughty America", "Xvideos", "Xnxx", "Team Skeet", "Pornhat", "Spankbang", 
+  "Sexvid", "Tube8", "Bang Bros", "Youjizz", "Beeg", "DRtuber", "Blacked", "Sunporno"
+];
+
+const FEATURED_CATEGORIES = [
+  { type: "category", name: "Asian", count: "60k+", img: "/asian.jpg" },
+  { type: "category", name: "Japanese", count: "45k+", img: "/japenese.jpg" },
+  { type: "ad", name: "PREMIUM AD ZONE 3", count: "CLICK HERE", img: "https://via.placeholder.com/400x300/222225/ffffff?text=ADVERTISEMENT" },
+  { type: "category", name: "Russian", count: "30k+", img: "/russian.jpg" },
+  { type: "category", name: "American", count: "57k+", img: "/american.jpg" },
+  { type: "category", name: "European", count: "55k+", img: "/european.jpg" },
+  { type: "ad", name: "DATING AD ZONE 7", count: "JOIN FREE", img: "https://via.placeholder.com/400x300/222225/ffffff?text=ADVERTISEMENT" },
+  { type: "category", name: "British", count: "25k+", img: "/british.jpg" },
+  { type: "category", name: "Colombian", count: "18k+", img: "/colombian.jpg" },
+  { type: "category", name: "Thai", count: "22k+", img: "/thai.jpg" }
+];
+
+export function Home({ defaultPreference }: { defaultPreference?: string }) {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [userPreference, setUserPreference] = useState<string>(() => {
+    return localStorage.getItem("user_preference") || defaultPreference || "Straight";
+  });
+
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+
+    const fetchVideos = async () => {
+      try {
+        const url = `${import.meta.env.VITE_API_URL}/api/videos?pipeline=${userPreference.toLowerCase()}&q=${encodeURIComponent(activeCategory)}&limit=100`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (isMounted && data.videos) {
+          // Enhancing backend feeds to seamlessly blend elite provider tags and enforce high premium view counts
+      const normalizedFeeds = data.videos.map((vid: any) => ({
+        ...vid,
+        thumb: vid.thumbnail_url || vid.thumb || vid.poster || "",
+        provider: vid.provider || vid.source_platform || "Premium",
+        views: vid.views || Math.floor(Math.random() * 5000000)
+      }));
+      setVideos(normalizedFeeds);
+          setVideos(premiumFeeds);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchVideos();
+    return () => { isMounted = false; };
+  }, [activeCategory, userPreference]);
+
+  return (
+    <div className="min-h-screen bg-[#09090b] pb-28 pt-20 text-zinc-100 font-sans select-none antialiased">
+      
+      {/* Top Navigation Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#121214] border-b border-zinc-800 px-4 py-3 flex items-center justify-between shadow-md">
+        <div className="flex items-center cursor-pointer h-9" onClick={() => navigate("/")}>
+          <img src="/cumbear.png" onError={(e)=>{e.currentTarget.src="/cumbear.jpg"}} alt="Logo" className="h-full w-auto max-w-[130px] object-contain" />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/search")} className="p-2.5 bg-zinc-900 rounded-xl text-zinc-400 hover:text-white border border-zinc-800 active:scale-95 transition-all">
+            <Search size={18} />
+          </button>
+          <button onClick={() => setShowPreferenceModal(true)} className="p-2.5 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center gap-1.5 font-semibold text-xs active:scale-95 transition-all">
+            <SlidersHorizontal size={14} className="text-red-500" />
+            <span>{userPreference}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Pipeline Filter Modal */}
+      {showPreferenceModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#121214] border border-zinc-800 p-6 rounded-2xl w-full max-w-sm text-center shadow-2xl">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-4 text-white">Switch Pipeline Feed</h2>
+            <div className="flex flex-col gap-2">
+              {["Straight", "Gay", "Trans"].map(pref => (
+                <button 
+                  key={pref}
+                  onClick={() => { 
+                    setUserPreference(pref); 
+                    localStorage.setItem("user_preference", pref);
+                    setShowPreferenceModal(false); 
+                  }}
+                  className={cn("py-2.5 rounded-xl font-medium uppercase text-xs transition-all border", userPreference === pref ? "bg-red-600 border-red-500 text-white" : "bg-zinc-900 border-zinc-800 text-zinc-400")}
+                >
+                  {pref}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowPreferenceModal(false)} className="mt-4 text-[10px] uppercase font-mono tracking-widest text-zinc-500">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Category Scroll Filter Bar */}
+      <div className="bg-[#09090b] border-b border-zinc-800 sticky top-[57px] z-40">
+        <div className="flex overflow-x-auto gap-2 px-4 py-2.5 hide-scrollbar">
+          <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+          {CATEGORIES_SCROLL.map((cat, idx) => (
+            <button
+              key={cat + idx}
+              onClick={() => setActiveCategory(cat)}
+              className={cn(
+                "flex-shrink-0 px-4 py-1.5 rounded-xl text-xs font-medium uppercase tracking-wider transition-all border transform active:scale-95",
+                activeCategory === cat ? "bg-red-600 border-red-500 text-white" : "bg-[#121214] border-zinc-800 text-zinc-400"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <main className="p-4 max-w-7xl mx-auto space-y-6">
+        
+        {/* Ad Space Banner */}
+        <div onClick={() => window.open("https://www.exoclick.com", "_blank")} className="w-full h-[120px] bg-[#121214] border border-dashed border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-mono text-xs cursor-pointer">
+          <span className="bg-[#09090b] border border-zinc-800 px-3 py-1.5 rounded-md tracking-wider text-zinc-400 uppercase font-bold">ADS ZONE • 728 x 120</span>
+        </div>
+
+        {/* Categories Thumbnail Matrix */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {FEATURED_CATEGORIES.map((cat, idx) => {
+            const isCardAd = cat.type === "ad";
+            return (
+              <div 
+                key={cat.name + idx} 
+                onClick={() => { 
+                  if (isCardAd) { window.open("https://www.juicyads.com", "_blank"); } 
+                  else { setActiveCategory(cat.name); navigate("/search?q=" + cat.name); }
+                }} 
+                className={cn(
+                  "relative aspect-video rounded-2xl overflow-hidden cursor-pointer group border bg-[#121214] transition-all",
+                  isCardAd ? "border-amber-600/40" : "border-zinc-800 hover:border-red-500/50"
+                )}
+              >
+                <img 
+                  src={cat.img} 
+                  alt="" 
+                  className="w-full h-full object-cover opacity-60 group-hover:opacity-90 transition-opacity duration-300" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
+                  <span className={cn("font-bold text-xs uppercase tracking-wide", isCardAd ? "text-amber-400" : "text-white")}>{cat.name}</span>
+                  <span className={cn("text-[9px] font-medium uppercase tracking-wider", isCardAd ? "text-zinc-500" : "text-red-500")}>{cat.count}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Ad Space Banner */}
+        <div onClick={() => window.open("https://www.popads.net", "_blank")} className="w-full h-[140px] bg-[#121214] border border-dashed border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-mono text-xs cursor-pointer">
+          <span className="bg-[#09090b] border border-zinc-800 px-3 py-1.5 rounded-md tracking-wider text-zinc-400 uppercase font-bold">ADS ZONE • 728 x 140</span>
+        </div>
+
+        {/* Dynamic Video Stream Elements */}
+        <div>
+          <div className="flex items-center justify-between mb-4 border-l-2 border-red-500 pl-3">
+            <h2 className="text-xs font-bold uppercase text-white tracking-wider">Premium Aggregated Feed ({userPreference})</h2>
+            <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono">
+              <Eye size={12} className="text-red-500" />
+              <span>{videos.length || "100+"} HIGH-QUALITY STREAMS</span>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-20"><div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /></div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-5">
+              {videos.map((video, index) => (
+                <div key={video.id || index} className="contents">
+                  <VideoCardUI video={video} onNavigate={() => navigate(`/video/${video.id}`)} />
+                  
+                  {/* Standardized Interstitial Ad Break */}
+                  {(index + 1) % 10 === 0 && (
+                    <div onClick={() => window.open("https://www.juicyads.com", "_blank")} className="flex flex-col gap-2 relative bg-[#121214] border border-zinc-800 rounded-2xl overflow-hidden p-2 cursor-pointer shadow-md group">
+                      <div className="absolute top-4 left-4 bg-red-600 text-white text-[8px] font-bold tracking-widest px-1.5 py-0.5 z-10 rounded">SPONSORED</div>
+                      <div className="relative aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center">
+                        <video src="https://assets.mixkit.co/videos/preview/mixkit-abstract-laser-lights-background-41855-large.mp4" autoPlay muted loop playsInline className="w-full h-full object-cover opacity-30 group-hover:opacity-50" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-white text-[9px] font-mono bg-[#09090b]/90 px-2 py-1 rounded border border-zinc-800">CONNECT TO STREAM</span>
+                        </div>
+                      </div>
+                      <div className="px-1 py-0.5">
+                        <h3 className="text-xs font-bold text-zinc-300 line-clamp-1 uppercase tracking-wide">Live Sponsorship Interactive Link</h3>
+                        <p className="text-[9px] text-zinc-500 uppercase font-mono">Premium Verification Channel</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+
+function VideoCardUI({ video, onNavigate }: { video: any; onNavigate: () => void }) {
+  const [preview, setPreview] = useState(false);
+  const timer = useRef<NodeJS.Timeout | null>(null);
+  const previewUrl = `${video.embed_url}${video.embed_url.includes('?') ? '&' : '?'}autoplay=1&muted=1&controls=0&logo=0`;
+
+  return (
+    <div
+      className="flex flex-col gap-2 cursor-pointer group relative"
+      onPointerDown={() => { timer.current = setTimeout(() => setPreview(true), 350); }}
+      onPointerUp={() => { if (timer.current) clearTimeout(timer.current); if (!preview) onNavigate(); else setPreview(false); }}
+      onPointerLeave={() => { if (timer.current) clearTimeout(timer.current); setPreview(false); }}
+      onPointerCancel={() => { if (timer.current) clearTimeout(timer.current); setPreview(false); }}
+    >
+      <div className="relative aspect-video bg-[#121214] rounded-2xl overflow-hidden border border-zinc-800 transition-colors">
+        {!preview ? (
+          <img src={video.thumb} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 pointer-events-none bg-black">
+            <iframe src={previewUrl} className="w-full h-full border-none scale-[1.03]" allow="autoplay; muted" />
+          </div>
+        )}
+        <div className="absolute bottom-2 right-2 bg-black/80 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded text-zinc-300">
+          {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
+        </div>
+        
+        {/* Dynamic Premium High-Quality View Badge */}
+        <div className="absolute top-2 left-2 bg-black/70 border border-zinc-800 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded text-red-500 uppercase tracking-widest">
+          HD 1080P
+        </div>
+      </div>
+      
+      <div className="flex flex-col min-w-0 px-0.5">
+        <h3 className="text-xs font-semibold text-zinc-300 line-clamp-2 leading-snug group-hover:text-red-500 transition-colors tracking-tight">{video.title}</h3>
+        
+        {/* Meta layout row showing premium provider and filtered 100k+ analytics */}
+        <div className="flex items-center justify-between mt-1 text-[9px] uppercase font-mono tracking-wider text-zinc-500">
+          <span className="text-red-400 font-semibold truncate max-w-[110px]">{video.provider || "Premium"}</span>
+          <span>
+            {video.views >= 1000000 ? (video.views / 1000000).toFixed(1) + "M" : (video.views / 1000).toFixed(0) + "K"} VIEWS
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

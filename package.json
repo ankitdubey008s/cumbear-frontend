@@ -1,0 +1,15 @@
+{
+  "name": "cumbear-backend",
+  "version": "1.0.0",
+  "description": "Cumbear Production Backend Server",
+  "main": "shorts-server.js",
+  "scripts": {
+    "start": "node shorts-server.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "lowdb": "^1.0.0"
+  }
+}

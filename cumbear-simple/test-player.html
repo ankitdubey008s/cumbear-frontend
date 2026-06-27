@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cumbear Production Suite</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #111; font-family: -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
+        }
+        .upload-panel {
+            background: #1a1a1a; padding: 20px;
+            border-bottom: 2px solid #333; box-sizing: border-box;
+        }
+        .upload-form {
+            display: flex; flex-direction: column; gap: 10px; max-width: 400px; margin: 0 auto;
+        }
+        input, button {
+            padding: 12px; border-radius: 6px; border: 1px solid #444;
+            background: #222; color: white; font-size: 1rem;
+        }
+        button {
+            background: #ff0055; font-weight: bold; cursor: pointer; border: none;
+        }
+        button:hover { background: #ff3377; }
+        .feed-container {
+            flex: 1; width: 100vw; overflow-y: scroll; 
+            scroll-snap-type: y mandatory; background: #000;
+            -webkit-overflow-scrolling: touch;
+        }
+        .video-card {
+            width: 100vw; height: calc(100vh - 180px);
+            scroll-snap-align: start; display: flex; 
+            justify-content: center; align-items: center; position: relative;
+            border-bottom: 1px solid #222;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .video-title {
+            position: absolute; bottom: 20px; left: 15px; z-index: 10;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-size: 1.1rem;
+        }
+        .status-msg {
+            text-align: center; padding: 40px; color: #aaa; font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-panel">
+        <form id="uploadForm" class="upload-form">
+            <input type="text" id="videoTitle" placeholder="Video Title (e.g., Amateur Clip)" required>
+            <input type="file" id="videoFile" accept="video/*" required>
+            <button type="submit" id="submitBtn">Upload & Stream</button>
+        </form>
+    </div>
+
+    <div id="feed" class="feed-container">
+        <div class="status-msg">Loading Cumbear Feed Matrix...</div>
+    </div>
+
+    <script>
+        const feedContainer = document.getElementById('feed');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function loadFeed() {
+            fetch('http://localhost:3000/api/shorts')
+                .then(res => res.json())
+                .then(data => {
+                    const shorts = Array.isArray(data) ? data : (data.data || []);
+                    if (shorts.length === 0) {
+                        feedContainer.innerHTML = '<div class="status-msg">No videos indexed yet. Drop a file above to activate the feed!</div>';
+                        return;
+                    }
+                    
+                    feedContainer.innerHTML = '';
+
+                    shorts.forEach(short => {
+                        const card = document.createElement('div');
+                        card.className = 'video-card';
+                        
+                        const video = document.createElement('video');
+                        video.src = short.streamUrl;
+                        video.poster = short.thumbnailUrl;
+                        video.loop = true;
+                        video.muted = true;
+                        video.playsInline = true;
+                        video.controls = true;
+
+                        const title = document.createElement('div');
+                        title.className = 'video-title';
+                        title.innerText = short.title || 'Untitled Short';
+
+                        card.appendChild(video);
+                        card.appendChild(title);
+                        feedContainer.appendChild(card);
+                    });
+
+                    setupObserver();
+                })
+                .catch(err => {
+                    console.error(err);
+                    feedContainer.innerHTML = '<div class="status-msg">Error connecting to Backend on Port 3000</div>';
+                });
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.innerText = "Processing Video Stream...";
+            submitBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('title', document.getElementById('videoTitle').value);
+            formData.append('video', document.getElementById('videoFile').files[0]);
+            formData.append('tags', JSON.stringify(['amateur']));
+
+            try {
+                const response = await fetch('http://localhost:3000/api/shorts/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Success! Video uploaded and indexed to Upstash.');
+                    uploadForm.reset();
+                    setTimeout(loadFeed, 1500);
+                } else {
+                    alert('Server Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Backend connection error.');
+                console.error(error);
+            } finally {
+                submitBtn.innerText = "Upload & Stream";
+                submitBtn.disabled = false;
+            }
+        });
+
+        function setupObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const video = entry.target;
+                    if (entry.isIntersecting) {
+                        video.play().catch(e => console.log("Interaction pending: ", e));
+                    } else {
+                        video.pause();
+                        video.currentTime = 0;
+                    }
+                });
+            }, { threshold: 0.6 });
+
+            document.querySelectorAll('video').forEach(vid => observer.observe(vid));
+        }
+
+        loadFeed();
+    </script>
+</body>
+</html>
+

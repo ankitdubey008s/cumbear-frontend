@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cumbear Proxy Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { background: black; color: white; font-family: Arial; padding: 20px; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .video-card { background: #1a1a1a; border-radius: 8px; overflow: hidden; }
+        img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+        .info { padding: 8px; }
+        .title { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        .views { font-size: 12px; color: #888; }
+        h1 { font-size: 20px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🎬 Cumbear - 100+ Videos (Proxy Test)</h1>
+    <div id="videos" class="video-grid">Loading videos from proxy...</div>
+
+    <script>
+        async function loadVideos() {
+            try {
+                const response = await fetch('http://localhost:3001/api/videos?query=popular&per_page=100');
+                const data = await response.json();
+                const container = document.getElementById('videos');
+                
+                if (data.videos && data.videos.length > 0) {
+                    container.innerHTML = data.videos.map(video => `
+                        <div class="video-card">
+                            <img src="${video.thumb}" alt="${video.title}" loading="lazy" 
+                                 onerror="this.src='https://picsum.photos/320/180'">
+                            <div class="info">
+                                <div class="title">${video.title.substring(0, 50)}</div>
+                                <div class="views">👁️ ${(video.views || 0).toLocaleString()} views</div>
+                                <div class="views">⏱️ ${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>No videos loaded. Check if proxy is running.</p>';
+                }
+            } catch (error) {
+                document.getElementById('videos').innerHTML = `<p>Error loading videos: ${error.message}<br>Make sure proxy is running on port 3001</p>`;
+            }
+        }
+        
+        loadVideos();
+    </script>
+</body>
+</html>
