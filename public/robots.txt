@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /shorts
+Disallow: /video/
+Sitemap: https://cumbear.in/sitemap.xml
+
