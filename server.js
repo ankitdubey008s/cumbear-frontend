@@ -6,7 +6,6 @@ const API_BASE = 'https://cumbear-backend.vercel.app/api';
 
 app.use(express.static('public'));
 
-// 1. Single Video Page (Ad-Optimized Player + Related Content)
 app.get('/v/:id', async (req, res) => {
   const videoId = req.params.id;
   
@@ -17,7 +16,6 @@ app.get('/v/:id', async (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Watch Free HD Video | CumBear</title>
   <link rel="stylesheet" href="/style.css">
-  <!-- Ad Network Popunder Hook (Place ExoClick/JuicyAds Code Here) -->
 </head>
 <body class="dark-theme">
   <header class="navbar">
@@ -31,7 +29,6 @@ app.get('/v/:id', async (req, res) => {
         <p class="loading">Loading Video Stream...</p>
       </div>
 
-      <!-- Banner Ad Slot (Above Title) -->
       <div class="ad-slot banner-300x250">
         <!-- JuicAds / ExoClick 300x250 Banner Code -->
       </div>
@@ -42,7 +39,6 @@ app.get('/v/:id', async (req, res) => {
         <span id="videoViews"></span>
       </div>
 
-      <!-- Native Ads Slot (Recommended Section) -->
       <h2 class="section-title">Recommended Videos</h2>
       <div id="relatedGrid" class="video-grid"></div>
     </main>
@@ -64,7 +60,6 @@ app.get('/v/:id', async (req, res) => {
         document.getElementById('videoCategory').innerText = video.category || 'General';
         document.getElementById('videoViews').innerText = (video.views || 1) + ' views';
 
-        // Direct HTML5 Player Setup
         document.getElementById('playerContainer').innerHTML = \`
           <video controls autoplay poster="\${video.thumbnailUrl}" style="width:100%; max-height:500px;">
             <source src="\${video.playableUrl}" type="video/mp4">
@@ -104,7 +99,6 @@ app.get('/v/:id', async (req, res) => {
   res.send(html);
 });
 
-// 2. Homepage & Category Feed
 app.get('*', (req, res) => {
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -126,7 +120,6 @@ app.get('*', (req, res) => {
   <div class="container">
     <nav id="categoryBar" class="category-bar"></nav>
 
-    <!-- Top Native Ad Banner -->
     <div class="ad-slot leaderboard">
       <!-- ExoClick / JuicyAds Leaderboard Banner -->
     </div>
@@ -144,6 +137,7 @@ app.get('*', (req, res) => {
   <script>
     const API_BASE = '${API_BASE}';
     let currentPage = 1;
+    let totalPages = 1;
     let currentCategory = '';
     let searchQuery = '';
 
@@ -164,6 +158,8 @@ app.get('*', (req, res) => {
           return;
         }
 
+        totalPages = json.pagination.totalPages;
+
         grid.innerHTML = json.data.map(v => \`
           <div class="video-card" onclick="location.href='/v/\${v._id}'">
             <div class="thumb-box">
@@ -177,7 +173,7 @@ app.get('*', (req, res) => {
           </div>
         \`).join('');
 
-        document.getElementById('pageIndicator').innerText = \`Page \${currentPage}\`;
+        document.getElementById('pageIndicator').innerText = \`Page \${currentPage} of \${totalPages} (\${json.pagination.total} Videos)\`;
       } catch (e) {
         grid.innerHTML = '<p class="error">Failed to load content.</p>';
       }
@@ -209,7 +205,7 @@ app.get('*', (req, res) => {
     }
 
     function changePage(delta) {
-      if (currentPage + delta < 1) return;
+      if (currentPage + delta < 1 || currentPage + delta > totalPages) return;
       currentPage += delta;
       fetchVideos();
       window.scrollTo({ top: 0, behavior: 'smooth' });
