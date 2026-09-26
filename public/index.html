@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CumBear - Free HD Adult Videos & Tube Streams</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="dark-theme">
+  <header class="navbar">
+    <a href="/" class="logo">Cum<span>Bear</span></a>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search 14,000+ videos..." onkeyup="if(event.key==='Enter') triggerSearch()">
+      <button onclick="triggerSearch()">Search</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- View Switcher Container -->
+    <div id="mainView">
+      <nav id="categoryBar" class="category-bar"></nav>
+
+      <div class="ad-slot leaderboard">
+        <!-- ExoClick / JuicyAds Leaderboard Banner -->
+      </div>
+
+      <h2 class="section-title" id="feedTitle">Latest HD Videos</h2>
+      <div id="videoGrid" class="video-grid"></div>
+
+      <div class="pagination">
+        <button id="prevBtn" onclick="changePage(-1)">Previous</button>
+        <span id="pageIndicator">Page 1</span>
+        <button id="nextBtn" onclick="changePage(1)">Next</button>
+      </div>
+    </div>
+
+    <!-- Video Watch Player View -->
+    <div id="playerView" style="display: none;">
+      <button onclick="showFeed()" style="padding: 8px 16px; background: #222; color: #fff; border: 1px solid #333; cursor: pointer; border-radius: 4px; margin-bottom: 15px;">← Back to Videos</button>
+      <div id="playerContainer" class="player-wrapper"></div>
+      <h1 id="videoTitle" class="video-title" style="margin-top: 15px; font-size: 20px;"></h1>
+      <div class="video-stats" style="margin: 10px 0;">
+        <span id="videoCategory" class="badge"></span>
+      </div>
+      <h2 class="section-title" style="margin-top: 25px;">Recommended Videos</h2>
+      <div id="relatedGrid" class="video-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://cumbear-backend.vercel.app/api';
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentCategory = '';
+    let searchQuery = '';
+
+    async function fetchVideos() {
+      const grid = document.getElementById('videoGrid');
+      grid.innerHTML = '<p class="loading">Loading videos from database...</p>';
+
+      let url = `${API_BASE}/videos?page=${currentPage}&limit=24`;
+      if (currentCategory) url += `&category=${encodeURIComponent(currentCategory)}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+
+      try {
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (!json.success || !json.data || json.data.length === 0) {
+          grid.innerHTML = '<p class="empty">No videos found.</p>';
+          return;
+        }
+
+        totalPages = json.pagination.totalPages;
+
+        grid.innerHTML = json.data.map(v => `
+          <div class="video-card" onclick="playVideo('${v._id}')">
+            <div class="thumb-box">
+              <img src="${v.thumbnailUrl}" alt="${v.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180?text=No+Thumbnail'">
+              <span class="duration">${v.duration || ''}</span>
+            </div>
+            <div class="card-title">${v.title}</div>
+            <div class="card-meta">
+              <span class="category">${v.category || 'HD'}</span>
+            </div>
+          </div>
+        `).join('');
+
+        document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages} (${json.pagination.total.toLocaleString()} Videos)`;
+      } catch (e) {
+        grid.innerHTML = '<p class="error">Failed to load content.</p>';
+      }
+    }
+
+    async function fetchCategories() {
+      try {
+        const res = await fetch(`${API_BASE}/categories`);
+        const json = await res.json();
+        const bar = document.getElementById('categoryBar');
+
+        bar.innerHTML = `<button class="cat-chip active" onclick="filterCategory('')">All</button>` + 
+          json.data.map(c => `
+            <button class="cat-chip" onclick="filterCategory('${c._id}')">${c._id || 'Uncategorized'} (${c.count})</button>
+          `).join('');
+      } catch (e) {}
+    }
+
+    async function playVideo(id) {
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('playerView').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      try {
+        const res = await fetch(`${API_BASE}/videos/${id}`);
+        const json = await res.json();
+        if (!json.success) return;
+
+        const video = json.data;
+        document.title = video.title + ' | CumBear';
+        document.getElementById('videoTitle').innerText = video.title;
+        document.getElementById('videoCategory').innerText = video.category || 'General';
+
+        // Playable URL video stream injection
+        document.getElementById('playerContainer').innerHTML = `
+          <video controls autoplay playsinline poster="${video.thumbnailUrl}" style="width:100%; max-height:500px; background:#000;">
+            <source src="${video.playableUrl}" type="video/mp4">
+            Your browser does not support HTML5 video playback.
+          </video>
+        `;
+
+        loadRelated(video.category);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function showFeed() {
+      document.getElementById('playerView').style.display = 'none';
+      document.getElementById('mainView').style.display = 'block';
+      document.title = 'CumBear - Free HD Adult Videos & Tube Streams';
+    }
+
+    async function loadRelated(cat) {
+      try {
+        const res = await fetch(`${API_BASE}/videos/related/${cat || 'MILF'}?limit=12`);
+        const json = await res.json();
+        const grid = document.getElementById('relatedGrid');
+        
+        grid.innerHTML = json.data.map(v => `
+          <div class="video-card" onclick="playVideo('${v._id}')">
+            <div class="thumb-box">
+              <img src="${v.thumbnailUrl}" alt="${v.title}" loading="lazy">
+              <span class="duration">${v.duration || ''}</span>
+            </div>
+            <div class="card-title">${v.title}</div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      searchQuery = '';
+      currentPage = 1;
+      document.getElementById('feedTitle').innerText = cat ? `Category: ${cat}` : 'Latest HD Videos';
+      fetchVideos();
+    }
+
+    function triggerSearch() {
+      searchQuery = document.getElementById('searchInput').value;
+      currentCategory = '';
+      currentPage = 1;
+      document.getElementById('feedTitle').innerText = searchQuery ? `Search Results for: "${searchQuery}"` : 'Latest HD Videos';
+      fetchVideos();
+    }
+
+    function changePage(delta) {
+      if (currentPage + delta < 1 || currentPage + delta > totalPages) return;
+      currentPage += delta;
+      fetchVideos();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    fetchCategories();
+    fetchVideos();
+  </script>
+</body>
+</html>
