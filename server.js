@@ -5,6 +5,7 @@ const app = express();
 const API_BASE = 'https://cumbear-backend.vercel.app/api';
 
 app.use(express.static('public'));
+app.use(express.static('Public'));
 
 app.get('/v/:id', async (req, res) => {
   const videoId = req.params.id;
@@ -20,7 +21,7 @@ app.get('/v/:id', async (req, res) => {
 <body class="dark-theme">
   <header class="navbar">
     <a href="/" class="logo">Cum<span>Bear</span></a>
-    <input type="text" id="searchInput" placeholder="Search videos...">
+    <input type="text" id="searchInput" placeholder="Search 14,000+ videos...">
   </header>
 
   <div class="container">
@@ -30,7 +31,7 @@ app.get('/v/:id', async (req, res) => {
       </div>
 
       <div class="ad-slot banner-300x250">
-        <!-- JuicAds / ExoClick 300x250 Banner Code -->
+        <!-- ExoClick / JuicyAds 300x250 Banner Code -->
       </div>
 
       <h1 id="videoTitle" class="video-title"></h1>
@@ -83,7 +84,7 @@ app.get('/v/:id', async (req, res) => {
           <div class="video-card" onclick="location.href='/v/\${v._id}'">
             <div class="thumb-box">
               <img src="\${v.thumbnailUrl}" alt="\${v.title}" loading="lazy">
-              <span class="duration">\${v.duration}</span>
+              <span class="duration">\${v.duration || ''}</span>
             </div>
             <div class="card-title">\${v.title}</div>
           </div>
@@ -112,7 +113,7 @@ app.get('*', (req, res) => {
   <header class="navbar">
     <a href="/" class="logo">Cum<span>Bear</span></a>
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search 14,000+ videos...">
+      <input type="text" id="searchInput" placeholder="Search 14,000+ videos..." onkeyup="if(event.key==='Enter') triggerSearch()">
       <button onclick="triggerSearch()">Search</button>
     </div>
   </header>
@@ -124,7 +125,7 @@ app.get('*', (req, res) => {
       <!-- ExoClick / JuicyAds Leaderboard Banner -->
     </div>
 
-    <h2 class="section-title">Latest HD Videos</h2>
+    <h2 class="section-title" id="feedTitle">Latest HD Videos</h2>
     <div id="videoGrid" class="video-grid"></div>
 
     <div class="pagination">
@@ -143,7 +144,7 @@ app.get('*', (req, res) => {
 
     async function fetchVideos() {
       const grid = document.getElementById('videoGrid');
-      grid.innerHTML = '<p class="loading">Loading videos...</p>';
+      grid.innerHTML = '<p class="loading">Loading videos from database...</p>';
 
       let url = \`\${API_BASE}/videos?page=\${currentPage}&limit=24\`;
       if (currentCategory) url += \`&category=\${encodeURIComponent(currentCategory)}\`;
@@ -153,7 +154,7 @@ app.get('*', (req, res) => {
         const res = await fetch(url);
         const json = await res.json();
         
-        if (!json.success || json.data.length === 0) {
+        if (!json.success || !json.data || json.data.length === 0) {
           grid.innerHTML = '<p class="empty">No videos found.</p>';
           return;
         }
@@ -164,7 +165,7 @@ app.get('*', (req, res) => {
           <div class="video-card" onclick="location.href='/v/\${v._id}'">
             <div class="thumb-box">
               <img src="\${v.thumbnailUrl}" alt="\${v.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180?text=No+Thumbnail'">
-              <span class="duration">\${v.duration}</span>
+              <span class="duration">\${v.duration || ''}</span>
             </div>
             <div class="card-title">\${v.title}</div>
             <div class="card-meta">
@@ -173,7 +174,7 @@ app.get('*', (req, res) => {
           </div>
         \`).join('');
 
-        document.getElementById('pageIndicator').innerText = \`Page \${currentPage} of \${totalPages} (\${json.pagination.total} Videos)\`;
+        document.getElementById('pageIndicator').innerText = \`Page \${currentPage} of \${totalPages} (\${json.pagination.total.toLocaleString()} Videos)\`;
       } catch (e) {
         grid.innerHTML = '<p class="error">Failed to load content.</p>';
       }
@@ -187,20 +188,24 @@ app.get('*', (req, res) => {
 
         bar.innerHTML = \`<button class="cat-chip active" onclick="filterCategory('')">All</button>\` + 
           json.data.map(c => \`
-            <button class="cat-chip" onclick="filterCategory('\${c._id}')">\${c._id} (\${c.count})</button>
+            <button class="cat-chip" onclick="filterCategory('\${c._id}')">\${c._id || 'Uncategorized'} (\${c.count})</button>
           \`).join('');
       } catch (e) {}
     }
 
     function filterCategory(cat) {
       currentCategory = cat;
+      searchQuery = '';
       currentPage = 1;
+      document.getElementById('feedTitle').innerText = cat ? \`Category: \${cat}\` : 'Latest HD Videos';
       fetchVideos();
     }
 
     function triggerSearch() {
       searchQuery = document.getElementById('searchInput').value;
+      currentCategory = '';
       currentPage = 1;
+      document.getElementById('feedTitle').innerText = searchQuery ? \`Search Results for: "\${searchQuery}"\` : 'Latest HD Videos';
       fetchVideos();
     }
 
