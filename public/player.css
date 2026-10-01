@@ -1,0 +1,87 @@
+/* --- Custom Video Player Styles --- */
+.player-container {
+    width: 100%;
+    background: #000;
+    position: relative;
+    aspect-ratio: 16/9;
+    margin-bottom: 1rem;
+}
+.player-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.player-controls {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(transparent 50%, rgba(0,0,0,0.9));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1rem;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+.player-container.hide-controls .player-controls { opacity: 0; }
+
+.progress-bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    position: relative;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: var(--accent-burgundy);
+    width: 0%;
+    border-radius: 2px;
+}
+.controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+}
+.ctrl-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+.time-display { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+.double-tap-zone {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 30%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.double-tap-zone.left { left: 0; }
+.double-tap-zone.right { right: 0; }
+.double-tap-zone:active { opacity: 1; background: rgba(255,255,255,0.1); }
+
+/* Player Info & Suggestions */
+.player-info { padding: 0 1rem 1rem; }
+.player-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.player-actions { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.action-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.suggestions-title { padding: 1rem; font-size: 1.1rem; font-weight: 700; }

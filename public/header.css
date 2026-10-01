@@ -1,0 +1,81 @@
+/* --- Header Styles --- */
+.site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    z-index: 1000;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.header-btn {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.header-btn:active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .header-btn:active {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.header-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Perfectly Centered Logo - Now Bigger & Clickable */
+.header-logo-container {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 5px; /* Extra tap area */
+}
+
+.header-logo-container img {
+    height: 52px; /* Increased by 20px */
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+/* Tap feedback for logo */
+.header-logo-container:active img {
+    transform: scale(0.92);
+}
+
+/* Spacer to ensure flexbox balance on mobile */
+.header-spacer {
+    width: 40px; 
+}
+
+/* --- Header Logo Size Adjustment (-8dp) --- */
+.header-logo-container img {
+    height: 44px !important; /* Reduced from 52px */
+}
