@@ -7,6 +7,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGlobalMuted = true;
 
     async function loadShorts() {
+        // Play Vertical VAST Pre-roll before Shorts feed
+        try {
+            const response = await fetch("https://s.magsrv.com/v1/vast.php?idzone=6045638");
+            const text = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
+            const mediaFile = xmlDoc.querySelector("MediaFile");
+            if (mediaFile && mediaFile.textContent) {
+                const adUrl = mediaFile.textContent.trim();
+                const overlay = document.createElement("div");
+                overlay.className = "short-item";
+                overlay.style.zIndex = "100";
+                overlay.innerHTML = `<video class="short-video" src="${adUrl}" playsinline></video><div class="short-info" style="bottom:20px;"><button class="watch-full-btn" id="skipShortsAd">Skip Ad</button></div>`;
+                shortsContainer.innerHTML = "";
+                shortsContainer.appendChild(overlay);
+                const adVid = overlay.querySelector("video");
+                adVid.muted = false;
+                adVid.play();
+                await new Promise(resolve => {
+                    adVid.onended = resolve;
+                    overlay.querySelector("#skipShortsAd").onclick = () => { adVid.pause(); resolve(); };
+                });
+                overlay.remove();
+            }
+        } catch(e) { console.log("Shorts VAST skipped"); }
         shortsContainer.innerHTML = '<div class="short-loading" style="z-index:50"><div class="short-spinner"></div></div>';
         try {
             // Fetch from playable collection

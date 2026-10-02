@@ -315,3 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHomeVideos();
     loadHorizontalCategories();
 });
+
+// Inject 900x250 Top Banner on Home Load
+const topBannerContainer = document.getElementById('topBannerContainer');
+if (topBannerContainer && window.innerWidth >= 768) {
+    topBannerContainer.innerHTML = `
+        <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+        <ins class="eas6a97888e2" data-zoneid="6045618"><\/ins>
+        <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
+    `;
+}
