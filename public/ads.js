@@ -1,11 +1,15 @@
-// --- Centralized Ad Rendering ---
+
+// ExoClick Ad Renderer
 window.renderAd = function(type) {
-    // In the future, you can inject real ad codes (AdSense, ExoClick, etc.) here.
-    // For now, it renders a styled placeholder.
-    if (type === 'banner') {
-        return `<div class="ad-banner"><span style="color: var(--text-muted); font-size: 0.9rem;">728x90 Banner Ad Slot</span></div>`;
-    } else if (type === 'infeed') {
-        return `<div class="ad-infeed"><span style="color: var(--text-muted); font-size: 0.9rem;">In-Feed Ad Slot</span></div>`;
+    if (type === 'infeed') {
+        // Returns a clean, centered container for the 320x250 banner
+        return `
+            <div style="grid-column: 1 / -1; margin: 1.5rem 0; display: flex; justify-content: center; align-items: center; background: #111; border-radius: 12px; padding: 1rem; border: 1px solid #222;">
+                <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+                <ins class="eas6a97888e2" data-zoneid="6045616"><\/ins>
+                <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
+            </div>
+        `;
     }
     return '';
 };
