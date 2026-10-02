@@ -1,10 +1,13 @@
-/* --- Header Styles --- */
+/* ============================================
+   HEADER - PRODUCTION STYLES
+   ============================================ */
+
 .site-header {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: var(--header-h);
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -12,28 +15,66 @@
     justify-content: space-between;
     padding: 0 1rem;
     z-index: 1000;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.35s var(--ease-smooth),
+                opacity 0.35s var(--ease-smooth),
+                background-color 0.3s ease,
+                backdrop-filter 0.3s ease;
+    will-change: transform, opacity;
 }
 
+/* Header states */
+.site-header.scrolled {
+    background-color: rgba(var(--bg-primary-rgb, 0, 0, 0), 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom-color: var(--border-light);
+}
+
+.site-header.hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+/* Header buttons */
 .header-btn {
     background: none;
     border: none;
     color: var(--text-primary);
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 0.625rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
+    border-radius: 12px;
+    transition: all var(--duration-fast) var(--ease-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.header-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent-burgundy);
+    opacity: 0;
+    border-radius: inherit;
+    transition: opacity var(--duration-fast) var(--ease-smooth);
+}
+
+.header-btn:hover::before {
+    opacity: 0.1;
 }
 
 .header-btn:active {
-    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(0.92);
+}
+
+.header-btn:active::before {
+    opacity: 0.2;
 }
 
 [data-theme="light"] .header-btn:active {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.06);
 }
 
 .header-btn svg {
@@ -44,9 +85,29 @@
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
+    position: relative;
+    z-index: 1;
 }
 
-/* Perfectly Centered Logo - Now Bigger & Clickable */
+/* Ripple effect on click */
+.header-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent-burgundy);
+    opacity: 0.3;
+    transform: scale(0);
+    animation: ripple 0.6s ease-out;
+    pointer-events: none;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Logo container */
 .header-logo-container {
     position: absolute;
     left: 50%;
@@ -55,27 +116,47 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    padding: 5px; /* Extra tap area */
+    padding: 6px;
+    border-radius: 14px;
+    transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.header-logo-container:hover {
+    background: var(--border-light);
+}
+
+.header-logo-container:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.header-logo-container:focus-visible {
+    outline: 2px solid var(--accent-burgundy);
+    outline-offset: 2px;
 }
 
 .header-logo-container img {
-    height: 52px; /* Increased by 20px */
+    height: 40px;
     width: auto;
     object-fit: contain;
-    transition: transform 0.2s ease;
+    transition: transform var(--duration-fast) var(--ease-out-back),
+                filter var(--duration-fast) var(--ease-smooth);
+    filter: drop-shadow(0 2px 8px rgba(124, 29, 64, 0.2));
 }
 
-/* Tap feedback for logo */
-.header-logo-container:active img {
-    transform: scale(0.92);
+.header-logo-container:hover img {
+    transform: scale(1.03);
+    filter: drop-shadow(0 4px 12px rgba(124, 29, 64, 0.35));
 }
 
-/* Spacer to ensure flexbox balance on mobile */
+/* Spacer for flex balance */
 .header-spacer {
-    width: 40px; 
+    width: 44px;
 }
 
-/* --- Header Logo Size Adjustment (-8dp) --- */
-.header-logo-container img {
-    height: 44px !important; /* Reduced from 52px */
+/* Responsive */
+@media (min-width: 768px) {
+    .header-logo-container img {
+        height: 44px;
+    }
 }
+

@@ -1,42 +1,106 @@
-// --- Header Logic ---
+/**
+ * CUMBEAR HEADER ENGINE v2.0
+ * Smart header with scroll behavior, haptic feedback
+ */
+
+'use strict';
+
 document.addEventListener('DOMContentLoaded', () => {
     const menuBtn = document.getElementById('menuBtn');
     const searchBtn = document.getElementById('searchBtn');
     const homeLogoBtn = document.getElementById('homeLogoBtn');
+    const header = document.getElementById('siteHeader');
+    
+    let lastScrollY = 0;
+    let ticking = false;
 
-    // Menu Button (Hamburger)
-    menuBtn.addEventListener('click', () => {
-        console.log('Hamburger clicked - Opening Sidebar in Step 3');
-    });
-
-    // Search Button
-    searchBtn.addEventListener('click', () => {
-        console.log('Search clicked - Opening Search in Step 4');
-    });
-
-    // Logo Click -> Go Home
-    homeLogoBtn.addEventListener('click', () => {
-        console.log('Logo clicked - Returning to Home');
+    // Smart header hide/show on scroll
+    function updateHeader() {
+        const currentScrollY = window.scrollY;
         
-        // 1. Hide all view sections (Future-proofing for Step 5)
-        document.querySelectorAll('.view-section').forEach(section => {
-            section.classList.remove('active');
-            section.classList.add('hidden');
-        });
-        
-        // 2. Show Home view
-        const homeView = document.getElementById('homeView');
-        if (homeView) {
-            homeView.classList.remove('hidden');
-            homeView.classList.add('active');
+        if (currentScrollY > lastScrollY && currentScrollY > 80) {
+            // Scrolling down - hide header
+            header.style.transform = 'translateY(-100%)';
+            header.style.opacity = '0';
+        } else {
+            // Scrolling up - show header
+            header.style.transform = 'translateY(0)';
+            header.style.opacity = '1';
         }
         
-        // 3. Scroll to top smoothly
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Add background blur when scrolled
+        if (currentScrollY > 20) {
+            header.style.backdropFilter = 'blur(20px) saturate(180%)';
+            header.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
+            header.style.backgroundColor = 'var(--bg-primary)';
+        } else {
+            header.style.backdropFilter = 'none';
+            header.style.webkitBackdropFilter = 'none';
+        }
         
-        // 4. Reset bottom nav active state (Future-proofing)
-        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-        const homeNavBtn = document.querySelector('.nav-item[data-view="homeView"]');
-        if (homeNavBtn) homeNavBtn.classList.add('active');
+        lastScrollY = currentScrollY;
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            requestAnimationFrame(updateHeader);
+            ticking = true;
+        }
+    }, { passive: true });
+
+    // Menu Button - Open Sidebar
+    menuBtn?.addEventListener('click', () => {
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(15);
+        
+        // Dispatch custom event for sidebar to handle
+        window.dispatchEvent(new CustomEvent('sidebar:open'));
+    });
+
+    // Search Button - Open Categories/Search
+    searchBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (navigator.vibrate) navigator.vibrate(15);
+        
+        if (window.showCategoriesView) {
+            window.showCategoriesView();
+        } else if (window.switchView) {
+            window.switchView('categoriesView', true);
+        }
+    });
+
+    // Logo Click - Go Home with animation
+    homeLogoBtn?.addEventListener('click', () => {
+        if (navigator.vibrate) navigator.vibrate(20);
+        
+        // If already on home, scroll to top with bounce
+        const homeView = document.getElementById('homeView');
+        if (homeView?.classList.contains('active')) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Subtle pulse animation on logo
+            const img = homeLogoBtn.querySelector('img');
+            img.style.transform = 'scale(0.9)';
+            setTimeout(() => img.style.transform = '', 200);
+            return;
+        }
+        
+        // Switch to home view
+        if (window.switchView) {
+            window.switchView('homeView', true);
+        }
+        
+        // Reset home state
+        if (window.resetHomeState) window.resetHomeState();
+    });
+
+    // Keyboard accessibility for logo
+    homeLogoBtn?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            homeLogoBtn.click();
+        }
     });
 });
+

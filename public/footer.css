@@ -1,21 +1,37 @@
-/* --- Bottom Navigation (Footer) Styles --- */
+/* ============================================
+   BOTTOM NAVIGATION - PRODUCTION STYLES
+   ============================================ */
+
 .bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
-    background-color: var(--bg-secondary); /* Uses theme color (White in Light Mode) */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    height: calc(var(--footer-h) + var(--safe-bottom));
+    background: var(--bg-secondary);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
     align-items: center;
-    z-index: 900; /* Below header and sidebar, above content */
-    padding-bottom: env(safe-area-inset-bottom); /* For iPhone notch */
+    z-index: 900;
+    padding-bottom: var(--safe-bottom);
+    transition: transform 0.35s var(--ease-smooth),
+                opacity 0.35s var(--ease-smooth);
+    will-change: transform, opacity;
+    /* Safe area for notched devices */
+    padding-left: max(var(--safe-left), 0px);
+    padding-right: max(var(--safe-right), 0px);
 }
 
+.bottom-nav.footer-hidden {
+    transform: translateY(calc(100% + var(--safe-bottom)));
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Nav items */
 .nav-item {
     background: none;
     border: none;
@@ -26,11 +42,36 @@
     justify-content: center;
     gap: 4px;
     cursor: pointer;
-    padding: 0.5rem 2rem;
-    transition: all 0.2s ease;
+    padding: 0.5rem 1.5rem;
+    min-width: 64px;
+    transition: all var(--duration-fast) var(--ease-smooth);
+    position: relative;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
+.nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 32px;
+    height: 3px;
+    background: var(--accent-burgundy);
+    border-radius: 0 0 4px 4px;
+    transition: transform var(--duration-normal) var(--ease-out-expo);
+}
+
+.nav-item.active {
+    color: var(--accent-burgundy);
+}
+
+.nav-item.active::before {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* Icon animations */
 .nav-icon {
     width: 26px;
     height: 26px;
@@ -39,41 +80,78 @@
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all var(--duration-fast) var(--ease-out-back);
+    transform-origin: center;
 }
 
+.nav-item:hover .nav-icon {
+    transform: translateY(-2px);
+}
+
+.nav-item.active .nav-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+}
+
+.nav-item:active .nav-icon {
+    transform: scale(0.9);
+    transition-duration: var(--duration-instant);
+}
+
+/* Label */
 .nav-label {
     font-family: 'Manrope', sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    transition: color 0.2s ease;
+    transition: all var(--duration-fast) var(--ease-smooth);
+    opacity: 0.8;
 }
 
-/* Active State */
-.nav-item.active {
-    color: var(--accent-burgundy);
+.nav-item.active .nav-label {
+    opacity: 1;
+    font-weight: 700;
 }
 
-.nav-item.active .nav-icon {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 8px rgba(124, 29, 64, 0.4));
+/* Active indicator dot (alternative style) */
+.nav-item .active-dot {
+    position: absolute;
+    bottom: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-burgundy);
+    opacity: 0;
+    transform: scale(0);
+    transition: all var(--duration-fast) var(--ease-out-back);
 }
 
-/* Click Animation */
-.nav-item:active .nav-icon {
-    transform: scale(0.9);
+.nav-item.active .active-dot {
+    opacity: 1;
+    transform: scale(1);
 }
 
-/* Ensure main content doesn't hide behind footer */
+/* Content padding adjustment */
 main {
-    padding-bottom: 70px !important; 
+    padding-bottom: calc(var(--footer-h) + var(--safe-bottom) + 80px) !important;
 }
 
-/* Auto-hide animation */
-.bottom-nav {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Hide on scroll down animation */
+@keyframes nav-bounce-in {
+    0% { transform: translateY(calc(100% + var(--safe-bottom))); }
+    60% { transform: translateY(-8px); }
+    100% { transform: translateY(0); }
 }
-.bottom-nav.footer-hidden {
-    transform: translateY(100%);
+
+.bottom-nav:not(.footer-hidden) {
+    animation: nav-bounce-in 0.4s var(--ease-out-back);
 }
+
+/* iOS safe area fix */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .bottom-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(60px + env(safe-area-inset-bottom));
+    }
+}
+
