@@ -9,7 +9,6 @@
   "keywords": ["video", "streaming", "frontend"],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
