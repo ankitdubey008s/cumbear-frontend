@@ -4,34 +4,16 @@
   "description": "Production-grade video streaming frontend",
   "main": "server.js",
   "scripts": {
-    "start": "NODE_ENV=production node server.js",
-    "dev": "NODE_ENV=development nodemon server.js",
-    "build": "npm run build:css && npm run build:js",
-    "build:css": "postcss public/*.css -d dist/css --use autoprefixer --use cssnano",
-    "build:js": "terser public/*.js -o dist/js/ --compress --mangle",
-    "compress": "npm run compress:br && npm run compress:gzip",
-    "compress:br": "for f in public/*.{css,js,html}; do brotli -q 11 -o \"$f.br\" \"$f\"; done",
-    "compress:gzip": "for f in public/*.{css,js,html}; do gzip -9 -k \"$f\"; done"
+    "start": "node server.js"
   },
-  "keywords": ["video", "streaming", "adult", "frontend"],
+  "keywords": ["video", "streaming", "frontend"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.6",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-static-gzip": "^2.1.7",
-    "helmet": "^7.1.0",
-    "compression": "^1.7.4"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.16",
-    "cssnano": "^6.0.1",
-    "nodemon": "^3.0.1",
-    "postcss": "^8.4.31",
-    "postcss-cli": "^11.0.0",
-    "terser": "^5.24.0"
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=18.0.0"
