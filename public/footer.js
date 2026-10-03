@@ -1,143 +1,75 @@
-/**
- * CUMBEAR FOOTER ENGINE v2.0
- * Smart bottom nav with gesture handling, scroll detection
- */
-
-'use strict';
+// ============================================
+// CUMBEAR ULTRA PREMIUM - Footer & Bottom Nav
+// Version: 2.0 Enhanced
+// ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
     const bottomNav = document.getElementById('bottomNav');
-    
     let lastScrollY = window.scrollY;
-    let scrollTimeout = null;
-    let isNavVisible = true;
+    let scrollTimeout;
 
-    // Navigation click handling
+    // --- 1. Navigation Click Handlers ---
     navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Haptic feedback
-            if (navigator.vibrate) navigator.vibrate(20);
-            
+        item.addEventListener('click', () => {
             const targetView = item.getAttribute('data-view');
             
-            // Update active state immediately for responsiveness
-            navItems.forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-current', 'false');
-            });
+            // Update active state visually
+            navItems.forEach(btn => btn.classList.remove('active'));
             item.classList.add('active');
-            item.setAttribute('aria-current', 'page');
             
-            // Switch view
+            // Use global router to switch views
             if (window.switchView) {
                 window.switchView(targetView, true);
             }
             
-            // Load shorts if needed
+            // Trigger Shorts loading specifically if switching to shorts
             if (targetView === 'shortsView' && window.loadShorts) {
                 window.loadShorts();
             }
+            
+            // Always show footer when navigating
+            bottomNav.classList.remove('footer-hidden');
         });
     });
 
-    // Smart hide/show on scroll with debounce
-    function handleScroll() {
-        const currentScrollY = window.scrollY;
-        const scrollDelta = currentScrollY - lastScrollY;
-        
-        // Show nav when near bottom (user might want to navigate)
-        const nearBottom = (window.innerHeight + currentScrollY) >= document.documentElement.scrollHeight - 100;
-        
-        if (nearBottom && !isNavVisible) {
-            showNav();
-        } else if (scrollDelta > 10 && currentScrollY > 100 && !nearBottom) {
-            // Scrolling down - hide
-            hideNav();
-        } else if (scrollDelta < -5) {
-            // Scrolling up - show
-            showNav();
-        }
-        
-        lastScrollY = currentScrollY;
-    }
-
-    function hideNav() {
-        if (!isNavVisible) return;
-        isNavVisible = false;
-        bottomNav.style.transform = `translateY(calc(100% + var(--safe-bottom, 0px)))`;
-        bottomNav.style.opacity = '0';
-        
-        // Also hide sticky ad
-        const stickyAd = document.getElementById('stickyAdContainer');
-        if (stickyAd) stickyAd.style.transform = 'translateY(100%)';
-    }
-
-    function showNav() {
-        if (isNavVisible) return;
-        isNavVisible = true;
-        bottomNav.style.transform = 'translateY(0)';
-        bottomNav.style.opacity = '1';
-        
-        // Show sticky ad
-        const stickyAd = document.getElementById('stickyAdContainer');
-        if (stickyAd) stickyAd.style.transform = 'translateY(0)';
-    }
-
-    // Throttled scroll listener
-    let ticking = false;
+    // --- 2. Premium Auto-Hide on Scroll ---
+    // Hides the footer when scrolling down to give more screen space, 
+    // and reveals it instantly when scrolling up.
     window.addEventListener('scroll', () => {
-        if (!ticking) {
-            requestAnimationFrame(() => {
-                handleScroll();
-                ticking = false;
-            });
-            ticking = true;
-        }
-        
-        // Clear existing timeout
+        // Clear previous timeout to prevent jitter
         clearTimeout(scrollTimeout);
         
-        // Show nav after scroll stops
         scrollTimeout = setTimeout(() => {
-            showNav();
-        }, 1500);
+            const currentScrollY = window.scrollY;
+            
+            // Only hide if scrolled down more than 100px and moving down
+            if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                bottomNav.classList.add('footer-hidden');
+            } else {
+                bottomNav.classList.remove('footer-hidden');
+            }
+            
+            lastScrollY = currentScrollY;
+        }, 100); // 100ms debounce for buttery smooth performance
     }, { passive: true });
 
-    // Override switchView to sync nav state
+    // --- 3. Global Router Hook ---
+    // Intercepts the global switchView function to ensure the bottom nav 
+    // always stays in sync, even if navigation happens from the sidebar or header.
     const originalSwitchView = window.switchView;
     if (originalSwitchView) {
         window.switchView = function(viewId, pushHistory = true) {
+            // Call the original router logic
             originalSwitchView(viewId, pushHistory);
             
-            // Sync nav items
+            // Sync bottom nav active state
             navItems.forEach(btn => {
-                const isActive = btn.getAttribute('data-view') === viewId;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-current', isActive ? 'page' : 'false');
+                btn.classList.toggle('active', btn.getAttribute('data-view') === viewId);
             });
             
-            // Always show nav on view switch
-            showNav();
+            // Always reveal footer when switching views via router
+            bottomNav.classList.remove('footer-hidden');
         };
     }
-
-    // Touch gesture: swipe up from bottom to show nav when hidden
-    let touchStartY = 0;
-    document.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    document.addEventListener('touchmove', (e) => {
-        const touchY = e.touches[0].clientY;
-        const windowHeight = window.innerHeight;
-        
-        // If touching near bottom edge and nav is hidden, show it
-        if (touchStartY > windowHeight - 20 && touchY < touchStartY - 30 && !isNavVisible) {
-            showNav();
-        }
-    }, { passive: true });
 });
-

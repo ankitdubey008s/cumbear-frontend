@@ -1,341 +1,224 @@
-/**
- * CUMBEAR PLAYER ENGINE v2.0
- * Adaptive streaming, gesture controls, memory management
- */
-
-'use strict';
+// ============================================
+// CUMBEAR ULTRA PREMIUM - Player & VAST Engine
+// Version: 2.0 Enhanced
+// ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ Player.js Loaded (Ultra Premium Engine)');
+
     const videoEl = document.getElementById('mainVideo');
     const suggestionsGrid = document.getElementById('suggestionsGrid');
     const vastOverlay = document.getElementById('vastOverlay');
     const vastVideo = document.getElementById('vastVideo');
     const vastSkipBtn = document.getElementById('vastSkipBtn');
     const vastCountdown = document.getElementById('vastCountdown');
-    const playerContainer = document.getElementById('playerContainer');
+    const playerTitleDisplay = document.getElementById('playerTitleDisplay');
+    const playerLikeBtn = document.getElementById('playerLikeBtn');
+    const playerShareBtn = document.getElementById('playerShareBtn');
 
-    let hls = null;
-    let adTimer = null;
-    let isDestroyed = false;
-
-    // ============================================
-    // VAST PRE-ROLL WITH PROPER CLEANUP
-    // ============================================
-    
-    async function playVastPreRoll(vastUrl, onComplete) {
-        // Cleanup any existing ad
-        cleanupAd();
-        
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(vastUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            const text = await response.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "text/xml");
-            
-            // Check for parsing errors
-            const parserError = xmlDoc.querySelector('parsererror');
-            if (parserError) throw new Error('VAST parse error');
-
-            const mediaFile = xmlDoc.querySelector("MediaFile");
-            const skipOffset = xmlDoc.querySelector("Linear")?.getAttribute("skipoffset") || "00:00:07";
-            
-            if (mediaFile?.textContent) {
-                const adVideoUrl = mediaFile.textContent.trim();
-                const skipSeconds = parseInt(skipOffset.split(":").pop()) || 7;
-
-                vastOverlay.classList.remove('hidden');
-                vastOverlay.setAttribute('aria-hidden', 'false');
-                
-                vastVideo.src = adVideoUrl;
-                vastVideo.muted = false;
-                
-                // Wait for ready
-                await new Promise((resolve, reject) => {
-                    vastVideo.oncanplay = resolve;
-                    vastVideo.onerror = reject;
-                    vastVideo.load();
-                });
-                
-                await vastVideo.play();
-
-                let timeLeft = skipSeconds;
-                vastCountdown.textContent = timeLeft;
-                vastSkipBtn.classList.add('hidden');
-
-                adTimer = setInterval(() => {
-                    timeLeft--;
-                    vastCountdown.textContent = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(adTimer);
-                        vastSkipBtn.classList.remove('hidden');
-                        vastSkipBtn.focus();
-                    }
-                }, 1000);
-
-                const endAd = () => {
-                    cleanupAd();
-                    if (onComplete) onComplete();
-                };
-
-                vastSkipBtn.onclick = endAd;
-                vastVideo.onended = endAd;
-                
-                // Auto-proceed on error
-                vastVideo.onerror = () => {
-                    console.warn('Ad failed to load');
-                    endAd();
-                };
-                
-            } else {
-                if (onComplete) onComplete();
-            }
-        } catch (e) {
-            console.warn("VAST Pre-roll failed:", e);
-            cleanupAd();
-            if (onComplete) onComplete();
-        }
-    }
-
-    function cleanupAd() {
-        if (adTimer) {
-            clearInterval(adTimer);
-            adTimer = null;
+    // --- 1. Global Kill Switch (Prevents Background Audio) ---
+    // This is called by script.js when navigating away from the player
+    window.stopPlayer = function() {
+        if (videoEl) {
+            videoEl.pause();
+            videoEl.removeAttribute('src');
+            videoEl.load();
         }
         if (vastVideo) {
             vastVideo.pause();
             vastVideo.removeAttribute('src');
             vastVideo.load();
         }
-        vastOverlay?.classList.add('hidden');
-        vastOverlay?.setAttribute('aria-hidden', 'true');
-        vastSkipBtn?.classList.add('hidden');
+        if (vastOverlay) {
+            vastOverlay.classList.add('hidden');
+        }
+    };
+
+    // --- 2. Robust VAST Pre-roll Engine ---
+    async function playVastPreRoll(vastUrl, onComplete) {
+        try {
+            const response = await fetch(vastUrl);
+            const text = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
+            const mediaFile = xmlDoc.querySelector("MediaFile");
+            
+            if (mediaFile && mediaFile.textContent) {
+                const adVideoUrl = mediaFile.textContent.trim();
+                const skipOffset = mediaFile.getAttribute("skipoffset") || "00:00:07";
+                const skipSeconds = parseInt(skipOffset.split(":").pop()) || 7;
+
+                vastOverlay.classList.remove('hidden');
+                vastVideo.src = adVideoUrl;
+                vastVideo.muted = false; // Pre-rolls should have sound
+                vastVideo.playbackRate = 1.0;
+                
+                const playPromise = vastVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn("Autoplay blocked, muting ad:", error);
+                        vastVideo.muted = true;
+                        vastVideo.play();
+                    });
+                }
+
+                let timeLeft = skipSeconds;
+                vastCountdown.textContent = timeLeft;
+                vastSkipBtn.classList.add('hidden');
+
+                const timer = setInterval(() => {
+                    timeLeft--;
+                    vastCountdown.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        vastSkipBtn.classList.remove('hidden');
+                    }
+                }, 1000);
+
+                const endAd = () => {
+                    clearInterval(timer);
+                    vastVideo.pause();
+                    vastVideo.removeAttribute('src');
+                    vastVideo.load();
+                    vastOverlay.classList.add('hidden');
+                    if (onComplete) onComplete();
+                };
+
+                vastSkipBtn.onclick = endAd;
+                vastVideo.onended = endAd;
+                vastVideo.onerror = endAd; // Fallback if ad fails
+            } else {
+                if (onComplete) onComplete(); // No ad found, proceed
+            }
+        } catch (e) {
+            console.error("VAST Pre-roll failed:", e);
+            if (onComplete) onComplete(); // Graceful fallback
+        }
     }
 
-    // ============================================
-    // MAIN VIDEO LOADING (HLS Support)
-    // ============================================
-    
+    // --- 3. Main Video Loader ---
     window.loadPlayerVideo = async function(video, startTime = 0) {
-        if (!video || isDestroyed) return;
+        if (!video) return;
         
-        // Cleanup previous
-        destroyPlayer();
+        // Update UI immediately
+        playerTitleDisplay.textContent = video.title;
+        if (playerLikeBtn) playerLikeBtn.textContent = '❤️ Like';
         
-        // Show loading state
-        playerContainer.classList.add('loading');
-
-        // 1. Play Pre-roll
+        // 1. Play Pre-roll First
         await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
             // 2. Start Main Video
-            loadMainVideo(video, startTime);
+            videoEl.src = video.playableUrl;
+            videoEl.poster = video.thumbnailUrl;
+            videoEl.load();
+            
+            if (startTime > 0) {
+                videoEl.addEventListener('loadedmetadata', function onMeta() {
+                    videoEl.currentTime = startTime;
+                    videoEl.removeEventListener('loadedmetadata', onMeta);
+                });
+            }
+            
+            const playPromise = videoEl.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {});
+            }
         });
-
+        
         // 3. Load Suggestions
         loadSuggestions(video);
     };
 
-    function loadMainVideo(video, startTime) {
-        document.getElementById('playerTitleDisplay').textContent = video.title;
-        
-        // Check for HLS support
-        const isHLS = video.playableUrl?.includes('.m3u8');
-        
-        if (isHLS && Hls?.isSupported()) {
-            hls = new Hls({
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-                enableWorker: true,
-                lowLatencyMode: true
-            });
-            hls.loadSource(video.playableUrl);
-            hls.attachMedia(videoEl);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                playerContainer.classList.remove('loading');
-                videoEl.play().catch(() => {});
-            });
-        } else {
-            videoEl.src = video.playableUrl;
-            videoEl.poster = video.thumbnailUrl;
-            videoEl.load();
-            playerContainer.classList.remove('loading');
-        }
-
-        if (startTime > 0) {
-            const seekOnReady = () => {
-                videoEl.currentTime = startTime;
-                videoEl.removeEventListener('loadedmetadata', seekOnReady);
-            };
-            videoEl.addEventListener('loadedmetadata', seekOnReady);
-        }
-
-        // Custom controls setup
-        setupCustomControls();
-    }
-
-    function setupCustomControls() {
-        // Double tap to seek
-        let lastTap = 0;
-        let tapSide = null;
-        
-        playerContainer.addEventListener('click', (e) => {
-            const rect = playerContainer.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const width = rect.width;
-            
-            const now = Date.now();
-            const isDoubleTap = now - lastTap < 300;
-            
-            if (isDoubleTap && tapSide === (x < width / 2 ? 'left' : 'right')) {
-                // Double tap on same side
-                const seekAmount = x < width / 2 ? -10 : 10;
-                videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + seekAmount));
-                
-                // Visual feedback
-                showSeekFeedback(x < width / 2 ? 'left' : 'right', seekAmount);
-            }
-            
-            tapSide = x < width / 2 ? 'left' : 'right';
-            lastTap = now;
-        });
-    }
-
-    function showSeekFeedback(side, amount) {
-        const feedback = document.createElement('div');
-        feedback.style.cssText = `
-            position: absolute;
-            top: 50%;
-            ${side}: 20%;
-            transform: translateY(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 1rem;
-            border-radius: 12px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            z-index: 10;
-            animation: seekFeedback 0.6s ease forwards;
-            pointer-events: none;
-        `;
-        feedback.textContent = `${amount > 0 ? '+' : ''}${amount}s`;
-        playerContainer.appendChild(feedback);
-        setTimeout(() => feedback.remove(), 600);
-    }
-
-    // ============================================
-    // SUGGESTIONS WITH LAZY LOADING
-    // ============================================
-    
+    // --- 4. Suggestions Engine ---
     async function loadSuggestions(currentVideo) {
-        if (!suggestionsGrid) return;
-        
-        suggestionsGrid.innerHTML = '<div class="skeleton" style="grid-column:1/-1;height:200px"></div>';
+        suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Loading suggestions...</div>';
         
         try {
-            const res = await fetchWithTimeout(
-                `https://cumbear-backend.vercel.app/api/videos/related/${encodeURIComponent(currentVideo.category)}?limit=12`,
-                {}, 5000
-            );
+            const res = await fetch(`https://cumbear-backend.vercel.app/api/videos/related/${encodeURIComponent(currentVideo.category || 'all')}?limit=50`);
             const data = await res.json();
             
             if (data.success && data.data) {
                 renderSuggestions(data.data, currentVideo._id);
+            } else {
+                suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">No suggestions found.</div>';
             }
-        } catch (err) {
-            suggestionsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted)">Failed to load suggestions</div>';
+        } catch (err) { 
+            console.error('Failed to load suggestions:', err); 
+            suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Error loading suggestions.</div>'; 
         }
     }
 
     function renderSuggestions(videos, excludeId) {
         suggestionsGrid.innerHTML = '';
-        const filtered = videos.filter(v => v._id !== excludeId).slice(0, 12);
+        const filtered = videos.filter(v => v._id !== excludeId);
         
         if (filtered.length === 0) {
-            suggestionsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted)">No suggestions found</div>';
+            suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">No suggestions found.</div>';
             return;
         }
-
-        const fragment = document.createDocumentFragment();
-
+        
         filtered.forEach((video, index) => {
+            // Inject In-Feed Ad every 6 suggestions
             if (index > 0 && index % 6 === 0 && window.renderAd) {
-                const adDiv = document.createElement('div');
-                adDiv.innerHTML = window.renderAd('infeed');
-                fragment.appendChild(adDiv.firstElementChild);
+                suggestionsGrid.insertAdjacentHTML('beforeend', window.renderAd('infeed'));
             }
-
+            
             const card = document.createElement('div');
-            card.className = 'video-card hover-lift';
+            card.className = 'video-card';
             card.innerHTML = `
                 <div class="video-thumb">
-                    <img src="${video.thumbnailUrl}" loading="lazy" alt="" decoding="async">
-                    <span class="duration-badge">${escapeHtml(video.duration || '')}</span>
+                    <img src="${video.thumbnailUrl}" loading="lazy" alt="${video.title}">
+                    <span class="duration-badge">${video.duration}</span>
                 </div>
-                <div class="video-title" style="font-size:0.85rem;margin-top:0.5rem">${escapeHtml(video.title)}</div>
-                <div class="video-meta" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem">${formatViews(Math.floor(Math.random() * 90000) + 10000)} views</div>
+                <div class="video-info">
+                    <div class="video-title" style="font-size: 0.9rem;">${video.title}</div>
+                    <div class="video-meta" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">${formatViews(Math.floor(Math.random() * 90000) + 10000)} views</div>
+                </div>
             `;
-            
-            card.addEventListener('click', () => window.loadPlayerVideo(video, 0));
-            fragment.appendChild(card);
+            card.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'instant' }); // Instant jump to top
+                window.loadPlayerVideo(video, 0);
+            });
+            suggestionsGrid.appendChild(card);
         });
-
-        suggestionsGrid.appendChild(fragment);
     }
 
-    // ============================================
-    // CLEANUP
-    // ============================================
-    
-    function destroyPlayer() {
-        if (hls) {
-            hls.destroy();
-            hls = null;
-        }
-        if (videoEl) {
-            videoEl.pause();
-            videoEl.removeAttribute('src');
-            videoEl.load();
-        }
-        cleanupAd();
+    // --- 5. Player Action Buttons (Like & Share) ---
+    if (playerLikeBtn) {
+        playerLikeBtn.addEventListener('click', () => {
+            const isLiked = playerLikeBtn.classList.toggle('liked');
+            playerLikeBtn.textContent = isLiked ? '❤️ Liked' : '❤️ Like';
+            playerLikeBtn.style.color = isLiked ? 'var(--accent-burgundy)' : 'var(--text-primary)';
+            playerLikeBtn.style.borderColor = isLiked ? 'var(--accent-burgundy)' : 'var(--border-color)';
+        });
     }
 
-    window.stopPlayer = destroyPlayer;
-    
-    // Cleanup on page hide
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && videoEl && !videoEl.paused) {
-            videoEl.pause();
-        }
-    });
+    if (playerShareBtn) {
+        playerShareBtn.addEventListener('click', async () => {
+            const shareData = {
+                title: playerTitleDisplay.textContent,
+                text: 'Check out this video on CumBear!',
+                url: window.location.href
+            };
+
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    await navigator.clipboard.writeText(window.location.href);
+                    const originalText = playerShareBtn.textContent;
+                    playerShareBtn.textContent = '🔗 Copied!';
+                    setTimeout(() => { playerShareBtn.textContent = originalText; }, 2000);
+                }
+            } catch (err) {
+                console.log('Share canceled or failed');
+            }
+        });
+    }
+
+    // --- 6. Helper Functions ---
+    function formatViews(num) { 
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'; 
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k'; 
+        return num; 
+    }
 });
-
-// Utilities
-function formatViews(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return num.toString();
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-        const res = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(id);
-        return res;
-    } catch (e) {
-        clearTimeout(id);
-        throw e;
-    }
-}
-

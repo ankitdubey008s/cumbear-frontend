@@ -1,149 +1,122 @@
-/**
- * CUMBEAR AD ENGINE v2.0
- * Lazy-loaded, viewport-aware, performance-optimized
- */
+// ============================================
+// CUMBEAR ULTRA PREMIUM - Ad Integration
+// Version: 2.0 Enhanced
+// ============================================
 
-'use strict';
-
-// Ad configuration
-const AD_CONFIG = {
-    zones: {
-        infeed: 6045616,
-        stickyMobile: 6045626,
-        stickyDesktop: 6045628,
-        topBanner: 6045618,
-        vastPreroll: 6045632,
-        shortsVast: 6045638
-    },
-    hosts: {
-        ads: 'a.magsrv.com',
-        syndication: 's.magsrv.com'
+// --- 1. In-Feed Ad Renderer (Called by home.js and search.js) ---
+window.renderAd = function(type) {
+    if (type === 'infeed') {
+        // Premium container with burgundy accent border
+        return `
+            <div class="ad-infeed-container" style="grid-column: 1 / -1; margin: 1.5rem 0; display: flex; justify-content: center; align-items: center; background: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 100%); border-radius: 16px; padding: 1.25rem; border: 1px solid rgba(124, 29, 64, 0.2); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); min-height: 250px; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(124, 29, 64, 0.5), transparent);"></div>
+                <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; opacity: 0.7;">Sponsored</div>
+                <div class="ad-slot" style="width: 100%; max-width: 320px; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                    <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+                    <ins class="eas6a97888e2" data-zoneid="6045616"><\/ins>
+                    <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
+                </div>
+            </div>
+        `;
     }
+    return '';
 };
 
-// Lazy ad renderer - only loads when near viewport
-window.renderAd = function(type) {
-    if (type !== 'infeed') return '';
+// --- 2. Top Banner Renderer (900x250 Desktop Only) ---
+window.renderTopBanner = function() {
+    const topBannerContainer = document.getElementById('topBannerContainer');
+    if (!topBannerContainer) return;
     
-    return `
-        <div class="ad-infeed" data-ad-type="infeed" data-ad-loaded="false">
-            <div class="ad-placeholder">
-                <span class="ad-label">Sponsored</span>
-                <div class="ad-loading-spinner"></div>
+    // Only show on desktop (768px+)
+    if (window.innerWidth < 768) {
+        topBannerContainer.style.display = 'none';
+        return;
+    }
+    
+    topBannerContainer.innerHTML = `
+        <div style="width: 100%; max-width: 900px; min-height: 250px; display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 100%); border-radius: 16px; padding: 1rem; border: 1px solid rgba(124, 29, 64, 0.2); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(124, 29, 64, 0.5), transparent);"></div>
+            <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; opacity: 0.7;">Advertisement</div>
+            <div class="ad-slot" style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+                <ins class="eas6a97888e2" data-zoneid="6045618"><\/ins>
+                <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
             </div>
         </div>
     `;
 };
 
-// Intersection Observer for lazy ad loading
-let adObserver = null;
-
-function initAdObserver() {
-    if (adObserver) return;
-    
-    adObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && entry.intersectionRatio > 0.1) {
-                loadAdElement(entry.target);
-                adObserver.unobserve(entry.target);
-            }
-        });
-    }, {
-        rootMargin: '200px 0px', // Load 200px before visible
-        threshold: 0.1
-    });
-}
-
-function loadAdElement(container) {
-    if (container.dataset.adLoaded === 'true') return;
-    container.dataset.adLoaded = 'true';
-    
-    const zoneId = AD_CONFIG.zones.infeed;
-    
-    container.innerHTML = `
-        <script async type="application/javascript" src="https://${AD_CONFIG.hosts.ads}/ad-provider.js"><\/script>
-        <ins class="eas6a97888e2" data-zoneid="${zoneId}"></ins>
-        <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
-    `;
-}
-
-// Sticky Ad with viewport awareness
+// --- 3. Sticky Ad Initialization (Mobile 320x250 / Desktop 900x250) ---
 document.addEventListener('DOMContentLoaded', () => {
     const stickyContainer = document.getElementById('stickyAdContent');
-    const stickyWrapper = document.getElementById('stickyAdContainer');
-    const closeBtn = document.getElementById('stickyCloseBtn');
-    
     if (!stickyContainer) return;
-
-    // Close button
-    closeBtn?.addEventListener('click', () => {
-        stickyWrapper.style.transform = 'translateY(100%)';
-        stickyWrapper.style.opacity = '0';
-        setTimeout(() => {
-            stickyWrapper.style.display = 'none';
-        }, 300);
-        
-        // Remember closure
-        sessionStorage.setItem('sticky_ad_closed', Date.now().toString());
-    });
-
-    // Check if recently closed
-    const closedTime = sessionStorage.getItem('sticky_ad_closed');
-    if (closedTime && (Date.now() - parseInt(closedTime)) < 300000) { // 5 min cooldown
-        stickyWrapper.style.display = 'none';
-        return;
-    }
-
-    // Load based on device
-    const isMobile = window.innerWidth < 768;
-    const zoneId = isMobile ? AD_CONFIG.zones.stickyMobile : AD_CONFIG.zones.stickyDesktop;
     
-    // Defer loading until page is stable
-    requestIdleCallback(() => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+        // Mobile: 320x250 Sticky Banner
         stickyContainer.innerHTML = `
-            <div style="display:flex;justify-content:center;padding:${isMobile ? '0' : '0.5rem 0'}">
-                <script async type="application/javascript" src="https://${AD_CONFIG.hosts.ads}/ad-provider.js"><\/script>
-                <ins class="eas6a97888e17" data-zoneid="${zoneId}"></ins>
+            <div style="width: 100%; max-width: 320px; min-height: 250px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+                <ins class="eas6a97888e17" data-zoneid="6045626"><\/ins>
                 <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
             </div>
         `;
-    });
-
-    // Hide sticky when keyboard is open (mobile)
-    if ('visualViewport' in window) {
-        window.visualViewport.addEventListener('resize', () => {
-            const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
-            stickyWrapper.style.display = isKeyboardOpen ? 'none' : 'flex';
-        });
+    } else {
+        // Desktop: 900x250 Sticky Banner
+        stickyContainer.innerHTML = `
+            <div style="width: 100%; max-width: 900px; min-height: 250px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script>
+                <ins class="eas6a97888e17" data-zoneid="6045628"><\/ins>
+                <script>(AdProvider = window.AdProvider || []).push({"serve": {}});<\/script>
+            </div>
+        `;
     }
-
-    // Initialize infeed ad observer
-    initAdObserver();
     
-    // Observe existing ads
-    document.querySelectorAll('.ad-infeed[data-ad-loaded="false"]').forEach(ad => {
-        adObserver.observe(ad);
+    // Premium entrance animation for sticky ad
+    setTimeout(() => {
+        const stickyWrapper = document.getElementById('stickyAdContainer');
+        if (stickyWrapper) {
+            stickyWrapper.style.opacity = '0';
+            stickyWrapper.style.transform = 'translateY(20px)';
+            stickyWrapper.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            
+            requestAnimationFrame(() => {
+                stickyWrapper.style.opacity = '1';
+                stickyWrapper.style.transform = 'translateY(0)';
+            });
+        }
+    }, 1000);
+});
+
+// --- 4. Global Ad Error Handler ---
+// Prevents broken layouts if an ad fails to load
+window.addEventListener('error', (e) => {
+    if (e.target && e.target.tagName === 'SCRIPT') {
+        const adSlot = e.target.closest('.ad-slot');
+        if (adSlot) {
+            adSlot.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 2rem;">Ad temporarily unavailable</div>';
+        }
+    }
+}, true);
+
+// --- 5. Responsive Ad Resize Handler ---
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        // Re-render top banner if screen size changes
+        if (window.renderTopBanner) {
+            window.renderTopBanner();
+        }
+    }, 250);
+});
+
+// --- 6. Initialize Top Banner on Load ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.renderTopBanner) window.renderTopBanner();
     });
-});
-
-// MutationObserver for dynamically added ads
-const adMutationObserver = new MutationObserver((mutations) => {
-    mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-            if (node.nodeType === 1) { // Element
-                const ads = node.matches?.('.ad-infeed') ? [node] : 
-                    node.querySelectorAll?.('.ad-infeed') || [];
-                ads.forEach(ad => {
-                    if (ad.dataset.adLoaded === 'false' && adObserver) {
-                        adObserver.observe(ad);
-                    }
-                });
-            }
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    adMutationObserver.observe(document.body, { childList: true, subtree: true });
-});
-
+} else {
+    if (window.renderTopBanner) window.renderTopBanner();
+}

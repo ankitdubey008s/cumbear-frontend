@@ -2,120 +2,113 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="CumBear - The ultimate premium video experience. Discover high-quality content with a sleek, ad-optimized interface.">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <title>CumBear - Premium Video Experience</title>
-    <meta name="description" content="Premium adult video streaming platform with high-quality content">
     <link rel="canonical" href="https://www.cumbear.in/">
     <base href="https://www.cumbear.in/">
     
-    <!-- Preconnect critical origins -->
+    <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cumbear-backend.vercel.app">
-    <link rel="dns-prefetch" href="https://s.magsrv.com">
-    <link rel="dns-prefetch" href="https://a.magsrv.com">
-    <link rel="dns-prefetch" href="https://s.pemsrv.com">
+    <link rel="preconnect" href="https://a.magsrv.com">
+    <link rel="preconnect" href="https://s.magsrv.com">
     
-    <!-- Preload critical font -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" as="style">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Premium Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Critical CSS inlined, rest async -->
-    <style>
-        /* CRITICAL: Above-fold styles only */
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0f;--bg-card:#0f0f1a;--accent-burgundy:#7c1d40;--accent-dark:#5a1528;--text-primary:#fff;--text-secondary:#a1a1aa;--text-muted:#616168;--border-color:#1f1f2a;--grid-cols:1;--header-h:60px;--footer-h:60px;--safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom)}
-        [data-theme="light"]{--bg-primary:#fff;--bg-secondary:#f4f4f5;--bg-card:#fff;--text-primary:#18181b;--text-secondary:#52525b;--text-muted:#71717a;--border-color:#e4e4e7}
-        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-        html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-        body{font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100dvh;overflow-x:hidden;overscroll-behavior-y:none;-webkit-overflow-scrolling:touch}
-        .hidden{display:none!important}
-        #ageGate{position:fixed;inset:0;background:#000;z-index:9999;display:flex;justify-content:center;align-items:center;padding:1rem}
-        .age-gate-container{background:var(--bg-card);border:1px solid var(--border-color);border-radius:24px;padding:2.5rem 2rem;width:100%;max-width:520px;text-align:center;animation:slideUp .7s cubic-bezier(.16,1,.3,1)}
-        @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-        .site-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:var(--bg-primary);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;z-index:1000;transition:background-color .3s,border-color .3s,transform .3s}
-        .header-logo-container{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:5px}
-        .header-logo-container img{height:44px;width:auto;object-fit:contain;transition:transform .2s}
-        main{padding-top:var(--header-h);min-height:100dvh;background:var(--bg-primary);padding-bottom:calc(var(--footer-h) + var(--safe-bottom) + 80px)}
-        .video-grid{display:grid;grid-template-columns:repeat(var(--grid-cols,1),1fr);gap:16px;padding:12px 4px;contain:layout style paint}
-        .video-card{background:transparent;cursor:pointer;user-select:none;-webkit-user-select:none;contain:layout style;will-change:transform}
-        .video-thumb{position:relative;width:100%;aspect-ratio:16/9;background:#111;overflow:hidden;margin-bottom:.5rem;border-radius:12px;transform:translateZ(0)}
-        .video-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .2s}
-        .video-thumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;z-index:2}
-        .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--footer-h) + var(--safe-bottom));background:var(--bg-secondary);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-top:1px solid var(--border-color);display:flex;justify-content:space-around;align-items:center;z-index:900;padding-bottom:var(--safe-bottom);transition:transform .35s cubic-bezier(.4,0,.2,1)}
-        .view-section{opacity:0;visibility:hidden;position:absolute;width:100%;transform:translateY(20px);transition:opacity .4s ease,transform .4s ease,visibility .4s}
-        .view-section.active{opacity:1;visibility:visible;position:relative;transform:translateY(0)}
-    </style>
-    
-    <!-- Non-critical CSS async loaded -->
-    <link rel="preload" href="/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/header.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/sidebar.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/search.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/footer.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/ads.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/home.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/player.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/shorts.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript>
-        <link rel="stylesheet" href="/style.css">
-        <link rel="stylesheet" href="/header.css">
-        <link rel="stylesheet" href="/sidebar.css">
-        <link rel="stylesheet" href="/search.css">
-        <link rel="stylesheet" href="/footer.css">
-        <link rel="stylesheet" href="/ads.css">
-        <link rel="stylesheet" href="/home.css">
-        <link rel="stylesheet" href="/player.css">
-        <link rel="stylesheet" href="/shorts.css">
-    </noscript>
-
-    <!-- ExoClick Client Hints -->
+    <!-- ExoClick Client Hints for Max Revenue -->
     <meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.magsrv.com; Sec-CH-UA-Mobile https://s.magsrv.com; Sec-CH-UA-Arch https://s.magsrv.com; Sec-CH-UA-Model https://s.magsrv.com; Sec-CH-UA-Platform https://s.magsrv.com; Sec-CH-UA-Platform-Version https://s.magsrv.com; Sec-CH-UA-Bitness https://s.magsrv.com; Sec-CH-UA-Full-Version-List https://s.magsrv.com; Sec-CH-UA-Full-Version https://s.magsrv.com;">
     <meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.pemsrv.com; Sec-CH-UA-Mobile https://s.pemsrv.com; Sec-CH-UA-Arch https://s.pemsrv.com; Sec-CH-UA-Model https://s.pemsrv.com; Sec-CH-UA-Platform https://s.pemsrv.com; Sec-CH-UA-Platform-Version https://s.pemsrv.com; Sec-CH-UA-Bitness https://s.pemsrv.com; Sec-CH-UA-Full-Version-List https://s.pemsrv.com; Sec-CH-UA-Full-Version https://s.pemsrv.com;">
+
+    <!-- Stylesheets (Ordered for Cascade) -->
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/header.css">
+    <link rel="stylesheet" href="/sidebar.css">
+    <link rel="stylesheet" href="/search.css">
+    <link rel="stylesheet" href="/home.css">
+    <link rel="stylesheet" href="/player.css">
+    <link rel="stylesheet" href="/shorts.css">
+    <link rel="stylesheet" href="/footer.css">
+    <link rel="stylesheet" href="/ads.css">
 </head>
 <body>
-    <!-- Google Translate hidden element -->
-    <div id="google_translate_element" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;" aria-hidden="true"></div>
+    <!-- ============================================
+         GLOBAL POPUNDER (ExoClick Zone: 6045624)
+         Triggers on link clicks for max revenue
+         ============================================ -->
+    <script type="application/javascript">
+    (function() {
+        function randStr(e,t){for(var n="",r=t||"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",o=0;o<e;o++)n+=r.charAt(Math.floor(Math.random()*r.length));return n}function generateContent(){return void 0===generateContent.val&&(generateContent.val="document.dispatchEvent("+randStr(4*Math.random()+3)+");"),generateContent.val}try{Object.defineProperty(document.currentScript,"innerHTML",{get:generateContent}),Object.defineProperty(document.currentScript,"textContent",{get:generateContent})}catch(e){};
+        var adConfig = {
+            "ads_host": "a.pemsrv.com", "syndication_host": "s.pemsrv.com", "idzone": 6045624,
+            "popup_fallback": false, "popup_force": true, "chrome_enabled": true, "new_tab": true,
+            "frequency_period": 360, "frequency_count": 1, "trigger_method": 3, "trigger_class": "",
+            "trigger_delay": 0, "capping_enabled": true, "tcf_enabled": true, "agego_cross_site_enabled": true, "only_inline": false
+        };
+        var popMagic={version:12,cookie_name:"",url:"",config:{},open_count:0,top:null,browser:null,venor_loaded:!1,venor:!1,tcfData:null,native_ad_class:".msg-native-widget-item",remoteLicensedDomains:["exdynsrv.com","exosrv.com","exoclick.com","opoxv.com","exacdn.com","pemsrv.com"],configTpl:{ads_host:"",syndication_host:"",idzone:"",frequency_period:720,frequency_count:1,trigger_method:1,trigger_class:"",popup_force:!1,popup_fallback:!1,chrome_enabled:!0,new_tab:!1,cat:"",tags:"",el:"",sub:"",sub2:"",sub3:"",block_ad_types:"",only_inline:!1,trigger_delay:0,capping_enabled:!0,tcf_enabled:!1,agego_cross_site_enabled:!0,cookieconsent:!0,should_fire:function(){return!0},on_redirect:null},isAdsDomainLicensed:function(){for(var e=this.config.ads_host,o=this.remoteLicensedDomains.concat([".local","localhost","127.0.0.1"]),t=0;t<o.length;t++){var i=o[t];if("string"==typeof i)if("."===i.charAt(0)){var n=i,r=i.substring(1);if(e.slice(-n.length)===n||e===r)return!0}else{var a=e===i,c="."+i,p=e.slice(-c.length)===c;if(a||p)return!0}}return!1},init:function(e){if(void 0!==e.idzone&&e.idzone){void 0===e.customTargeting&&(e.customTargeting=[]),window.customTargeting=e.customTargeting||null;var o=Object.keys(e.customTargeting).filter(function(e){return 0<=e.search("ex_")});for(var t in o.length&&o.forEach(function(e){return this.configTpl[e]=null}.bind(this)),this.configTpl)Object.prototype.hasOwnProperty.call(this.configTpl,t)&&(void 0!==e[t]?this.config[t]=e[t]:this.config[t]=this.configTpl[t]);if(void 0!==this.config.idzone&&""!==this.config.idzone){!0!==this.config.only_inline&&this.isAdsDomainLicensed()&&this.loadHosted();var i=this;this.checkTCFConsent(function(){"complete"===document.readyState?i.preparePopWait():i.addEventToElement(window,"load",i.preparePop)})}}},getCountFromCookie:function(){if(!this.config.cookieconsent)return 0;var e=popMagic.getCookie(popMagic.cookie_name),o=void 0===e?0:parseInt(e);return isNaN(o)&&(o=0),o},getLastOpenedTimeFromCookie:function(){var e=popMagic.getCookie(popMagic.cookie_name),o=null;if(e){var t=parseInt(e.split(";")[1]);o=0<t?t:0}return isNaN(o)&&(o=null),o},shouldShow:function(e){if(e=e||!1,!popMagic.config.capping_enabled){var o=!0,t=popMagic.config.should_fire;try{e||"function"!=typeof t||(o=Boolean(t()))}catch(e){console.error("Error executing should fire callback function:",e)}return o&&0===popMagic.open_count}if(popMagic.open_count>=popMagic.config.frequency_count)return!1;var i=popMagic.getCountFromCookie(),n=popMagic.getLastOpenedTimeFromCookie(),r=Math.floor(Date.now()/1e3),a=n+popMagic.config.trigger_delay;return!(n&&r<a)&&!((popMagic.open_count=i)>=popMagic.config.frequency_count)},venorShouldShow:function(){return popMagic.venor_loaded&&"0"===popMagic.venor},setAsOpened:function(e){var o=e?e.target||e.srcElement:null,t={id:"",tagName:"",classes:"",text:"",href:"",elm:""};void 0!==o&&null!=o&&(t={id:void 0!==o.id&&null!=o.id?o.id:"",tagName:void 0!==o.tagName&&null!=o.tagName?o.tagName:"",classes:void 0!==o.classList&&null!=o.classList?o.classList:"",text:void 0!==o.outerText&&null!=o.outerText?o.outerText:"",href:void 0!==o.href&&null!=o.href?o.href:"",elm:o});var i=new CustomEvent("creativeDisplayed-"+popMagic.config.idzone,{detail:t});if(document.dispatchEvent(i),popMagic.config.capping_enabled){var n=1;n=0!==popMagic.open_count?popMagic.open_count+1:popMagic.getCountFromCookie()+1;var r=Math.floor(Date.now()/1e3);popMagic.config.cookieconsent&&popMagic.setCookie(popMagic.cookie_name,n+";"+r,popMagic.config.frequency_period)}else++popMagic.open_count},loadHosted:function(){var e=document.createElement("script");for(var o in e.type="application/javascript",e.async=!0,e.src="//"+this.config.ads_host+"/popunder1000.js",e.id="popmagicldr",this.config)Object.prototype.hasOwnProperty.call(this.config,o)&&"ads_host"!==o&&"syndication_host"!==o&&e.setAttribute("data-msg-"+o,this.config[o]);var t=document.getElementsByTagName("body").item(0);t.firstChild?t.insertBefore(e,t.firstChild):t.appendChild(e)},preparePopWait:function(){setTimeout(popMagic.preparePop,400)},preparePop:function(){if("object"!=typeof msgJsPop101||!Object.prototype.hasOwnProperty.call(msgJsPop101,"add")){if(popMagic.top=self,popMagic.top!==self)try{top.document.location.toString()&&(popMagic.top=top)}catch(e){}if(popMagic.cookie_name="zone-cap-"+popMagic.config.idzone,popMagic.config.capping_enabled||(document.cookie=popMagic.cookie_name+"=;expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/"),popMagic.shouldShow(!0)){var e=new XMLHttpRequest;e.onreadystatechange=function(){e.readyState==XMLHttpRequest.DONE&&(popMagic.venor_loaded=!0,200==e.status?popMagic.venor=e.responseText:popMagic.venor="0")};var o=("https:"!==document.location.protocol&&"http:"!==document.location.protocol?"https:":document.location.protocol)+"//"+popMagic.config.syndication_host+"/venor.php?cookieconsent="+popMagic.config.cookieconsent;e.open("GET",popMagic.addNuvtValueToUrl(o),!0),e.withCredentials=!0;try{e.send()}catch(e){popMagic.venor_loaded=!0}}if(popMagic.buildUrl(),popMagic.browser=popMagic.browserDetector.getBrowserInfo(),popMagic.config.chrome_enabled||!popMagic.browser.isChrome){var t=popMagic.getPopMethod(popMagic.browser);popMagic.addEvent("click",t),popMagic.prefetchAgToken()}}},getPopMethod:function(e){return popMagic.config.popup_force?popMagic.methods.popup:popMagic.config.popup_fallback&&e.isChrome&&68<=e.version&&!e.isMobile?popMagic.methods.popup:e.isMobile?popMagic.methods.default:e.isChrome?popMagic.methods.chromeTab:popMagic.methods.default},checkTCFConsent:function(t){if(this.config.tcf_enabled&&"function"==typeof window.__tcfapi){var i=this;window.__tcfapi("addEventListener",2,function(e,o){o&&("tcloaded"!==(i.tcfData=e).eventStatus&&"useractioncomplete"!==e.eventStatus||(window.__tcfapi("removeEventListener",2,function(){},e.listenerId),t()))})}else t()},buildUrl:function(){var t,e="https:"!==document.location.protocol&&"http:"!==document.location.protocol?"https:":document.location.protocol,o=top===self?document.URL:document.referrer,i={type:"inline",name:"popMagic",ver:this.version},n="";customTargeting&&Object.keys(customTargeting).length&&("object"==typeof customTargeting?Object.keys(customTargeting):customTargeting).forEach(function(e){"object"==typeof customTargeting?t=customTargeting[e]:Array.isArray(customTargeting)&&(t=scriptEl.getAttribute(e));var o=e.replace("data-msg-","").replace("data-exo-","");n+="&"+o+"="+t});var r,a,c=this.tcfData&&this.tcfData.gdprApplies&&!0===this.tcfData.gdprApplies?1:0;this.url=e+"//"+this.config.syndication_host+"/v1/link.php?cat="+this.config.cat+"&idzone="+this.config.idzone+"&type=8&p="+encodeURIComponent(o)+"&sub="+this.config.sub+(""!==this.config.sub2?"&sub2="+this.config.sub2:"")+(""!==this.config.sub3?"&sub3="+this.config.sub3:"")+"&block=1&el="+this.config.el+"&tags="+this.config.tags+(""!==this.config.block_ad_types?"&block_ad_types="+this.config.block_ad_types:"")+"&scr_info="+(a=(r=i).type+"|"+r.name+"|"+r.ver,encodeURIComponent(btoa(a)))+n+"&gdpr="+c+"&cb="+Math.floor(1e9*Math.random()),this.tcfData&&this.tcfData.tcString?this.url+="&gdpr_consent="+encodeURIComponent(this.tcfData.tcString):this.url+="&cookieconsent="+this.config.cookieconsent},addSuvtValueToUrl:function(e){var o=popMagic.getCookie("__suvt");if(o){var t=-1!==e.indexOf("?")?"&":"?";return e+t+"suvt="+o}return e},addNuvtValueToUrl:function(e){var o=popMagic.getCookie("__nuvt");if(o){var t=-1!==e.indexOf("?")?"&":"?";return e+t+"nuvt="+encodeURIComponent(o)}return e},isAgegoEnabled:function(){return"undefined"!=typeof Promise&&void 0!==window.AGEGO&&!0===this.config.agego_cross_site_enabled},prefetchAgToken:function(){if(popMagic.isAgegoEnabled())try{window.AGEGO("prefetchToken")}catch(e){}},addAgeGoToken:function(o){if(!popMagic.isAgegoEnabled())return Promise.resolve(o);try{var e=window.AGEGO("getTokenUrl",o);return e&&"function"==typeof e.then?e:Promise.resolve(o)}catch(e){return Promise.resolve(o)}},addEventToElement:function(e,o,t){e.addEventListener?e.addEventListener(o,t,!1):e.attachEvent?(e["e"+o+t]=t,e[o+t]=function(){e["e"+o+t](window.event)},e.attachEvent("on"+o,e[o+t])):e["on"+o]=e["e"+o+t]},getTriggerClasses:function(){var e,o=[];-1===popMagic.config.trigger_class.indexOf(",")?e=popMagic.config.trigger_class.split(" "):e=popMagic.config.trigger_class.replace(/\s/g,"").split(",");for(var t=0;t<e.length;t++)""!==e[t]&&o.push("."+e[t]);return o},isNativeAdTarget:function(e){if(!e||"function"!=typeof e.closest)return!1;try{return null!==e.closest(popMagic.native_ad_class)}catch(e){return!1}},addEvent:function(e,o){var t,i=function(e){popMagic.isNativeAdTarget(e?e.target||e.srcElement:null)||o.call(this,e)};if("3"!=popMagic.config.trigger_method)if("2"!=popMagic.config.trigger_method||""==popMagic.config.trigger_class)if("4"!=popMagic.config.trigger_method||""==popMagic.config.trigger_class)if("5"!=popMagic.config.trigger_method||""==popMagic.config.trigger_class)popMagic.addEventToElement(document,e,i);else{var n="a"+popMagic.getTriggerClasses().map(function(e){return":not("+e+")"}).join("");t=document.querySelectorAll(n);for(var r=0;r<t.length;r++)popMagic.addEventToElement(t[r],e,i)}else{var a=popMagic.getTriggerClasses();popMagic.addEventToElement(document,e,function(o){a.some(function(e){return null!==o.target.closest(e)})||i.call(o.target,o)})}else{var c=popMagic.getTriggerClasses();for(t=document.querySelectorAll(c.join(", ")),r=0;r<t.length;r++)popMagic.addEventToElement(t[r],e,i)}else for(t=document.querySelectorAll("a"),r=0;r<t.length;r++)popMagic.addEventToElement(t[r],e,i)},setCookie:function(e,o,t){if(!this.config.cookieconsent)return!1;t=parseInt(t,10);var i=new Date;i.setMinutes(i.getMinutes()+parseInt(t));var n=encodeURIComponent(o)+"; expires="+i.toUTCString()+"; path=/";document.cookie=e+"="+n},getCookie:function(e){if(!this.config.cookieconsent)return!1;var o,t,i,n=document.cookie.split(";");for(o=0;o<n.length;o++)if(t=n[o].substr(0,n[o].indexOf("=")),i=n[o].substr(n[o].indexOf("=")+1),(t=t.replace(/^\s+|\s+$/g,""))===e)return decodeURIComponent(i)},randStr:function(e,o){for(var t="",i=o||"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",n=0;n<e;n++)t+=i.charAt(Math.floor(Math.random()*i.length));return t},isValidUserEvent:function(e){return!!("isTrusted"in e&&e.isTrusted&&"ie"!==popMagic.browser.name&&"safari"!==popMagic.browser.name)||0!=e.screenX&&0!=e.screenY},isValidHref:function(e){if(void 0===e||""==e)return!1;return!/\s?javascript\s?:/i.test(e)},findLinkToOpen:function(e){var o=e,t=!1;try{for(var i=0;i<20&&!o.getAttribute("href")&&o!==document&&"html"!==o.nodeName.toLowerCase();)o=o.parentNode,i++;var n=o.getAttribute("target");n&&-1!==n.indexOf("_blank")||(t=o.getAttribute("href"))}catch(e){}return popMagic.isValidHref(t)||(t=!1),t||window.location.href},getPuId:function(){return"ok_"+Math.floor(89999999*Math.random()+1e7)},executeOnRedirect:function(){try{popMagic.config.capping_enabled||"function"!=typeof popMagic.config.on_redirect||popMagic.config.on_redirect()}catch(e){console.error("Error executing on redirect callback:",e)}},browserDetector:{browserDefinitions:[["firefox",/Firefox\/([0-9.]+)(?:\s|$)/],["opera",/Opera\/([0-9.]+)(?:\s|$)/],["opera",/OPR\/([0-9.]+)(:?\s|$)$/],["edge",/Edg(?:e|)\/([0-9._]+)/],["ie",/Trident\/7\.0.*rv:([0-9.]+)\).*Gecko$/],["ie",/MSIE\s([0-9.]+);.*Trident\/[4-7].0/],["ie",/MSIE\s(7\.0)/],["safari",/Version\/([0-9._]+).*Safari/],["chrome",/(?!Chrom.*Edg(?:e|))Chrom(?:e|ium)\/([0-9.]+)(:?\s|$)/],["chrome",/(?!Chrom.*OPR)Chrom(?:e|ium)\/([0-9.]+)(:?\s|$)/],["bb10",/BB10;\sTouch.*Version\/([0-9.]+)/],["android",/Android\s([0-9.]+)/],["ios",/Version\/([0-9._]+).*Mobile.*Safari.*/],["yandexbrowser",/YaBrowser\/([0-9._]+)/],["crios",/CriOS\/([0-9.]+)(:?\s|$)/]],isChromeOrChromium:function(){var e=window.navigator,o=(e.userAgent||"").toLowerCase(),t=e.vendor||"";if(-1!==o.indexOf("crios"))return!0;if(e.userAgentData&&Array.isArray(e.userAgentData.brands)&&0<e.userAgentData.brands.length){var i=e.userAgentData.brands,n=i.some(function(e){return"Google Chrome"===e.brand}),r=i.some(function(e){return"Chromium"===e.brand})&&2===i.length;return n||r}var a=!!window.chrome,c=-1!==o.indexOf("edg"),p=!!window.opr||-1!==o.indexOf("opr"),s=!(!e.brave||!e.brave.isBrave),g=-1!==o.indexOf("vivaldi"),l=-1!==o.indexOf("yabrowser"),d=-1!==o.indexOf("samsungbrowser"),u=-1!==o.indexOf("ucbrowser");return a&&"Google Inc."===t&&!c&&!p&&!s&&!g&&!l&&!d&&!u},getBrowserInfo:function(){var e=window.navigator.userAgent,o={name:"other",version:"1.0",versionNumber:1,isChrome:this.isChromeOrChromium(),isMobile:!!e.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WebOS|Windows Phone/i)};for(var t in this.browserDefinitions){var i=this.browserDefinitions[t];if(i[1].test(e)){var n=i[1].exec(e),r=n&&n[1].split(/[._]/).slice(0,3),a=Array.prototype.slice.call(r,1).join("")||"0";r&&r.length<3&&Array.prototype.push.apply(r,1===r.length?[0,0]:[0]),o.name=i[0],o.version=r.join("."),o.versionNumber=parseFloat(r[0]+"."+a);break}}return o}},methods:{default:function(e){if(!popMagic.shouldShow()||!popMagic.venorShouldShow()||!popMagic.isValidUserEvent(e))return!0;var o=e.target||e.srcElement,t=popMagic.findLinkToOpen(o),i=popMagic.addSuvtValueToUrl(popMagic.url);return window.open(t,"_blank"),popMagic.setAsOpened(e),popMagic.executeOnRedirect(),popMagic.isAgegoEnabled()?popMagic.addAgeGoToken(i).then(function(e){popMagic.top.document.location=e}):popMagic.top.document.location=i,void 0!==e.preventDefault&&(e.preventDefault(),e.stopPropagation()),!0},chromeTab:function(e){if(!popMagic.shouldShow()||!popMagic.venorShouldShow()||!popMagic.isValidUserEvent(e))return!0;if(void 0===e.preventDefault)return!0;e.preventDefault(),e.stopPropagation();var o=popMagic.addSuvtValueToUrl(popMagic.url),t=top.window.document.createElement("a"),i=e.target||e.srcElement;t.href=popMagic.findLinkToOpen(i),document.getElementsByTagName("body")[0].appendChild(t);var n=new MouseEvent("click",{bubbles:!0,cancelable:!0,view:window,screenX:0,screenY:0,clientX:0,clientY:0,ctrlKey:!0,altKey:!1,shiftKey:!1,metaKey:!0,button:0});n.preventDefault=void 0,t.dispatchEvent(n),t.parentNode.removeChild(t),popMagic.executeOnRedirect(),popMagic.isAgegoEnabled()?popMagic.addAgeGoToken(o).then(function(e){window.open(e,"_self")}):window.open(o,"_self"),popMagic.setAsOpened(e)},popup:function(e){if(!popMagic.shouldShow()||!popMagic.venorShouldShow()||!popMagic.isValidUserEvent(e))return!0;var o="";if(popMagic.config.popup_fallback&&!popMagic.config.popup_force){var t=Math.max(Math.round(.8*window.innerHeight),300);o="menubar=1,resizable=1,width="+Math.max(Math.round(.7*window.innerWidth),300)+",height="+t+",top="+(window.screenY+100)+",left="+(window.screenX+100)}var i=document.location.href,n=window.open(i,popMagic.getPuId(),o);popMagic.setAsOpened(e),setTimeout(function(){popMagic.isAgegoEnabled()?popMagic.addAgeGoToken(popMagic.url).then(function(e){n.location.href=e,popMagic.executeOnRedirect()}):(n.location.href=popMagic.url,popMagic.executeOnRedirect())},200),void 0!==e.preventDefault&&(e.preventDefault(),e.stopPropagation())}}};
+        popMagic.init(adConfig);
+    })();
+    </script>
 
-    <!-- Age Gate -->
+    <!-- ============================================
+         AGE VERIFICATION GATE
+         Premium, secure-looking overlay
+         ============================================ -->
     <div class="age-gate-overlay" id="ageGate">
         <div class="age-gate-container">
             <div class="logo-wrapper">
-                <img src="/cumb.png" alt="CumBear Logo" class="brand-logo" width="240" height="80" fetchpriority="high">
+                <img src="/cumb.png" alt="CumBear Premium Logo" class="brand-logo">
             </div>
-            <h1 class="gate-title">Age Verification</h1>
+            <h1 class="gate-title">Age Verification Required</h1>
             <div class="disclaimer-box">
-                <p class="disclaimer-text">WARNING: This website contains strictly age-restricted material. By clicking "I am 18+ Years Old", you legally affirm you are at least eighteen (18) years of age or the legal age of majority in your jurisdiction.</p>
-                <p class="disclaimer-text">You voluntarily consent to view such material. If you are not of legal age, or if this is illegal in your area, you must immediately exit. We strictly prohibit minors.</p>
+                <p class="disclaimer-text">
+                    <strong>WARNING:</strong> This website contains strictly age-restricted material intended for adults only. By proceeding, you legally affirm that you are at least eighteen (18) years of age or the legal age of majority in your jurisdiction.
+                </p>
+                <p class="disclaimer-text">
+                    You voluntarily consent to view such material. If you are not of legal age, or if accessing this content is illegal in your area, you must exit immediately. We strictly prohibit access by minors.
+                </p>
             </div>
             <div class="button-wrapper">
-                <button class="btn-exit" onclick="exitSite()" type="button">Exit Website</button>
-                <button class="btn-enter" onclick="verifyAge()" type="button"><span>I am 18+ Years Old</span></button>
+                <button class="btn-exit" onclick="exitSite()" aria-label="Exit Website">Exit Website</button>
+                <button class="btn-enter" onclick="verifyAge()" aria-label="Enter Website">
+                    <span>I am 18+ Years Old</span>
+                </button>
             </div>
             <p class="security-note">Secure verification required</p>
         </div>
     </div>
 
-    <!-- Main App -->
+    <!-- ============================================
+         MAIN APPLICATION
+         Hidden until age is verified
+         ============================================ -->
     <div id="mainApp" class="hidden">
+        
+        <!-- HEADER -->
         <header class="site-header" id="siteHeader">
-            <button class="header-btn" id="menuBtn" aria-label="Menu" type="button">
-                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <button class="header-btn" id="menuBtn" aria-label="Open Menu">
+                <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
-            <div class="header-logo-container" id="homeLogoBtn" role="button" tabindex="0" aria-label="Go to homepage">
-                <img src="/cumb.png" alt="CumBear" width="120" height="40" fetchpriority="high" decoding="async">
+            <div class="header-logo-container" id="homeLogoBtn" role="button" aria-label="Go to Home">
+                <img src="/cumb.png" alt="CumBear">
             </div>
-            <button class="header-btn" id="searchBtn" aria-label="Search" type="button">
-                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <button class="header-btn" id="searchBtn" aria-label="Open Search">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
         </header>
 
-        <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
-        <aside class="site-sidebar" id="siteSidebar" aria-label="Main navigation" aria-hidden="true">
+        <!-- SIDEBAR OVERLAY & MENU -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <aside class="site-sidebar" id="siteSidebar" aria-hidden="true">
             <div class="sidebar-header">
-                <img src="/cumb.png" alt="CumBear" class="sidebar-logo" width="100" height="34" loading="lazy" decoding="async">
-                <button class="close-btn" id="closeSidebar" aria-label="Close sidebar" type="button">✕</button>
+                <img src="/cumb.png" alt="CumBear" class="sidebar-logo">
+                <button class="close-btn" id="closeSidebar" aria-label="Close Menu">✕</button>
             </div>
             <div class="sidebar-content">
                 <div>
@@ -123,13 +116,13 @@
                     <div class="control-group">
                         <div class="control-row">
                             <span class="control-label">Theme</span>
-                            <button class="theme-toggle-btn" id="themeToggleBtn" type="button">Light Mode</button>
+                            <button class="theme-toggle-btn" id="themeToggleBtn">Light Mode</button>
                         </div>
-                        <div class="control-row clickable-row" id="gridViewRow" role="button" tabindex="0">
+                        <div class="control-row clickable-row" id="gridViewRow">
                             <span class="control-label">Grid View</span>
                             <span class="control-value" id="gridValueDisplay">1 Column</span>
                         </div>
-                        <div class="control-row clickable-row" id="languageRow" role="button" tabindex="0">
+                        <div class="control-row clickable-row" id="languageRow">
                             <span class="control-label">Language</span>
                             <span class="control-value" id="langValueDisplay">English</span>
                         </div>
@@ -138,173 +131,188 @@
                 <div class="sidebar-divider"></div>
                 <div>
                     <div class="sidebar-section-title">Navigate</div>
-                    <nav class="nav-links" aria-label="Primary navigation">
-                        <a class="nav-link active" data-target="homeView" href="#home" role="button">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <div class="nav-links">
+                        <a class="nav-link active" data-target="homeView">
+                            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             Home
                         </a>
-                        <a class="nav-link" data-target="shortsView" href="#shorts" role="button">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        <a class="nav-link" data-target="shortsView">
+                            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                             Shorts
                         </a>
-                        <a class="nav-link" data-target="categoriesView" href="#categories" role="button">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <a class="nav-link" data-target="categoriesView">
+                            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                             Categories
                         </a>
-                    </nav>
+                    </div>
                 </div>
                 <div class="sidebar-divider"></div>
                 <div>
                     <div class="sidebar-section-title">Legal & Support</div>
-                    <nav class="nav-links" aria-label="Legal navigation">
-                        <a class="nav-link" href="/support"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Support</a>
-                        <a class="nav-link" href="/report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="12" y1="20" x2="12" y2="15"></line></svg>Report Issue</a>
-                        <a class="nav-link" href="/privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>Privacy Policy</a>
-                    </nav>
+                    <div class="nav-links">
+                        <a class="nav-link" href="/support">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            Support
+                        </a>
+                        <a class="nav-link" href="/report">
+                            <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="12" y1="20" x2="12" y2="15"></line></svg>
+                            Report Issue
+                        </a>
+                        <a class="nav-link" href="/privacy">
+                            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Privacy Policy
+                        </a>
+                    </div>
                 </div>
                 <div class="sidebar-divider"></div>
                 <div>
                     <div class="sidebar-section-title">Follow Us</div>
                     <div class="social-grid">
-                        <a href="https://www.facebook.com/share/1Cj5K1UMPX/" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
-                        <a href="https://t.me/cumbear_offical" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="Telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-16.5 6.498a2.25 2.25 0 0 0 .102 4.22l4.2 1.302 1.95 5.85a1.5 1.5 0 0 0 2.85 0l2.85-8.55 4.2-1.4a2.25 2.25 0 0 0 1.37-2.135z"></path></svg></a>
-                        <a href="https://x.com/cumbear_offical" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="X (Twitter)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
-                        <a href="https://www.youtube.com/@cumbear" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#000"></polygon></svg></a>
-                        <a href="https://www.tiktok.com/@cumbear_offical" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"></path></svg></a>
-                        <a href="https://www.instagram.com/cumbear_offical" target="_blank" rel="noopener noreferrer" class="social-icon-btn" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+                        <a href="https://www.facebook.com/share/1Cj5K1UMPX/" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Facebook">
+                            <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                        </a>
+                        <a href="https://t.me/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Telegram">
+                            <svg viewBox="0 0 24 24"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-16.5 6.498a2.25 2.25 0 0 0 .102 4.22l4.2 1.302 1.95 5.85a1.5 1.5 0 0 0 2.85 0l2.85-8.55 4.2-1.4a2.25 2.25 0 0 0 1.37-2.135z"></path></svg>
+                        </a>
+                        <a href="https://x.com/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="X (Twitter)">
+                            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                        </a>
+                        <a href="https://www.youtube.com/@cumbear" target="_blank" rel="noopener" class="social-icon-btn" aria-label="YouTube">
+                            <svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#000"></polygon></svg>
+                        </a>
+                        <a href="https://www.tiktok.com/@cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="TikTok">
+                            <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"></path></svg>
+                        </a>
+                        <a href="https://www.instagram.com/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Instagram">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                        </a>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <main>
-            <!-- Home View -->
-            <section id="homeView" class="view-section active" aria-label="Home">
-                <div class="horizontal-cats" id="horizontalCats" role="tablist" aria-label="Categories">
-                    <button class="h-cat-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
+        <!-- MAIN CONTENT AREA -->
+        <main style="padding-top: var(--header-height); min-height: 100vh; background-color: var(--bg-primary); padding-bottom: calc(var(--footer-height) + 20px);">
+            
+            <!-- HOME VIEW -->
+            <section id="homeView" class="view-section active">
+                <div class="horizontal-cats" id="horizontalCats">
+                    <button class="h-cat-chip active" data-cat="all">All</button>
                 </div>
                 
-                <!-- Top Banner Ad -->
-                <div id="topBannerContainer" style="padding:0 1rem;margin-bottom:1rem;display:flex;justify-content:center;min-height:90px" aria-label="Advertisement"></div>
+                <!-- 900x250 Top Banner (Desktop Optimized) -->
+                <div id="topBannerContainer" style="padding: 0 1rem; margin-bottom: 1rem; display: flex; justify-content: center;"></div>
 
                 <div class="filter-bar">
                     <div class="filter-title">CumBear Latest</div>
                     <div class="filter-dropdown">
-                        <button class="filter-btn" id="filterBtn" type="button" aria-haspopup="true" aria-expanded="false">
+                        <button class="filter-btn" id="filterBtn">
                             <span>Popular</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
-                        <div class="filter-menu" id="filterMenu" role="menu" aria-hidden="true">
-                            <div class="filter-option active" data-sort="" role="menuitem">Popular</div>
-                            <div class="filter-option" data-sort="newest" role="menuitem">Newest</div>
-                            <div class="filter-option" data-sort="views" role="menuitem">Most Watched</div>
-                            <div class="filter-option" data-sort="duration" role="menuitem">Long Duration</div>
+                        <div class="filter-menu" id="filterMenu">
+                            <div class="filter-option active" data-sort="">Popular</div>
+                            <div class="filter-option" data-sort="newest">Newest</div>
+                            <div class="filter-option" data-sort="views">Most Watched</div>
+                            <div class="filter-option" data-sort="duration">Long Duration</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="video-grid" id="videoGrid" role="list" aria-label="Videos"></div>
-                <div class="pagination" id="paginationContainer" role="navigation" aria-label="Pagination"></div>
+                <div class="video-grid" id="videoGrid"></div>
+                <div class="pagination" id="paginationContainer"></div>
                 
-                <div style="padding:1rem">
-                    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">Browse Categories</h2>
-                    <div class="categories-grid" id="bottomCatsContainer" role="list"></div>
+                <div style="padding: 1rem;">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">Browse Categories</h2>
+                    <div class="categories-grid" id="bottomCatsContainer"></div>
                 </div>
                 
                 <footer class="site-footer" id="siteFooter"></footer>
             </section>
             
-            <!-- Shorts View -->
-            <section id="shortsView" class="view-section hidden" aria-label="Shorts">
-                <div class="shorts-container" id="shortsContainer" role="list"></div>
+            <!-- SHORTS VIEW -->
+            <section id="shortsView" class="view-section hidden">
+                <div class="shorts-container" id="shortsContainer"></div>
             </section>
             
-            <!-- Categories/Search View -->
-            <section id="categoriesView" class="view-section hidden" aria-label="Categories and Search">
-                <form class="search-header" id="searchForm" role="search">
+            <!-- CATEGORIES / SEARCH VIEW -->
+            <section id="categoriesView" class="view-section hidden">
+                <form class="search-header" id="searchForm">
                     <div class="search-input-wrapper">
-                        <svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        <input type="search" class="search-input" id="searchInput" placeholder="Search videos or categories..." aria-label="Search videos" autocomplete="off" enterkeyhint="search">
+                        <svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search videos or categories..." autocomplete="off">
                     </div>
                     <button type="submit" class="search-submit-btn">Search</button>
                 </form>
+                
                 <div class="categories-hub" id="categoriesHub">
                     <h2 class="categories-hub-title">Browse Categories</h2>
-                    <div class="categories-grid" id="categoriesGrid" role="list"></div>
+                    <div class="categories-grid" id="categoriesGrid"></div>
                 </div>
+                
                 <div class="search-results-header hidden" id="searchResultsHeader">
-                    <button class="back-btn" id="backToCategoriesBtn" type="button" aria-label="Back to categories">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <button class="back-btn" id="backToCategoriesBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     </button>
-                    <span id="currentSearchTerm" style="font-weight:600;font-size:1rem;color:var(--text-primary)">Results</span>
+                    <span id="currentSearchTerm" style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Results</span>
                 </div>
             </section>
 
-            <!-- Player View -->
-            <section id="playerView" class="view-section hidden" aria-label="Video Player">
-                <!-- VAST Pre-roll Overlay -->
-                <div id="vastOverlay" class="vast-overlay hidden" aria-hidden="true">
-                    <video id="vastVideo" playsinline muted preload="auto"></video>
-                    <div class="vast-skip-btn hidden" id="vastSkipBtn" role="button" tabindex="0">
-                        Skip Ad in <span id="vastCountdown">7</span>s
-                    </div>
+            <!-- PLAYER VIEW -->
+            <section id="playerView" class="view-section hidden">
+                <!-- Custom VAST Pre-roll Overlay -->
+                <div id="vastOverlay" class="vast-overlay hidden">
+                    <video id="vastVideo" playsinline></video>
+                    <div class="vast-skip-btn" id="vastSkipBtn">Skip Ad in <span id="vastCountdown">7</span>s</div>
                 </div>
 
-                <div class="player-container" id="playerContainer" style="background:#000;width:100%;aspect-ratio:16/9;position:relative">
-                    <video id="mainVideo" controls playsinline preload="metadata" style="width:100%;height:100%;object-fit:contain" crossorigin="anonymous"></video>
+                <div class="player-container" id="playerContainer">
+                    <video id="mainVideo" controls playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
                 </div>
+                
                 <div class="player-info">
                     <h1 class="player-title" id="playerTitleDisplay">Video Title</h1>
                     <div class="player-actions">
-                        <button class="action-btn" id="likeBtn" type="button">
-                            <span class="like-icon">❤️</span> Like
-                        </button>
-                        <button class="action-btn" id="shareBtn" type="button">🔗 Share</button>
+                        <button class="action-btn" id="playerLikeBtn">❤️ Like</button>
+                        <button class="action-btn" id="playerShareBtn">🔗 Share</button>
                     </div>
                 </div>
+                
                 <h3 class="suggestions-title">Suggested Videos</h3>
-                <div class="video-grid" id="suggestionsGrid" style="grid-template-columns:repeat(2,1fr)" role="list"></div>
+                <div class="video-grid" id="suggestionsGrid" style="grid-template-columns: repeat(2, 1fr);"></div>
             </section>
         </main>
 
-        <!-- Sticky Ad -->
-        <div id="stickyAdContainer" class="sticky-ad-wrapper" aria-label="Advertisement">
-            <button class="sticky-close-btn" id="stickyCloseBtn" type="button" aria-label="Close advertisement">✕</button>
+        <!-- STICKY AD CONTAINER (Mobile 320x250 / Desktop 900x250) -->
+        <div id="stickyAdContainer" class="sticky-ad-wrapper">
+            <button class="sticky-close-btn" onclick="document.getElementById('stickyAdContainer').style.display='none'" aria-label="Close Ad">✕</button>
             <div id="stickyAdContent"></div>
         </div>
 
-        <!-- Bottom Navigation -->
-        <footer class="bottom-nav" id="bottomNav" role="navigation" aria-label="Main navigation">
-            <button class="nav-item active" data-view="homeView" type="button" aria-label="Home" aria-current="page">
-                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <!-- BOTTOM NAVIGATION -->
+        <footer class="bottom-nav" id="bottomNav">
+            <button class="nav-item active" data-view="homeView" aria-label="Home">
+                <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                 <span class="nav-label">Home</span>
             </button>
-            <button class="nav-item" data-view="shortsView" type="button" aria-label="Shorts">
-                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <button class="nav-item" data-view="shortsView" aria-label="Shorts">
+                <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 <span class="nav-label">Shorts</span>
             </button>
         </footer>
     </div>
 
-    <!-- Deferred scripts for performance -->
-    <script src="/script.js" defer></script>
-    <script src="/header.js" defer></script>
-    <script src="/sidebar.js" defer></script>
-    <script src="/search.js" defer></script>
-    <script src="/footer.js" defer></script>
-    <script src="/ads.js" defer></script>
-    <script src="/home.js" defer></script>
-    <script src="/player.js" defer></script>
-    <script src="/shorts.js" defer></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator && location.protocol === 'https:') {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(() => {});
-            });
-        }
-    </script>
+    <!-- ============================================
+         SCRIPTS (Ordered for Dependencies)
+         ============================================ -->
+    <script src="/script.js"></script>
+    <script src="/header.js"></script>
+    <script src="/sidebar.js"></script>
+    <script src="/search.js"></script>
+    <script src="/footer.js"></script>
+    <script src="/ads.js"></script>
+    <script src="/home.js"></script>
+    <script src="/player.js"></script>
+    <script src="/shorts.js"></script>
 </body>
 </html>
-

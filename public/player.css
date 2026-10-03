@@ -1,76 +1,78 @@
 /* ============================================
-   VIDEO PLAYER - PRODUCTION STYLES
+   CUMBEAR ULTRA PREMIUM - Video Player
+   Version: 2.0 Enhanced
    ============================================ */
 
+/* --- Player Container (Cinematic) --- */
 .player-container {
     width: 100%;
     background: #000;
     position: relative;
     aspect-ratio: 16/9;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     overflow: hidden;
     border-radius: 0;
-}
-
-.player-container.loading::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--bg-secondary);
-    z-index: 5;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 .player-container video {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    display: block;
+    background: #000;
 }
 
-/* Custom controls overlay */
+/* --- Player Controls Overlay (Cinematic Gradient) --- */
 .player-controls {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.3) 100%);
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 50%,
+        rgba(0, 0, 0, 0.8) 100%
+    );
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     padding: 1.25rem;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    opacity: 1;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
-    z-index: 10;
 }
 
-.player-container:hover .player-controls,
-.player-container.show-controls .player-controls {
-    opacity: 1;
+.player-container:not(.hide-controls) .player-controls {
     pointer-events: all;
 }
 
-/* Progress bar */
+.player-container.hide-controls .player-controls {
+    opacity: 0;
+}
+
+/* --- Progress Bar (Premium Burgundy) --- */
 .progress-bar-container {
     width: 100%;
-    height: 4px;
+    height: 5px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
+    border-radius: 3px;
     margin-bottom: 1rem;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
+    transition: height 0.2s ease;
 }
 
 .progress-bar-container:hover {
-    height: 6px;
+    height: 7px;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background: var(--accent-burgundy);
+    background: linear-gradient(90deg, var(--accent-burgundy), var(--accent-burgundy-light));
     width: 0%;
-    border-radius: inherit;
+    border-radius: 3px;
     position: relative;
     transition: width 0.1s linear;
+    box-shadow: 0 0 8px rgba(124, 29, 64, 0.6);
 }
 
 .progress-bar-fill::after {
@@ -78,20 +80,21 @@
     position: absolute;
     right: -6px;
     top: 50%;
-    transform: translateY(-50%) scale(0);
+    transform: translateY(-50%);
     width: 12px;
     height: 12px;
-    background: white;
+    background: var(--accent-burgundy);
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    transition: transform 0.2s var(--ease-out-back);
+    box-shadow: 0 0 10px rgba(124, 29, 64, 0.8);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .progress-bar-container:hover .progress-bar-fill::after {
-    transform: translateY(-50%) scale(1);
+    opacity: 1;
 }
 
-/* Controls row */
+/* --- Controls Row --- */
 .controls-row {
     display: flex;
     align-items: center;
@@ -100,28 +103,19 @@
     gap: 1rem;
 }
 
-.controls-left,
-.controls-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
 .ctrl-btn {
-    background: none;
+    background: transparent;
     border: none;
     color: white;
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     cursor: pointer;
     padding: 0.5rem;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--duration-fast) var(--ease-smooth);
-    position: relative;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .ctrl-btn:hover {
@@ -130,83 +124,59 @@
 
 .ctrl-btn:active {
     transform: scale(0.9);
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(124, 29, 64, 0.3);
 }
 
-/* Time display */
 .time-display {
     font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-    font-family: 'Manrope', monospace;
+    font-weight: 600;
     letter-spacing: 0.5px;
 }
 
-/* Double tap zones */
+/* --- Double-Tap Zones (Invisible but Interactive) --- */
 .double-tap-zone {
     position: absolute;
     top: 0;
     height: 100%;
-    width: 35%;
+    width: 30%;
     z-index: 5;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     transition: opacity 0.2s ease;
+    pointer-events: all;
 }
 
 .double-tap-zone.left {
     left: 0;
-    background: linear-gradient(to right, rgba(255,255,255,0.1), transparent);
 }
 
 .double-tap-zone.right {
     right: 0;
-    background: linear-gradient(to left, rgba(255,255,255,0.1), transparent);
 }
 
-.double-tap-zone.active {
+.double-tap-zone:active {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.double-tap-indicator {
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 16px;
-    font-size: 1.5rem;
-    font-weight: 700;
-    animation: doubleTapFade 0.6s ease forwards;
-}
-
-@keyframes doubleTapFade {
-    0% { opacity: 0; transform: scale(0.5); }
-    30% { opacity: 1; transform: scale(1.1); }
-    100% { opacity: 0; transform: scale(1); }
-}
-
-/* Player info section */
+/* --- Player Info Section --- */
 .player-info {
-    padding: 0 1rem 1.5rem;
-    animation: slideUp 0.4s var(--ease-out-expo);
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    padding: 0 1.25rem 1.5rem;
 }
 
 .player-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    margin-bottom: 0.875rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
     line-height: 1.4;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.3px;
 }
 
+/* --- Action Buttons (Like & Share) --- */
 .player-actions {
     display: flex;
     gap: 0.75rem;
@@ -218,25 +188,47 @@
     background: var(--bg-card);
     border: 1.5px solid var(--border-color);
     color: var(--text-primary);
-    padding: 0.625rem 1.25rem;
+    padding: 0.65rem 1.25rem;
     border-radius: 24px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    transition: all var(--duration-fast) var(--ease-smooth);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(124, 29, 64, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.5s, height 0.5s;
+}
+
+.action-btn:active::before {
+    width: 300px;
+    height: 300px;
 }
 
 .action-btn:hover {
     border-color: var(--accent-burgundy);
-    background: rgba(124, 29, 64, 0.08);
-    transform: translateY(-1px);
+    background: var(--bg-elevated);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 29, 64, 0.2);
 }
 
 .action-btn:active {
-    transform: scale(0.95) translateY(0);
+    transform: translateY(0);
+    border-color: var(--accent-burgundy);
 }
 
 .action-btn.liked {
@@ -245,50 +237,115 @@
     color: var(--accent-burgundy);
 }
 
-/* Suggestions */
+/* --- Suggestions Section --- */
 .suggestions-title {
-    padding: 1rem;
-    font-size: 1.1rem;
+    padding: 1.25rem 1.25rem 0.75rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#suggestionsGrid {
+    padding: 0 1rem 2rem;
+}
+
+#suggestionsGrid .video-card {
+    transition: transform 0.2s ease;
+}
+
+#suggestionsGrid .video-card:hover {
+    transform: translateY(-4px);
+}
+
+#suggestionsGrid .video-card:active {
+    transform: scale(0.98);
+}
+
+#suggestionsGrid .video-thumb {
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+}
+
+#suggestionsGrid .video-title {
+    font-size: 0.9rem;
     font-weight: 700;
-    margin-top: 0.5rem;
+    line-height: 1.3;
 }
 
-/* Loading state */
-.player-container .loading-spinner {
+#suggestionsGrid .video-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 0.3rem;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 480px) {
+    .player-title {
+        font-size: 1.05rem;
+    }
+    
+    .action-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .suggestions-title {
+        font-size: 1.05rem;
+        padding: 1rem 1rem 0.6rem;
+    }
+    
+    #suggestionsGrid {
+        padding: 0 0.75rem 1.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .player-container {
+        border-radius: 12px;
+        margin: 0 auto 2rem;
+        max-width: 100%;
+    }
+    
+    .player-info {
+        padding: 0 2rem 2rem;
+        max-width: 100%;
+        margin: 0 auto;
+    }
+    
+    .player-title {
+        font-size: 1.4rem;
+    }
+    
+    .suggestions-title {
+        font-size: 1.25rem;
+        padding: 1.5rem 2rem 1rem;
+    }
+    
+    #suggestionsGrid {
+        padding: 0 1.5rem 3rem;
+    }
+}
+
+/* --- Loading State --- */
+.player-container.loading::after {
+    content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 48px;
-    height: 48px;
-    border: 3px solid rgba(124, 29, 64, 0.2);
-    border-top-color: var(--accent-burgundy);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    z-index: 6;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
 }
 
-/* Seek feedback animation */
-.seek-feedback {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 16px;
-    font-size: 1.25rem;
-    font-weight: 700;
-    z-index: 20;
-    animation: seekPop 0.5s var(--ease-out-back) forwards;
+/* --- Smooth Transitions --- */
+.player-container,
+.player-controls,
+.progress-bar-container,
+.ctrl-btn,
+.action-btn {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.seek-feedback.left { left: 15%; }
-.seek-feedback.right { right: 15%; }
-
-@keyframes seekPop {
-    0% { opacity: 0; transform: translateY(-50%) scale(0.5); }
-    50% { opacity: 1; transform: translateY(-50%) scale(1.1); }
-    100% { opacity: 0; transform: translateY(-50%) scale(1); }
-}
-

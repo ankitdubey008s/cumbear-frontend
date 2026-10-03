@@ -1,9 +1,7 @@
-/**
- * CUMBEAR SIDEBAR ENGINE v2.0
- * Hardware-accelerated drawer with gesture physics
- */
-
-'use strict';
+// ============================================
+// CUMBEAR ULTRA PREMIUM - Sidebar & Settings
+// Version: 2.0 Enhanced
+// ============================================
 
 const LANGUAGES = [
     { code: 'en', name: 'English', native: 'English' },
@@ -19,11 +17,11 @@ const LANGUAGES = [
     { code: 'ko', name: 'Korean', native: '한국어' },
     { code: 'it', name: 'Italian', native: 'Italiano' },
     { code: 'tr', name: 'Turkish', native: 'Türkçe' },
-    { code: 'pl', name: 'Polish', native: 'Polski' },
     { code: 'nl', name: 'Dutch', native: 'Nederlands' },
+    { code: 'pl', name: 'Polish', native: 'Polski' },
+    { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia' },
     { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt' },
-    { code: 'th', name: 'Thai', native: 'ไทย' },
-    { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia' }
+    { code: 'th', name: 'Thai', native: 'ไทย' }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,322 +30,212 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('sidebarOverlay');
     const sidebar = document.getElementById('siteSidebar');
     const themeBtn = document.getElementById('themeToggleBtn');
-    const navLinks = document.querySelectorAll('.nav-link');
+    const navLinks = document.querySelectorAll('.nav-link[data-target]');
 
-    let isOpen = false;
-    let startX = 0;
-    let currentX = 0;
-    let isDragging = false;
-
-    // ============================================
-    // DRAWER PHYSICS
-    // ============================================
-    
-    function openSidebar() {
-        if (isOpen) return;
-        isOpen = true;
-        
+    // --- 1. Sidebar Open/Close (History API for Android Back Button) ---
+    window.openSidebar = () => {
+        if (!sidebar || !overlay) return;
         sidebar.classList.add('active');
         overlay.classList.add('active');
         sidebar.setAttribute('aria-hidden', 'false');
-        overlay.setAttribute('aria-hidden', 'false');
-        
-        // Push history for back button support
+        // Push state so the physical back button closes the sidebar instead of leaving the app
         history.pushState({ sidebarOpen: true }, '');
-        
-        // Focus trap
-        setTimeout(() => closeBtn.focus(), 100);
-    }
+    };
 
-    function closeSidebar() {
-        if (!isOpen) return;
-        isOpen = false;
-        
+    window.closeSidebar = () => {
+        if (!sidebar || !overlay) return;
         sidebar.classList.remove('active');
         overlay.classList.remove('active');
         sidebar.setAttribute('aria-hidden', 'true');
-        overlay.setAttribute('aria-hidden', 'true');
-        
-        // Remove sidebar state from history if present
-        if (history.state?.sidebarOpen) {
-            history.back();
-        }
-    }
+    };
 
-    // Back button support
-    window.addEventListener('popstate', (e) => {
-        if (isOpen && !e.state?.sidebarOpen) {
-            closeSidebar();
+    // Listen for physical back button
+    window.addEventListener('popstate', (event) => {
+        if (sidebar && sidebar.classList.contains('active')) {
+            window.closeSidebar();
         }
     });
 
-    // Click handlers
-    menuBtn?.addEventListener('click', openSidebar);
-    closeBtn?.addEventListener('click', closeSidebar);
-    overlay?.addEventListener('click', closeSidebar);
+    // Standard Click Events
+    if (menuBtn) menuBtn.addEventListener('click', window.openSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', window.closeSidebar);
+    if (overlay) overlay.addEventListener('click', window.closeSidebar);
 
-    // ============================================
-    // TOUCH GESTURES WITH PHYSICS
-    // ============================================
-    
-    document.addEventListener('touchstart', (e) => {
-        startX = e.changedTouches[0].screenX;
-        
-        // Open gesture: left edge swipe right
-        if (startX < 30 && !isOpen) {
-            isDragging = true;
-        }
-        // Close gesture: swipe left on sidebar
-        else if (isOpen && startX > window.innerWidth - 280) {
-            isDragging = true;
-        }
+    // --- 2. Premium Swipe Gestures ---
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
     }, { passive: true });
 
-    document.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        
-        currentX = e.changedTouches[0].screenX;
-        const diff = currentX - startX;
-        
-        if (!isOpen && diff > 0) {
-            // Opening
-            const progress = Math.min(diff / 280, 1);
-            sidebar.style.transform = `translateX(${(progress - 1) * 100}%)`;
-            overlay.style.opacity = progress * 0.6;
-        } else if (isOpen && diff < 0) {
-            // Closing
-            const progress = Math.max(1 + diff / 280, 0);
-            sidebar.style.transform = `translateX(${(progress - 1) * 100}%)`;
-            overlay.style.opacity = progress * 0.6;
-        }
-    }, { passive: true });
+    document.addEventListener('touchend', e => {
+        const touchEndX = e.changedTouches[0].screenX;
+        const touchEndY = e.changedTouches[0].screenY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
 
-    document.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        
-        const diff = currentX - startX;
-        const threshold = 80;
-        
-        sidebar.style.transform = '';
-        overlay.style.opacity = '';
-        
-        if (!isOpen && diff > threshold) {
-            openSidebar();
-        } else if (isOpen && diff < -threshold) {
-            closeSidebar();
-        } else {
-            // Snap back
-            if (isOpen) openSidebar();
-            else closeSidebar();
-        }
-    });
-
-    // ============================================
-    // THEME TOGGLE
-    // ============================================
-    
-    themeBtn?.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        
-        // Smooth transition
-        document.documentElement.style.transition = 'background-color 0.5s ease, color 0.5s ease';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('cumbear_theme', newTheme);
-        themeBtn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-        
-        setTimeout(() => {
-            document.documentElement.style.transition = '';
-        }, 500);
-    });
-
-    // ============================================
-    // GRID MODAL
-    // ============================================
-    
-    const gridRow = document.getElementById('gridViewRow');
-    let gridModal = null;
-
-    function createGridModal() {
-        gridModal = document.createElement('div');
-        gridModal.className = 'fullscreen-modal';
-        gridModal.id = 'gridModal';
-        gridModal.innerHTML = `
-            <div class="modal-header">
-                <div class="modal-title">Grid View</div>
-                <button class="modal-close" id="closeGridModal" aria-label="Close">✕</button>
-            </div>
-            <div class="modal-content" style="padding:1.5rem">
-                <div class="grid-option" data-value="1">
-                    <div class="grid-preview one-col"><div class="grid-bar"></div></div>
-                    <div class="grid-label">1 Column</div>
-                </div>
-                <div class="grid-option" data-value="2">
-                    <div class="grid-preview two-col"><div class="grid-bar"></div><div class="grid-bar"></div></div>
-                    <div class="grid-label">2 Columns</div>
-                </div>
-                <div class="grid-option" data-value="4">
-                    <div class="grid-preview four-col"><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div></div>
-                    <div class="grid-label">4 Columns</div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(gridModal);
-
-        gridModal.querySelector('#closeGridModal').addEventListener('click', () => {
-            gridModal.classList.remove('active');
-        });
-
-        const savedGrid = localStorage.getItem('cumbear_grid') || '1';
-        
-        gridModal.querySelectorAll('.grid-option').forEach(opt => {
-            const value = opt.getAttribute('data-value');
-            if (value === savedGrid) opt.classList.add('active');
-            
-            opt.addEventListener('click', () => {
-                gridModal.querySelectorAll('.grid-option').forEach(o => o.classList.remove('active'));
-                opt.classList.add('active');
-                
-                document.documentElement.style.setProperty('--grid-cols', value);
-                localStorage.setItem('cumbear_grid', value);
-                
-                const labels = { '1': '1 Column', '2': '2 Columns', '4': '4 Columns' };
-                document.getElementById('gridValueDisplay').textContent = labels[value];
-                
-                setTimeout(() => gridModal.classList.remove('active'), 200);
-            });
-        });
-    }
-
-    gridRow?.addEventListener('click', () => {
-        if (!gridModal) createGridModal();
-        gridModal.classList.add('active');
-        closeSidebar();
-    });
-
-    // ============================================
-    // LANGUAGE MODAL
-    // ============================================
-    
-    const langRow = document.getElementById('languageRow');
-    let langModal = null;
-
-    function createLangModal() {
-        langModal = document.createElement('div');
-        langModal.className = 'fullscreen-modal';
-        langModal.id = 'langModal';
-        langModal.innerHTML = `
-            <div class="modal-header">
-                <div class="modal-title">Language</div>
-                <button class="modal-close" id="closeLangModal" aria-label="Close">✕</button>
-            </div>
-            <div class="modal-search-wrapper">
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="search" class="modal-search-input" id="langSearchInput" placeholder="Search language..." autocomplete="off">
-            </div>
-            <div class="modal-content">
-                <div id="langList"></div>
-            </div>
-        `;
-        document.body.appendChild(langModal);
-
-        langModal.querySelector('#closeLangModal').addEventListener('click', () => {
-            langModal.classList.remove('active');
-        });
-
-        const searchInput = langModal.querySelector('#langSearchInput');
-        const langList = langModal.querySelector('#langList');
-
-        function renderLangList(filter = '') {
-            const filtered = LANGUAGES.filter(lang => 
-                lang.name.toLowerCase().includes(filter.toLowerCase()) || 
-                lang.native.toLowerCase().includes(filter.toLowerCase())
-            );
-
-            if (filtered.length === 0) {
-                langList.innerHTML = '<div class="no-results">No languages found</div>';
-                return;
+        // Ensure it's a horizontal swipe (not vertical scrolling)
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            if (diffX > 0) {
+                // Swiped RIGHT -> Open (only if starting from the left edge)
+                if (touchStartX < 40 && sidebar && !sidebar.classList.contains('active')) {
+                    window.openSidebar();
+                }
+            } else {
+                // Swiped LEFT -> Close
+                if (sidebar && sidebar.classList.contains('active')) {
+                    window.closeSidebar();
+                }
             }
+        }
+    }, { passive: true });
 
-            const savedLang = localStorage.getItem('cumbear_lang') || 'en';
+    // --- 3. Theme Toggle ---
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             
-            langList.innerHTML = filtered.map(lang => `
-                <div class="lang-option ${lang.code === savedLang ? 'active' : ''}" data-code="${lang.code}">
-                    <div>
-                        <div class="lang-name">${lang.name}</div>
-                        <div class="lang-native">${lang.native}</div>
-                    </div>
-                    <div class="lang-check">✓</div>
-                </div>
-            `).join('');
+            // Smooth transition effect
+            document.documentElement.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('cumbear_theme', newTheme);
+            
+            themeBtn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+            
+            setTimeout(() => {
+                document.documentElement.style.transition = '';
+            }, 300);
+        });
+    }
 
-            langList.querySelectorAll('.lang-option').forEach(opt => {
-                opt.addEventListener('click', () => {
-                    const code = opt.getAttribute('data-code');
-                    const lang = LANGUAGES.find(l => l.code === code);
-                    
-                    langList.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
+    // --- Helper: Dynamic Modal Creator (Keeps HTML Clean) ---
+    function createModal(id, title, contentHTML) {
+        if (document.getElementById(id)) return document.getElementById(id);
+        const modal = document.createElement('div');
+        modal.className = 'fullscreen-modal';
+        modal.id = id;
+        modal.innerHTML = `
+            <div class="modal-header">
+                <div class="modal-title">${title}</div>
+                <button class="modal-close" id="close${id}">✕</button>
+            </div>
+            <div class="modal-content">${contentHTML}</div>
+        `;
+        document.body.appendChild(modal);
+        document.getElementById(`close${id}`).addEventListener('click', () => modal.classList.remove('active'));
+        return modal;
+    }
+
+    // --- 4. Grid View Modal Logic ---
+    const gridRow = document.getElementById('gridViewRow');
+    if (gridRow) {
+        gridRow.addEventListener('click', () => {
+            window.closeSidebar();
+            const gridHTML = `
+                <div class="grid-option" data-value="1"><div class="grid-label">1 Column (Cinema)</div><div class="grid-preview one-col"><div class="grid-bar"></div></div></div>
+                <div class="grid-option" data-value="2"><div class="grid-label">2 Columns (Standard)</div><div class="grid-preview two-col"><div class="grid-bar"></div><div class="grid-bar"></div></div></div>
+                <div class="grid-option" data-value="4"><div class="grid-label">4 Columns (Dense)</div><div class="grid-preview four-col"><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div></div></div>
+            `;
+            const modal = createModal('gridModal', 'Grid View', gridHTML);
+            modal.classList.add('active');
+            
+            modal.querySelectorAll('.grid-option').forEach(opt => {
+                const val = opt.getAttribute('data-value');
+                // Check current active state
+                if (document.documentElement.style.getPropertyValue('--grid-cols').trim() === val) {
                     opt.classList.add('active');
-                    
-                    document.getElementById('langValueDisplay').textContent = lang.name;
-                    localStorage.setItem('cumbear_lang', code);
-                    
-                    setTimeout(() => langModal.classList.remove('active'), 200);
+                }
+                opt.addEventListener('click', () => {
+                    modal.querySelectorAll('.grid-option').forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    document.documentElement.style.setProperty('--grid-cols', val);
+                    localStorage.setItem('cumbear_grid', val);
+                    const labels = { '1': '1 Column', '2': '2 Columns', '4': '4 Columns' };
+                    document.getElementById('gridValueDisplay').textContent = labels[val];
+                    setTimeout(() => modal.classList.remove('active'), 300);
                 });
             });
-        }
-
-        searchInput.addEventListener('input', (e) => renderLangList(e.target.value));
-        renderLangList();
+        });
     }
 
-    langRow?.addEventListener('click', () => {
-        if (!langModal) createLangModal();
-        langModal.classList.add('active');
-        closeSidebar();
-        setTimeout(() => langModal.querySelector('#langSearchInput')?.focus(), 100);
-    });
+    // --- 5. Language Modal Logic ---
+    const langRow = document.getElementById('languageRow');
+    if (langRow) {
+        langRow.addEventListener('click', () => {
+            window.closeSidebar();
+            const langHTML = `
+                <div class="modal-search-wrapper">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" class="modal-search-input" id="langSearchInput" placeholder="Search language...">
+                </div>
+                <div id="langListContainer"></div>
+            `;
+            const modal = createModal('langModal', 'Select Language', langHTML);
+            modal.classList.add('active');
+            
+            const searchInput = modal.querySelector('#langSearchInput');
+            const listContainer = modal.querySelector('#langListContainer');
+            
+            const renderLangs = (filter = '') => {
+                const filtered = LANGUAGES.filter(l => l.name.toLowerCase().includes(filter.toLowerCase()) || l.native.toLowerCase().includes(filter.toLowerCase()));
+                listContainer.innerHTML = filtered.map(l => `
+                    <div class="lang-option" data-code="${l.code}">
+                        <div><div class="lang-name">${l.name}</div><div class="lang-native">${l.native}</div></div>
+                        <div class="lang-check">✓</div>
+                    </div>
+                `).join('');
+                
+                listContainer.querySelectorAll('.lang-option').forEach(opt => {
+                    if (opt.getAttribute('data-code') === localStorage.getItem('cumbear_lang')) opt.classList.add('active');
+                    opt.addEventListener('click', () => {
+                        listContainer.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
+                        opt.classList.add('active');
+                        const code = opt.getAttribute('data-code');
+                        const lang = LANGUAGES.find(l => l.code === code);
+                        localStorage.setItem('cumbear_lang', code);
+                        document.getElementById('langValueDisplay').textContent = lang.name;
+                        setTimeout(() => modal.classList.remove('active'), 300);
+                    });
+                });
+            };
+            
+            renderLangs();
+            searchInput.addEventListener('input', (e) => renderLangs(e.target.value));
+            setTimeout(() => searchInput.focus(), 400); // Auto-focus for native feel
+        });
+    }
 
-    // ============================================
-    // NAVIGATION
-    // ============================================
-    
+    // --- 6. Navigation Links ---
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetView = link.getAttribute('data-target');
-            
             if (window.switchView) {
                 window.switchView(targetView, true);
             }
-            closeSidebar();
+            window.closeSidebar();
         });
     });
 
-    // ============================================
-    // INITIALIZE STATE
-    // ============================================
-    
+    // --- 7. Initialize State on Load ---
     const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
     const savedGrid = localStorage.getItem('cumbear_grid') || '1';
     const savedLang = localStorage.getItem('cumbear_lang') || 'en';
     
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.style.setProperty('--grid-cols', savedGrid);
-    themeBtn && (themeBtn.textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode');
+    if (themeBtn) themeBtn.textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
     
     const gridLabels = { '1': '1 Column', '2': '2 Columns', '4': '4 Columns' };
-    document.getElementById('gridValueDisplay') && (document.getElementById('gridValueDisplay').textContent = gridLabels[savedGrid] || '1 Column');
+    const gridDisplay = document.getElementById('gridValueDisplay');
+    if (gridDisplay) gridDisplay.textContent = gridLabels[savedGrid] || '1 Column';
     
-    const savedLangObj = LANGUAGES.find(l => l.code === savedLang);
-    if (savedLangObj) {
-        document.getElementById('langValueDisplay') && (document.getElementById('langValueDisplay').textContent = savedLangObj.name);
-    }
-
-    // Hide 4-col on mobile
-    if (window.innerWidth < 768) {
-        // Will be handled in modal creation
+    const langDisplay = document.getElementById('langValueDisplay');
+    if (langDisplay) {
+        const langObj = LANGUAGES.find(l => l.code === savedLang);
+        if (langObj) langDisplay.textContent = langObj.name;
     }
 });
-

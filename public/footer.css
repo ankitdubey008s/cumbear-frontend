@@ -1,5 +1,6 @@
 /* ============================================
-   BOTTOM NAVIGATION - PRODUCTION STYLES
+   CUMBEAR ULTRA PREMIUM - Bottom Navigation
+   Version: 2.0 Enhanced
    ============================================ */
 
 .bottom-nav {
@@ -7,33 +8,33 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(var(--footer-h) + var(--safe-bottom));
-    background: var(--bg-secondary);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    height: var(--footer-height);
+    background-color: rgba(0, 0, 0, 0.85); /* Glassmorphism */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 900;
-    padding-bottom: var(--safe-bottom);
-    transition: transform 0.35s var(--ease-smooth),
-                opacity 0.35s var(--ease-smooth);
-    will-change: transform, opacity;
-    /* Safe area for notched devices */
-    padding-left: max(var(--safe-left), 0px);
-    padding-right: max(var(--safe-right), 0px);
+    padding-bottom: env(safe-area-inset-bottom); /* Handles iPhone notch */
+    transition: transform var(--transition-normal), 
+                background-color var(--transition-normal);
 }
 
+/* Light mode adjustment */
+[data-theme="light"] .bottom-nav {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+/* Auto-hide animation class (toggled by footer.js) */
 .bottom-nav.footer-hidden {
-    transform: translateY(calc(100% + var(--safe-bottom)));
-    opacity: 0;
-    pointer-events: none;
+    transform: translateY(100%);
 }
 
-/* Nav items */
+/* --- Navigation Items --- */
 .nav-item {
-    background: none;
+    background: transparent;
     border: none;
     color: var(--text-muted);
     display: flex;
@@ -42,36 +43,28 @@
     justify-content: center;
     gap: 4px;
     cursor: pointer;
-    padding: 0.5rem 1.5rem;
-    min-width: 64px;
-    transition: all var(--duration-fast) var(--ease-smooth);
-    position: relative;
+    padding: 0.5rem 2.5rem; /* Wider tap area */
+    transition: all var(--transition-fast);
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    position: relative;
 }
 
-.nav-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%) scaleX(0);
-    width: 32px;
-    height: 3px;
-    background: var(--accent-burgundy);
-    border-radius: 0 0 4px 4px;
-    transition: transform var(--duration-normal) var(--ease-out-expo);
-}
-
+/* Active State - Burgundy Glow */
 .nav-item.active {
     color: var(--accent-burgundy);
 }
 
-.nav-item.active::before {
-    transform: translateX(-50%) scaleX(1);
+.nav-item.active .nav-icon {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px rgba(124, 29, 64, 0.5));
 }
 
-/* Icon animations */
+.nav-item.active .nav-label {
+    color: var(--accent-burgundy);
+    font-weight: 700;
+}
+
+/* Icon Styling */
 .nav-icon {
     width: 26px;
     height: 26px;
@@ -80,78 +73,39 @@
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
-    transition: all var(--duration-fast) var(--ease-out-back);
-    transform-origin: center;
+    transition: transform var(--transition-bounce), filter var(--transition-normal);
 }
 
-.nav-item:hover .nav-icon {
-    transform: translateY(-2px);
-}
-
-.nav-item.active .nav-icon {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 10px var(--accent-glow));
-}
-
-.nav-item:active .nav-icon {
-    transform: scale(0.9);
-    transition-duration: var(--duration-instant);
-}
-
-/* Label */
+/* Label Styling */
 .nav-label {
     font-family: 'Manrope', sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    transition: all var(--duration-fast) var(--ease-smooth);
-    opacity: 0.8;
+    transition: color var(--transition-fast), font-weight var(--transition-fast);
 }
 
-.nav-item.active .nav-label {
-    opacity: 1;
-    font-weight: 700;
+/* --- Micro-Interactions --- */
+
+/* Click Animation (Squish effect) */
+.nav-item:active {
+    transform: scale(0.92);
 }
 
-/* Active indicator dot (alternative style) */
-.nav-item .active-dot {
-    position: absolute;
-    bottom: 2px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--accent-burgundy);
-    opacity: 0;
-    transform: scale(0);
-    transition: all var(--duration-fast) var(--ease-out-back);
+.nav-item:active .nav-icon {
+    transform: scale(0.9);
 }
 
-.nav-item.active .active-dot {
-    opacity: 1;
-    transform: scale(1);
+/* Hover effect for desktop users */
+.nav-item:hover {
+    color: var(--text-primary);
 }
 
-/* Content padding adjustment */
+.nav-item:hover .nav-icon {
+    transform: scale(1.05);
+}
+
+/* Ensure main content doesn't hide behind footer */
 main {
-    padding-bottom: calc(var(--footer-h) + var(--safe-bottom) + 80px) !important;
+    padding-bottom: calc(var(--footer-height) + 20px) !important;
 }
-
-/* Hide on scroll down animation */
-@keyframes nav-bounce-in {
-    0% { transform: translateY(calc(100% + var(--safe-bottom))); }
-    60% { transform: translateY(-8px); }
-    100% { transform: translateY(0); }
-}
-
-.bottom-nav:not(.footer-hidden) {
-    animation: nav-bounce-in 0.4s var(--ease-out-back);
-}
-
-/* iOS safe area fix */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .bottom-nav {
-        padding-bottom: env(safe-area-inset-bottom);
-        height: calc(60px + env(safe-area-inset-bottom));
-    }
-}
-

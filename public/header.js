@@ -1,106 +1,77 @@
-/**
- * CUMBEAR HEADER ENGINE v2.0
- * Smart header with scroll behavior, haptic feedback
- */
-
-'use strict';
+// ============================================
+// CUMBEAR ULTRA PREMIUM - Header Logic
+// Version: 2.0 Enhanced
+// ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const menuBtn = document.getElementById('menuBtn');
     const searchBtn = document.getElementById('searchBtn');
     const homeLogoBtn = document.getElementById('homeLogoBtn');
     const header = document.getElementById('siteHeader');
-    
-    let lastScrollY = 0;
-    let ticking = false;
 
-    // Smart header hide/show on scroll
-    function updateHeader() {
-        const currentScrollY = window.scrollY;
-        
-        if (currentScrollY > lastScrollY && currentScrollY > 80) {
-            // Scrolling down - hide header
-            header.style.transform = 'translateY(-100%)';
-            header.style.opacity = '0';
-        } else {
-            // Scrolling up - show header
-            header.style.transform = 'translateY(0)';
-            header.style.opacity = '1';
-        }
-        
-        // Add background blur when scrolled
-        if (currentScrollY > 20) {
-            header.style.backdropFilter = 'blur(20px) saturate(180%)';
-            header.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
-            header.style.backgroundColor = 'var(--bg-primary)';
-        } else {
-            header.style.backdropFilter = 'none';
-            header.style.webkitBackdropFilter = 'none';
-        }
-        
-        lastScrollY = currentScrollY;
-        ticking = false;
+    // 1. Menu Button (Hamburger) -> Opens Sidebar
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            // Hook into global sidebar logic if available, otherwise fallback
+            if (window.openSidebar) {
+                window.openSidebar();
+            } else {
+                const sidebar = document.getElementById('siteSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (sidebar && overlay) {
+                    sidebar.classList.add('active');
+                    overlay.classList.add('active');
+                }
+            }
+        });
     }
 
-    window.addEventListener('scroll', () => {
-        if (!ticking) {
-            requestAnimationFrame(updateHeader);
-            ticking = true;
-        }
-    }, { passive: true });
-
-    // Menu Button - Open Sidebar
-    menuBtn?.addEventListener('click', () => {
-        // Haptic feedback
-        if (navigator.vibrate) navigator.vibrate(15);
-        
-        // Dispatch custom event for sidebar to handle
-        window.dispatchEvent(new CustomEvent('sidebar:open'));
-    });
-
-    // Search Button - Open Categories/Search
-    searchBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (navigator.vibrate) navigator.vibrate(15);
-        
-        if (window.showCategoriesView) {
-            window.showCategoriesView();
-        } else if (window.switchView) {
-            window.switchView('categoriesView', true);
-        }
-    });
-
-    // Logo Click - Go Home with animation
-    homeLogoBtn?.addEventListener('click', () => {
-        if (navigator.vibrate) navigator.vibrate(20);
-        
-        // If already on home, scroll to top with bounce
-        const homeView = document.getElementById('homeView');
-        if (homeView?.classList.contains('active')) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 2. Search Button -> Opens Search View & Auto-Focuses Input
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            // Use global router to switch to search/categories view
+            if (window.switchView) {
+                window.switchView('categoriesView', true);
+            }
             
-            // Subtle pulse animation on logo
-            const img = homeLogoBtn.querySelector('img');
-            img.style.transform = 'scale(0.9)';
-            setTimeout(() => img.style.transform = '', 200);
-            return;
-        }
-        
-        // Switch to home view
-        if (window.switchView) {
-            window.switchView('homeView', true);
-        }
-        
-        // Reset home state
-        if (window.resetHomeState) window.resetHomeState();
-    });
+            // Premium UX: Automatically focus the search input after transition
+            setTimeout(() => {
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                    // Scroll to top to ensure input is visible
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 350); // Matches the CSS transition time
+        });
+    }
 
-    // Keyboard accessibility for logo
-    homeLogoBtn?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            homeLogoBtn.click();
-        }
-    });
+    // 3. Logo Click -> Go Home (Smoothly & Resets State)
+    if (homeLogoBtn) {
+        homeLogoBtn.addEventListener('click', () => {
+            // Use the global router to go home (handles history API perfectly)
+            if (window.switchView) {
+                window.switchView('homeView', true);
+            }
+            
+            // Reset home filters/pagination if the function exists
+            if (window.resetHomeState) {
+                window.resetHomeState();
+            }
+        });
+    }
+
+    // 4. Premium Scroll Effect (Dynamic Header Shadow)
+    // Adds a subtle burgundy-tinted shadow when the user scrolls down
+    if (header) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.4)';
+                header.style.borderBottomColor = 'rgba(124, 29, 64, 0.3)'; // Subtle burgundy glow
+            } else {
+                header.style.boxShadow = 'none';
+                header.style.borderBottomColor = 'var(--border-color)';
+            }
+        }, { passive: true });
+    }
 });
-
