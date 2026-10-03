@@ -1,15 +1,11 @@
-/* ============================================
-   CUMBEAR ULTRA PREMIUM - Bottom Navigation
-   Version: 2.0 Enhanced
-   ============================================ */
-
 .bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--footer-height);
-    background-color: rgba(0, 0, 0, 0.85); /* Glassmorphism */
+    height: calc(var(--footer-height) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background-color: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--border-color);
@@ -17,24 +13,12 @@
     justify-content: space-around;
     align-items: center;
     z-index: 900;
-    padding-bottom: env(safe-area-inset-bottom); /* Handles iPhone notch */
-    transition: transform var(--transition-normal), 
-                background-color var(--transition-normal);
+    transition: transform var(--transition-normal);
 }
-
-/* Light mode adjustment */
-[data-theme="light"] .bottom-nav {
-    background-color: rgba(255, 255, 255, 0.85);
-}
-
-/* Auto-hide animation class (toggled by footer.js) */
-.bottom-nav.footer-hidden {
-    transform: translateY(100%);
-}
-
-/* --- Navigation Items --- */
+[data-theme="light"] .bottom-nav { background-color: rgba(255, 255, 255, 0.85); }
+.bottom-nav.footer-hidden { transform: translateY(100%); }
 .nav-item {
-    background: transparent;
+    background: none;
     border: none;
     color: var(--text-muted);
     display: flex;
@@ -43,28 +27,11 @@
     justify-content: center;
     gap: 4px;
     cursor: pointer;
-    padding: 0.5rem 2.5rem; /* Wider tap area */
+    padding: 0.5rem 2.5rem;
     transition: all var(--transition-fast);
-    -webkit-tap-highlight-color: transparent;
-    position: relative;
+    min-height: 60px;
 }
-
-/* Active State - Burgundy Glow */
-.nav-item.active {
-    color: var(--accent-burgundy);
-}
-
-.nav-item.active .nav-icon {
-    transform: scale(1.15);
-    filter: drop-shadow(0 0 8px rgba(124, 29, 64, 0.5));
-}
-
-.nav-item.active .nav-label {
-    color: var(--accent-burgundy);
-    font-weight: 700;
-}
-
-/* Icon Styling */
+.nav-item.active { color: var(--accent-burgundy); }
 .nav-icon {
     width: 26px;
     height: 26px;
@@ -73,39 +40,21 @@
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
-    transition: transform var(--transition-bounce), filter var(--transition-normal);
+    transition: transform var(--transition-fast), filter var(--transition-normal);
 }
-
-/* Label Styling */
+.nav-item.active .nav-icon {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px rgba(124, 29, 64, 0.5));
+}
 .nav-label {
     font-family: 'Manrope', sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    transition: color var(--transition-fast), font-weight var(--transition-fast);
 }
-
-/* --- Micro-Interactions --- */
-
-/* Click Animation (Squish effect) */
-.nav-item:active {
-    transform: scale(0.92);
-}
-
-.nav-item:active .nav-icon {
-    transform: scale(0.9);
-}
-
-/* Hover effect for desktop users */
-.nav-item:hover {
-    color: var(--text-primary);
-}
-
-.nav-item:hover .nav-icon {
-    transform: scale(1.05);
-}
-
-/* Ensure main content doesn't hide behind footer */
+.nav-item.active .nav-label { color: var(--accent-burgundy); font-weight: 700; }
+.nav-item:active { transform: scale(0.92); }
 main {
-    padding-bottom: calc(var(--footer-height) + 20px) !important;
+    padding-top: calc(var(--header-height) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--footer-height) + env(safe-area-inset-bottom) + 20px) !important;
 }

@@ -1,108 +1,6 @@
-/* ============================================
-   CUMBEAR ULTRA PREMIUM - Ad Styling
-   Version: 2.0 Enhanced
-   ============================================ */
-
-/* --- In-Feed Ad Container (Premium Card Style) --- */
-.ad-infeed-container {
-    grid-column: 1 / -1;
-    margin: 1.5rem 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
-    border-radius: 16px;
-    padding: 1.25rem;
-    border: 1px solid rgba(124, 29, 64, 0.2);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    min-height: 250px;
-    position: relative;
-    overflow: hidden;
-    transition: all var(--transition-normal);
-}
-
-.ad-infeed-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(124, 29, 64, 0.5), transparent);
-    opacity: 0.6;
-}
-
-.ad-infeed-container::after {
-    content: 'Sponsored';
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
-    opacity: 0.7;
-}
-
-.ad-slot {
-    width: 100%;
-    max-width: 320px;
-    min-height: 250px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-/* --- Top Banner (Desktop 900x250) --- */
-#topBannerContainer > div {
-    width: 100%;
-    max-width: 900px;
-    min-height: 250px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
-    border-radius: 16px;
-    padding: 1rem;
-    border: 1px solid rgba(124, 29, 64, 0.2);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
-    transition: all var(--transition-normal);
-}
-
-#topBannerContainer > div::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(124, 29, 64, 0.5), transparent);
-    opacity: 0.6;
-}
-
-#topBannerContainer > div::after {
-    content: 'Advertisement';
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
-    opacity: 0.7;
-}
-
-/* --- Sticky Ad Wrapper (Glassmorphism) --- */
 .sticky-ad-wrapper {
     position: fixed;
-    bottom: 60px;
+    bottom: var(--footer-height);
     left: 0;
     right: 0;
     background: rgba(0, 0, 0, 0.85);
@@ -115,13 +13,8 @@
     align-items: center;
     padding: 0.75rem;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-    transition: all var(--transition-normal);
 }
-
-[data-theme="light"] .sticky-ad-wrapper {
-    background: rgba(255, 255, 255, 0.85);
-}
-
+[data-theme="light"] .sticky-ad-wrapper { background: rgba(255, 255, 255, 0.85); }
 .sticky-close-btn {
     position: absolute;
     top: -12px;
@@ -140,19 +33,10 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(124, 29, 64, 0.4);
-    transition: all var(--transition-fast);
 }
+.sticky-close-btn:active { transform: scale(0.95); }
 
-.sticky-close-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(124, 29, 64, 0.6);
-}
-
-.sticky-close-btn:active {
-    transform: scale(0.95);
-}
-
-/* --- VAST Pre-roll Overlay --- */
+/* VAST Overlay */
 .vast-overlay {
     position: absolute;
     inset: 0;
@@ -161,15 +45,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: fadeIn 0.3s ease-out;
 }
-
-.vast-overlay video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
+.vast-overlay video { width: 100%; height: 100%; object-fit: contain; }
 .vast-skip-btn {
     position: absolute;
     bottom: 20px;
@@ -185,82 +62,7 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: all var(--transition-fast);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
-
-.vast-skip-btn:hover {
-    background: rgba(124, 29, 64, 0.9);
-    border-color: var(--accent-burgundy);
-    transform: scale(1.05);
-}
-
-.vast-skip-btn:active {
-    transform: scale(0.95);
-}
-
-.vast-skip-btn.hidden {
-    display: none;
-}
-
-/* --- Ad Error State (Graceful Fallback) --- */
-.ad-slot:empty::before {
-    content: 'Ad temporarily unavailable';
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    text-align: center;
-    padding: 2rem;
-    opacity: 0.6;
-}
-
-/* --- Responsive Adjustments --- */
-@media (max-width: 768px) {
-    .ad-infeed-container {
-        padding: 1rem;
-        min-height: 200px;
-    }
-    
-    .ad-slot {
-        min-height: 200px;
-    }
-    
-    #topBannerContainer {
-        display: none !important;
-    }
-    
-    .sticky-ad-wrapper {
-        bottom: 60px;
-        padding: 0.5rem;
-    }
-}
-
-@media (min-width: 769px) {
-    .ad-infeed-container {
-        padding: 1.5rem;
-    }
-    
-    .ad-slot {
-        max-width: 728px;
-    }
-}
-
-/* --- Smooth Entrance Animation --- */
-@keyframes adSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.ad-infeed-container,
-.sticky-ad-wrapper {
-    animation: adSlideUp 0.4s ease-out;
-}
-
-/* --- Utility Classes --- */
-.hidden {
-    display: none !important;
-}
+.vast-skip-btn:active { transform: scale(0.95); background: rgba(124, 29, 64, 0.9); }
+.vast-skip-btn.hidden { display: none; }
+.hidden { display: none !important; }
