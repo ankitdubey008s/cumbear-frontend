@@ -1,17 +1,13 @@
-// ============================================
-// CUMBEAR ULTRA PREMIUM - Shorts Feed & VAST
-// Version: 2.0 Enhanced
-// ============================================
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Shorts.js Loaded (Ultra Premium Engine)');
-
+    console.log('✅ Shorts.js Loaded (More Menu + Download + Captions)');
+    
     const shortsContainer = document.getElementById('shortsContainer');
     let activeObserver = null;
     let isGlobalMuted = true;
+    let currentMoreMenuVideo = null;
 
-    // --- 1. Vertical VAST Pre-roll Engine ---
-    async function playVerticalVast() {
+    async function loadShorts() {
+        // Play Vertical VAST Pre-roll before Shorts feed
         try {
             const response = await fetch("https://s.magsrv.com/v1/vast.php?idzone=6045638");
             const text = await response.text();
@@ -21,29 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (mediaFile && mediaFile.textContent) {
                 const adUrl = mediaFile.textContent.trim();
-                
-                // Create a temporary full-screen overlay for the ad
                 const overlay = document.createElement("div");
                 overlay.className = "short-item";
                 overlay.style.zIndex = "100";
-                overlay.innerHTML = `
-                    <video class="short-video" src="${adUrl}" playsinline></video>
-                    <div class="short-info" style="bottom:20px;">
-                        <button class="watch-full-btn" id="skipShortsAd">Skip Ad</button>
-                    </div>
-                `;
+                overlay.innerHTML = `<video class="short-video" src="${adUrl}" playsinline></video><div class="short-info" style="bottom:20px;"><button class="watch-full-btn" id="skipShortsAd">Skip Ad</button></div>`;
                 shortsContainer.innerHTML = "";
                 shortsContainer.appendChild(overlay);
                 
                 const adVid = overlay.querySelector("video");
-                adVid.muted = false; // Ads should have sound
+                adVid.muted = false;
+                adVid.play();
                 
-                const playPromise = adVid.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => { adVid.muted = true; adVid.play(); });
-                }
-
-                // Wait for ad to finish or be skipped
                 await new Promise(resolve => {
                     adVid.onended = resolve;
                     overlay.querySelector("#skipShortsAd").onclick = () => { adVid.pause(); resolve(); };
@@ -51,13 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 overlay.remove();
             }
-        } catch(e) { 
-            console.log("Shorts VAST skipped or failed, loading feed..."); 
-        }
-    }
+        } catch(e) { console.log("Shorts VAST skipped"); }
 
-    // --- 2. Main Shorts Loader ---
-    async function loadShorts() {
         shortsContainer.innerHTML = '<div class="short-loading" style="z-index:50"><div class="short-spinner"></div></div>';
         
         try {
@@ -67,19 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success && data.data) {
                 const videos = data.data.sort(() => Math.random() - 0.5).slice(0, 20);
                 renderShorts(videos);
-            } else {
-                shortsContainer.innerHTML = '<div style="color:white; text-align:center; padding:2rem;">No shorts available.</div>';
             }
         } catch (err) {
             shortsContainer.innerHTML = '<div style="color:white; text-align:center; padding:2rem;">Failed to load shorts.</div>';
         }
     }
 
-    // --- 3. Render Shorts Feed ---
     function renderShorts(videos) {
         shortsContainer.innerHTML = '';
         
-        // Back Button
         const backBtn = document.createElement('button');
         backBtn.className = 'shorts-back-btn';
         backBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>';
@@ -92,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const item = document.createElement('div');
             item.className = 'short-item';
-            item.addEventListener('contextmenu', e => e.preventDefault()); // Block Chrome Menu
+            item.addEventListener('contextmenu', e => e.preventDefault());
             
             item.innerHTML = `
                 <img class="short-thumbnail" src="${video.thumbnailUrl}" alt="thumb">
@@ -122,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
 
                 <div class="short-info">
-                    <div class="short-channel">CumBear</div>
+                    <div class="short-channel">cumbear</div>
                     <div class="short-title">${video.title}</div>
                     <button class="watch-full-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -137,7 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="action-btn-wrapper"><div class="action-icon"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></div><span class="action-label">${formatShortNum(randomViews)}</span></div>
                     <div class="action-btn-wrapper" onclick="shareShort('${video.title.replace(/'/g, "\\'")}')"><div class="action-icon"><svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg></div><span class="action-label">Share</span></div>
-                    <div class="action-btn-wrapper" onclick="window.location.href='/support'"><div class="action-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div><span class="action-label">Report</span></div>
+                    <div class="action-btn-wrapper more-btn-wrapper" data-video='${JSON.stringify(video).replace(/'/g, "&#39;")}'>
+                        <div class="action-icon">
+                            <svg viewBox="0 0 24 24" fill="white"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                        </div>
+                        <span class="action-label">More</span>
+                    </div>
                 </div>
                 <div class="short-timeline"><div class="short-timeline-fill"></div></div>
             `;
@@ -155,22 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const speedUpVideo = () => {
                 thumb.classList.add('loaded');
                 loader.classList.add('hidden');
-                vid.playbackRate = 1.25; // 25% faster for snappy feel
+                vid.playbackRate = 1.25;
             };
             vid.addEventListener('loadeddata', speedUpVideo);
             vid.addEventListener('canplay', speedUpVideo);
 
             // 2. 150s Limit & Timeline
             vid.addEventListener('timeupdate', () => {
-                if (vid.currentTime >= 150) { 
-                    vid.pause(); 
-                    endOverlay.classList.remove('hidden'); 
-                }
+                if (vid.currentTime >= 150) { vid.pause(); endOverlay.classList.remove('hidden'); }
                 const progress = (vid.currentTime / 150) * 100;
                 timelineFill.style.width = `${Math.min(100, progress)}%`;
             });
 
-            // 3. Watch Full Video Buttons (Start at 0 seconds)
+            // 3. Watch Full Video Buttons
             const openFullVideo = (e) => {
                 if(e) e.stopPropagation();
                 if (window.loadPlayerVideo) window.loadPlayerVideo(video, 0);
@@ -201,11 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tapLength = currentTime - lastTapTime;
 
                 if (tapLength < 300 && tapLength > 0) {
-                    // DOUBLE TAP -> Like Animation & Auto Like
                     triggerLikeAnimation(item);
                     if (!isLiked) toggleLike();
                 } else {
-                    // SINGLE TAP -> Play/Pause
                     if (vid.paused) {
                         vid.play();
                         playIcon.classList.add('show');
@@ -252,13 +227,283 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.short-video').forEach(v => { v.muted = isGlobalMuted; updateMuteUI(isGlobalMuted); });
             });
 
+            // 8. MORE BUTTON - Open Menu
+            const moreBtn = item.querySelector('.more-btn-wrapper');
+            moreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const videoData = JSON.parse(moreBtn.getAttribute('data-video').replace(/&#39;/g, "'"));
+                currentMoreMenuVideo = videoData;
+                showMoreMenu(videoData);
+            });
+
             shortsContainer.appendChild(item);
         });
 
         setupIntersectionObserver();
     }
 
-    // --- 8. Helper: Trigger Like Animation ---
+    // --- MORE MENU FUNCTIONS ---
+    function showMoreMenu(video) {
+        const existingMenu = document.querySelector('.more-menu-overlay');
+        if (existingMenu) existingMenu.remove();
+
+        const menuHTML = `
+            <div class="more-menu-overlay active">
+                <div class="more-menu">
+                    <div class="more-menu-header">
+                        <div class="more-menu-title">More Options</div>
+                        <button class="more-menu-close">✕</button>
+                    </div>
+                    
+                    <div class="more-menu-item" id="downloadBtn">
+                        <div class="more-menu-item-icon">
+                            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </div>
+                        <div class="more-menu-item-content">
+                            <div class="more-menu-item-title">Download Video</div>
+                            <div class="more-menu-item-desc">First 2.5 minutes with CumBear watermark</div>
+                        </div>
+                    </div>
+
+                    <div class="more-menu-item" id="captionsBtn">
+                        <div class="more-menu-item-icon">
+                            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                        <div class="more-menu-item-content">
+                            <div class="more-menu-item-title">Captions</div>
+                            <div class="more-menu-item-desc">Real-time captions in any language</div>
+                        </div>
+                    </div>
+
+                    <div class="captions-lang-menu" id="captionsLangMenu">
+                        <div class="captions-lang-title">Select Language</div>
+                        <div class="captions-lang-grid">
+                            <button class="captions-lang-btn" data-lang="en">English</button>
+                            <button class="captions-lang-btn" data-lang="es">Spanish</button>
+                            <button class="captions-lang-btn" data-lang="fr">French</button>
+                            <button class="captions-lang-btn" data-lang="de">German</button>
+                            <button class="captions-lang-btn" data-lang="hi">Hindi</button>
+                            <button class="captions-lang-btn" data-lang="zh">Chinese</button>
+                            <button class="captions-lang-btn" data-lang="ja">Japanese</button>
+                            <button class="captions-lang-btn" data-lang="ko">Korean</button>
+                        </div>
+                    </div>
+
+                    <div class="more-menu-item" id="reportBtn">
+                        <div class="more-menu-item-icon">
+                            <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="12" y1="20" x2="12" y2="15"></line></svg>
+                        </div>
+                        <div class="more-menu-item-content">
+                            <div class="more-menu-item-title">Report</div>
+                            <div class="more-menu-item-desc">Report inappropriate content</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', menuHTML);
+
+        document.querySelector('.more-menu-close').addEventListener('click', closeMoreMenu);
+        document.querySelector('.more-menu-overlay').addEventListener('click', (e) => {
+            if (e.target.classList.contains('more-menu-overlay')) closeMoreMenu();
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            closeMoreMenu();
+            downloadVideoWithWatermark(video);
+        });
+
+        document.getElementById('captionsBtn').addEventListener('click', () => {
+            document.getElementById('captionsLangMenu').classList.toggle('active');
+        });
+
+        document.querySelectorAll('.captions-lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.getAttribute('data-lang');
+                closeMoreMenu();
+                enableCaptions(lang);
+            });
+        });
+
+        document.getElementById('reportBtn').addEventListener('click', () => {
+            closeMoreMenu();
+            window.location.href = '/support';
+        });
+    }
+
+    function closeMoreMenu() {
+        const menu = document.querySelector('.more-menu-overlay');
+        if (menu) menu.remove();
+    }
+
+    // --- DOWNLOAD WITH WATERMARK ---
+    async function downloadVideoWithWatermark(video) {
+        const progressHTML = `
+            <div class="download-progress" id="downloadProgress">
+                <div class="download-progress-title">Preparing Download...</div>
+                <div class="download-progress-bar">
+                    <div class="download-progress-fill" id="downloadFill"></div>
+                </div>
+                <div class="download-progress-text" id="downloadText">0%</div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', progressHTML);
+
+        const progressFill = document.getElementById('downloadFill');
+        const progressText = document.getElementById('downloadText');
+
+        try {
+            const tempVideo = document.createElement('video');
+            tempVideo.src = video.playableUrl;
+            tempVideo.crossOrigin = 'anonymous';
+            tempVideo.muted = false;
+            
+            await new Promise((resolve, reject) => {
+                tempVideo.onloadedmetadata = resolve;
+                tempVideo.onerror = reject;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = tempVideo.videoWidth || 640;
+            canvas.height = tempVideo.videoHeight || 360;
+            const ctx = canvas.getContext('2d');
+
+            const watermark = new Image();
+            watermark.crossOrigin = 'anonymous';
+            watermark.src = '/cumb.png';
+            await new Promise((resolve) => {
+                watermark.onload = resolve;
+                watermark.onerror = resolve;
+            });
+
+            const stream = canvas.captureStream(30);
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 2500000
+            });
+
+            const chunks = [];
+            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `CumBear_${video.title.substring(0, 30).replace(/[^a-z0-9]/gi, '_')}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+                document.getElementById('downloadProgress').remove();
+            };
+
+            mediaRecorder.start();
+            tempVideo.currentTime = 0;
+            await tempVideo.play();
+
+            const maxDuration = 150; // 2.5 minutes
+            const startTime = Date.now();
+
+            const drawFrame = () => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min((elapsed / maxDuration) * 100, 100);
+                
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}%`;
+
+                if (elapsed >= maxDuration || tempVideo.ended) {
+                    mediaRecorder.stop();
+                    tempVideo.pause();
+                    return;
+                }
+
+                ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
+
+                const watermarkSize = canvas.width * 0.15;
+                const watermarkX = canvas.width - watermarkSize - 20;
+                const watermarkY = canvas.height - watermarkSize - 20;
+                
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
+                ctx.globalAlpha = 1.0;
+
+                requestAnimationFrame(drawFrame);
+            };
+
+            drawFrame();
+
+        } catch (error) {
+            console.error('Download failed:', error);
+            document.getElementById('downloadProgress').remove();
+            alert('Download failed. This video may not support downloading due to browser restrictions.');
+        }
+    }
+
+    // --- CAPTIONS ---
+    function enableCaptions(lang) {
+        const activeShort = document.querySelector('.short-item:not(.hidden)');
+        if (!activeShort) return;
+
+        const video = activeShort.querySelector('.short-video');
+        if (!video) return;
+
+        const existingCaptions = activeShort.querySelector('.captions-overlay');
+        if (existingCaptions) existingCaptions.remove();
+
+        const captionsOverlay = document.createElement('div');
+        captionsOverlay.className = 'captions-overlay';
+        captionsOverlay.innerHTML = '<div class="captions-text">Captions loading...</div>';
+        activeShort.appendChild(captionsOverlay);
+
+        const captionsText = captionsOverlay.querySelector('.captions-text');
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.lang = lang;
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                captionsText.textContent = transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                captionsText.textContent = 'Captions unavailable';
+                setTimeout(() => captionsOverlay.remove(), 2000);
+            };
+
+            recognition.onend = () => {
+                if (video && !video.paused) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+
+            video.addEventListener('play', () => {
+                try { recognition.start(); } catch(e) {}
+            });
+
+            video.addEventListener('pause', () => {
+                recognition.stop();
+            });
+
+            video.addEventListener('ended', () => {
+                recognition.stop();
+                captionsOverlay.remove();
+            });
+
+        } else {
+            captionsText.textContent = 'Captions not supported in this browser';
+            setTimeout(() => captionsOverlay.remove(), 2000);
+        }
+    }
+
+    // --- Helper: Trigger Like Animation ---
     function triggerLikeAnimation(item) {
         const heart = document.createElement('div');
         heart.className = 'like-heart';
@@ -267,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => heart.remove(), 800);
     }
 
-    // --- 9. Intersection Observer (Auto Play/Pause on Scroll) ---
+    // --- Intersection Observer (Auto Play/Pause on Scroll) ---
     function setupIntersectionObserver() {
         if (activeObserver) activeObserver.disconnect();
         activeObserver = new IntersectionObserver((entries) => {
@@ -283,13 +528,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }, { threshold: 0.6 });
+        
         document.querySelectorAll('.short-item').forEach(item => activeObserver.observe(item));
     }
 
-    function formatShortNum(num) { return num >= 1000000 ? (num / 1000000).toFixed(1) + 'M' : num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num; }
-    window.shareShort = function(title) { if (navigator.share) navigator.share({ title: 'CumBear Short', text: title, url: window.location.href }); else { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); } };
+    // --- Helper: Format Numbers ---
+    function formatShortNum(num) { 
+        return num >= 1000000 ? (num / 1000000).toFixed(1) + 'M' : num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num; 
+    }
+
+    // --- Helper: Share Short ---
+    window.shareShort = function(title) { 
+        if (navigator.share) {
+            navigator.share({ title: 'CumBear Short', text: title, url: window.location.href }); 
+        } else { 
+            navigator.clipboard.writeText(window.location.href); 
+            alert('Link copied!'); 
+        } 
+    };
+
+    // --- Expose loadShorts globally ---
     window.loadShorts = loadShorts;
 
-    // Initialize: Play VAST first, then load feed
-    playVerticalVast().then(() => loadShorts());
+    // --- Initialize: Play VAST first, then load feed ---
+    loadShorts();
 });
