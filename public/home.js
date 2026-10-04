@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSiteFooter() {
         const footer = document.getElementById('siteFooter');
         if (!footer) return;
-        footer.innerHTML = `<div class="footer-links"><a href="/support">Support</a><a href="/report">Report</a><a href="/privacy">Privacy Policy</a><a href="/advertise">Advertise</a><a href="/webmasters">Webmasters</a><a href="/help">Help</a></div><div class="copyright"><a href="https://cumbear.in">cumbear.in</a> - All rights reserved 2026®</div>`;
+        footer.innerHTML = `<div class="footer-links"><a href="https://support.cumbear.in" target="_blank">Support</a><a href="https://support.cumbear.in" target="_blank">Report</a><a href="https://support.cumbear.in" target="_blank">Privacy Policy</a><a href="https://support.cumbear.in" target="_blank">Advertise</a><a href="https://support.cumbear.in" target="_blank">Webmasters</a><a href="https://support.cumbear.in" target="_blank">Help</a></div><div class="copyright"><a href="https://cumbear.in">cumbear.in</a> - All rights reserved 2026®</div>`;
     }
 
     // --- 7. Global Reset Function (Called by Router) ---
