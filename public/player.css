@@ -1,140 +1,81 @@
-/* ============================================
-   CUMBEAR ULTRA PREMIUM - Video Player
-   Version: 2.0 Enhanced
-   ============================================ */
-
-/* --- Player Container (Cinematic) --- */
+/* --- Custom Video Player Styles --- */
 .player-container {
     width: 100%;
     background: #000;
     position: relative;
     aspect-ratio: 16/9;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-    border-radius: 0;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    margin-bottom: 1rem;
 }
 
 .player-container video {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #000;
 }
 
-/* --- Player Controls Overlay (Cinematic Gradient) --- */
+/* Hide native controls loading spinner */
+.player-container video::-webkit-media-controls-loading-panel {
+    display: none !important;
+}
+
+/* Custom Controls Overlay */
 .player-controls {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        transparent 50%,
-        rgba(0, 0, 0, 0.8) 100%
-    );
+    background: linear-gradient(transparent 50%, rgba(0,0,0,0.9));
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 1.25rem;
+    padding: 1rem;
     opacity: 1;
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s;
     pointer-events: none;
-}
-
-.player-container:not(.hide-controls) .player-controls {
-    pointer-events: all;
 }
 
 .player-container.hide-controls .player-controls {
     opacity: 0;
 }
 
-/* --- Progress Bar (Premium Burgundy) --- */
+/* Progress Bar */
 .progress-bar-container {
     width: 100%;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
     margin-bottom: 1rem;
     cursor: pointer;
     position: relative;
-    transition: height 0.2s ease;
-}
-
-.progress-bar-container:hover {
-    height: 7px;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-burgundy), var(--accent-burgundy-light));
-    width: 0%;
-    border-radius: 3px;
-    position: relative;
-    transition: width 0.1s linear;
-    box-shadow: 0 0 8px rgba(124, 29, 64, 0.6);
-}
-
-.progress-bar-fill::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
     background: var(--accent-burgundy);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(124, 29, 64, 0.8);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    width: 0%;
+    border-radius: 2px;
 }
 
-.progress-bar-container:hover .progress-bar-fill::after {
-    opacity: 1;
-}
-
-/* --- Controls Row --- */
 .controls-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     color: white;
-    gap: 1rem;
 }
 
 .ctrl-btn {
-    background: transparent;
+    background: none;
     border: none;
     color: white;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     cursor: pointer;
     padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.ctrl-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.ctrl-btn:active {
-    transform: scale(0.9);
-    background: rgba(124, 29, 64, 0.3);
 }
 
 .time-display {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    letter-spacing: 0.5px;
 }
 
-/* --- Double-Tap Zones (Invisible but Interactive) --- */
+/* Double-Tap Zones */
 .double-tap-zone {
     position: absolute;
     top: 0;
@@ -145,90 +86,54 @@
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: all;
+    transition: opacity 0.2s;
 }
 
-.double-tap-zone.left {
-    left: 0;
-}
+.double-tap-zone.left { left: 0; }
+.double-tap-zone.right { right: 0; }
+.double-tap-zone:active { opacity: 1; background: rgba(255,255,255,0.1); }
 
-.double-tap-zone.right {
-    right: 0;
-}
-
-.double-tap-zone:active {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* --- Player Info Section --- */
+/* Player Info */
 .player-info {
-    padding: 0 1.25rem 1.5rem;
+    padding: 0 1rem 1rem;
 }
 
 .player-title {
-    font-size: 1.2rem;
-    font-weight: 800;
+    font-size: 1.1rem;
+    font-weight: 700;
     margin-bottom: 0.75rem;
-    color: var(--text-primary);
-    line-height: 1.4;
-    letter-spacing: -0.3px;
 }
 
-/* --- Action Buttons (Like & Share) --- */
+/* Action Buttons - Horizontal like Shorts */
 .player-actions {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
 .action-btn {
     background: var(--bg-card);
-    border: 1.5px solid var(--border-color);
+    border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 0.65rem 1.25rem;
-    border-radius: 24px;
-    font-size: 0.9rem;
-    font-weight: 700;
+    padding: 0.6rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.action-btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(124, 29, 64, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.5s, height 0.5s;
-}
-
-.action-btn:active::before {
-    width: 300px;
-    height: 300px;
+    transition: all 0.2s;
 }
 
 .action-btn:hover {
     border-color: var(--accent-burgundy);
     background: var(--bg-elevated);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(124, 29, 64, 0.2);
 }
 
 .action-btn:active {
-    transform: translateY(0);
-    border-color: var(--accent-burgundy);
+    transform: scale(0.95);
 }
 
 .action-btn.liked {
@@ -237,14 +142,19 @@
     color: var(--accent-burgundy);
 }
 
-/* --- Suggestions Section --- */
+.action-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+/* Suggestions */
 .suggestions-title {
-    padding: 1.25rem 1.25rem 0.75rem;
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
 }
 
 #suggestionsGrid {
@@ -281,20 +191,20 @@
     margin-top: 0.3rem;
 }
 
-/* --- Responsive Adjustments --- */
+/* Responsive */
 @media (max-width: 480px) {
     .player-title {
-        font-size: 1.05rem;
+        font-size: 1rem;
     }
     
     .action-btn {
-        padding: 0.6rem 1rem;
-        font-size: 0.85rem;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.8rem;
     }
     
     .suggestions-title {
-        font-size: 1.05rem;
-        padding: 1rem 1rem 0.6rem;
+        font-size: 1rem;
+        padding: 0.85rem;
     }
     
     #suggestionsGrid {
@@ -316,36 +226,15 @@
     }
     
     .player-title {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
     }
     
     .suggestions-title {
-        font-size: 1.25rem;
-        padding: 1.5rem 2rem 1rem;
+        font-size: 1.2rem;
+        padding: 1.25rem 2rem 0.85rem;
     }
     
     #suggestionsGrid {
         padding: 0 1.5rem 3rem;
     }
-}
-
-/* --- Loading State --- */
-.player-container.loading::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-}
-
-/* --- Smooth Transitions --- */
-.player-container,
-.player-controls,
-.progress-bar-container,
-.ctrl-btn,
-.action-btn {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

@@ -1,11 +1,6 @@
-// ============================================
-// CUMBEAR ULTRA PREMIUM - Player & VAST Engine
-// Version: 2.0 Enhanced
-// ============================================
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Player.js Loaded (Ultra Premium Engine)');
-
+    console.log('✅ Player.js Loaded (No Auto-Play, Smooth Seeking)');
+    
     const videoEl = document.getElementById('mainVideo');
     const suggestionsGrid = document.getElementById('suggestionsGrid');
     const vastOverlay = document.getElementById('vastOverlay');
@@ -16,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerLikeBtn = document.getElementById('playerLikeBtn');
     const playerShareBtn = document.getElementById('playerShareBtn');
 
-    // --- 1. Global Kill Switch (Prevents Background Audio) ---
-    // This is called by script.js when navigating away from the player
+    // Global Kill Switch - Called when leaving player view
     window.stopPlayer = function() {
+        console.log('🛑 Killing player audio');
         if (videoEl) {
             videoEl.pause();
             videoEl.removeAttribute('src');
@@ -34,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 2. Robust VAST Pre-roll Engine ---
+    // VAST Pre-roll Engine
     async function playVastPreRoll(vastUrl, onComplete) {
         try {
             const response = await fetch(vastUrl);
@@ -50,17 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 vastOverlay.classList.remove('hidden');
                 vastVideo.src = adVideoUrl;
-                vastVideo.muted = false; // Pre-rolls should have sound
-                vastVideo.playbackRate = 1.0;
-                
-                const playPromise = vastVideo.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.warn("Autoplay blocked, muting ad:", error);
-                        vastVideo.muted = true;
-                        vastVideo.play();
-                    });
-                }
+                vastVideo.muted = false;
+                vastVideo.play();
 
                 let timeLeft = skipSeconds;
                 vastCountdown.textContent = timeLeft;
@@ -86,31 +72,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 vastSkipBtn.onclick = endAd;
                 vastVideo.onended = endAd;
-                vastVideo.onerror = endAd; // Fallback if ad fails
             } else {
-                if (onComplete) onComplete(); // No ad found, proceed
+                if (onComplete) onComplete();
             }
         } catch (e) {
             console.error("VAST Pre-roll failed:", e);
-            if (onComplete) onComplete(); // Graceful fallback
+            if (onComplete) onComplete();
         }
     }
 
-    // --- 3. Main Video Loader ---
+    // Load Video - NO AUTO-PLAY
     window.loadPlayerVideo = async function(video, startTime = 0) {
         if (!video) return;
         
         // Update UI immediately
         playerTitleDisplay.textContent = video.title;
-        if (playerLikeBtn) playerLikeBtn.textContent = '❤️ Like';
+        if (playerLikeBtn) {
+            playerLikeBtn.textContent = '';
+            playerLikeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg><span>Like</span>';
+        }
+        if (playerShareBtn) {
+            playerShareBtn.textContent = '';
+            playerShareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg><span>Share</span>';
+        }
         
         // 1. Play Pre-roll First
         await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
-            // 2. Start Main Video
+            // 2. Load Main Video - NO AUTO-PLAY
             videoEl.src = video.playableUrl;
             videoEl.poster = video.thumbnailUrl;
+            videoEl.preload = 'metadata'; // Only load metadata, not full video
             videoEl.load();
             
+            // Set start time if needed, but DON'T auto-play
             if (startTime > 0) {
                 videoEl.addEventListener('loadedmetadata', function onMeta() {
                     videoEl.currentTime = startTime;
@@ -118,17 +112,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             
-            const playPromise = videoEl.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => {});
-            }
+            // User must click play manually
         });
         
         // 3. Load Suggestions
         loadSuggestions(video);
     };
 
-    // --- 4. Suggestions Engine ---
+    // Suggestions Engine
     async function loadSuggestions(currentVideo) {
         suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Loading suggestions...</div>';
         
@@ -157,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         filtered.forEach((video, index) => {
-            // Inject In-Feed Ad every 6 suggestions
             if (index > 0 && index % 6 === 0 && window.renderAd) {
                 suggestionsGrid.insertAdjacentHTML('beforeend', window.renderAd('infeed'));
             }
@@ -175,23 +165,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             card.addEventListener('click', () => {
-                window.scrollTo({ top: 0, behavior: 'instant' }); // Instant jump to top
+                window.scrollTo({ top: 0, behavior: 'instant' });
                 window.loadPlayerVideo(video, 0);
             });
             suggestionsGrid.appendChild(card);
         });
     }
 
-    // --- 5. Player Action Buttons (Like & Share) ---
+    // Like Button with proper icon
     if (playerLikeBtn) {
         playerLikeBtn.addEventListener('click', () => {
             const isLiked = playerLikeBtn.classList.toggle('liked');
-            playerLikeBtn.textContent = isLiked ? '❤️ Liked' : '❤️ Like';
-            playerLikeBtn.style.color = isLiked ? 'var(--accent-burgundy)' : 'var(--text-primary)';
-            playerLikeBtn.style.borderColor = isLiked ? 'var(--accent-burgundy)' : 'var(--border-color)';
+            if (isLiked) {
+                playerLikeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg><span>Liked</span>';
+                playerLikeBtn.style.color = 'var(--accent-burgundy)';
+                playerLikeBtn.style.borderColor = 'var(--accent-burgundy)';
+            } else {
+                playerLikeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg><span>Like</span>';
+                playerLikeBtn.style.color = 'var(--text-primary)';
+                playerLikeBtn.style.borderColor = 'var(--border-color)';
+            }
         });
     }
 
+    // Share Button with native share API
     if (playerShareBtn) {
         playerShareBtn.addEventListener('click', async () => {
             const shareData = {
@@ -205,9 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     await navigator.share(shareData);
                 } else {
                     await navigator.clipboard.writeText(window.location.href);
-                    const originalText = playerShareBtn.textContent;
-                    playerShareBtn.textContent = '🔗 Copied!';
-                    setTimeout(() => { playerShareBtn.textContent = originalText; }, 2000);
+                    const originalHTML = playerShareBtn.innerHTML;
+                    playerShareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Copied!</span>';
+                    setTimeout(() => { playerShareBtn.innerHTML = originalHTML; }, 2000);
                 }
             } catch (err) {
                 console.log('Share canceled or failed');
@@ -215,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 6. Helper Functions ---
     function formatViews(num) { 
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'; 
         if (num >= 1000) return (num / 1000).toFixed(1) + 'k'; 
