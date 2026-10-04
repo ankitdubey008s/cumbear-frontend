@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('sidebarOverlay');
     const sidebar = document.getElementById('siteSidebar');
     const themeBtn = document.getElementById('themeToggleBtn');
-    const navLinks = document.querySelectorAll('.nav-link[data-target]');
 
     // --- 1. Sidebar Open/Close ---
     window.openSidebar = () => {
@@ -108,7 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 5. Grid View Modal ---
     const gridRow = document.getElementById('gridViewRow');
     if (gridRow) {
-        gridRow.addEventListener('click', () => {
+        gridRow.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
             window.closeSidebar();
             const currentGrid = localStorage.getItem('cumbear_grid') || '1';
             const gridHTML = `
@@ -143,10 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 6. Language Modal with Google Translate ---
+    // --- 6. Language Modal ---
     const langRow = document.getElementById('languageRow');
     if (langRow) {
-        langRow.addEventListener('click', () => {
+        langRow.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
             window.closeSidebar();
             const currentLang = localStorage.getItem('cumbear_lang') || 'en';
             const langHTML = `
@@ -184,9 +185,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         localStorage.setItem('cumbear_lang', code);
                         
                         // Trigger Google Translate
-                        triggerGoogleTranslate(code);
-                        
-                        setTimeout(() => modal.classList.remove('active'), 300);
+                        if (code !== 'en') {
+                            const langMap = { 'es': '/en/es', 'fr': '/en/fr', 'de': '/en/de', 'hi': '/en/hi', 'zh-CN': '/en/zh-CN', 'ru': '/en/ru', 'ar': '/en/ar', 'pt': '/en/pt', 'ja': '/en/ja', 'ko': '/en/ko', 'it': '/en/it', 'tr': '/en/tr', 'nl': '/en/nl', 'pl': '/en/pl', 'id': '/en/id', 'vi': '/en/vi', 'th': '/en/th' };
+                            if (langMap[code]) {
+                                document.cookie = `googtrans=${langMap[code]}; path=/;`;
+                                document.cookie = `googtrans=${langMap[code]}; path=/; domain=.cumbear.in;`;
+                                location.reload();
+                            }
+                        } else {
+                            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                            location.reload();
+                        }
                     });
                 });
             };
@@ -197,32 +206,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 7. Google Translate Trigger ---
-    function triggerGoogleTranslate(langCode) {
-        if (langCode === 'en') {
-            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.cumbear.in";
-            location.reload();
-            return;
-        }
-        const langMap = {
-            'es': '/en/es', 'fr': '/en/fr', 'de': '/en/de', 'hi': '/en/hi',
-            'zh-CN': '/en/zh-CN', 'ru': '/en/ru', 'ar': '/en/ar', 'pt': '/en/pt',
-            'ja': '/en/ja', 'ko': '/en/ko', 'it': '/en/it', 'tr': '/en/tr',
-            'nl': '/en/nl', 'pl': '/en/pl', 'id': '/en/id', 'vi': '/en/vi', 'th': '/en/th'
-        };
-        const transPath = langMap[langCode];
-        if (transPath) {
-            document.cookie = `googtrans=${transPath}; path=/;`;
-            document.cookie = `googtrans=${transPath}; path=/; domain=.cumbear.in;`;
-            location.reload();
-        }
-    }
-
-    // --- 8. Navigation Links ---
+    // --- 7. BULLETPROOF Navigation Links ---
+    const navLinks = document.querySelectorAll('.nav-link[data-target]');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
+            // CRITICAL: Stop default behavior AND stop event bubbling to prevent ad hijacking
             e.preventDefault();
+            e.stopPropagation();
+            
             const targetView = link.getAttribute('data-target');
             if (window.switchView) {
                 window.switchView(targetView, true);
@@ -231,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 9. Initialize State ---
+    // --- 8. Initialize State ---
     const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
     const savedGrid = localStorage.getItem('cumbear_grid') || '1';
     const savedLang = localStorage.getItem('cumbear_lang') || 'en';
