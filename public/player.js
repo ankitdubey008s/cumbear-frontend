@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Player.js Loaded (No Auto-Play, Smooth Seeking)');
+    console.log('✅ Player.js Loaded (7-Second Pre-roll Enforced)');
     
     const videoEl = document.getElementById('mainVideo');
     const suggestionsGrid = document.getElementById('suggestionsGrid');
@@ -11,25 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerLikeBtn = document.getElementById('playerLikeBtn');
     const playerShareBtn = document.getElementById('playerShareBtn');
 
-    // Global Kill Switch - Called when leaving player view
+    // Global Kill Switch
     window.stopPlayer = function() {
-        console.log('🛑 Killing player audio');
-        if (videoEl) {
-            videoEl.pause();
-            videoEl.removeAttribute('src');
-            videoEl.load();
-        }
-        if (vastVideo) {
-            vastVideo.pause();
-            vastVideo.removeAttribute('src');
-            vastVideo.load();
-        }
-        if (vastOverlay) {
-            vastOverlay.classList.add('hidden');
-        }
+        if (videoEl) { videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); }
+        if (vastVideo) { vastVideo.pause(); vastVideo.removeAttribute('src'); vastVideo.load(); }
+        if (vastOverlay) vastOverlay.classList.add('hidden');
     };
 
-    // VAST Pre-roll Engine
+    // VAST Pre-roll Engine (Strict 7-Second Skip)
     async function playVastPreRoll(vastUrl, onComplete) {
         try {
             const response = await fetch(vastUrl);
@@ -40,24 +29,35 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (mediaFile && mediaFile.textContent) {
                 const adVideoUrl = mediaFile.textContent.trim();
-                const skipOffset = mediaFile.getAttribute("skipoffset") || "00:00:07";
-                const skipSeconds = parseInt(skipOffset.split(":").pop()) || 7;
+                
+                // ENFORCE 7 SECONDS SKIP FOR LONG VIDEOS
+                const skipSeconds = 7; 
 
                 vastOverlay.classList.remove('hidden');
                 vastVideo.src = adVideoUrl;
-                vastVideo.muted = false;
-                vastVideo.play();
+                vastVideo.muted = false; // Pre-rolls must have sound for max revenue
+                
+                const playPromise = vastVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        vastVideo.muted = true; // Fallback if browser blocks unmuted autoplay
+                        vastVideo.play();
+                    });
+                }
 
                 let timeLeft = skipSeconds;
                 vastCountdown.textContent = timeLeft;
                 vastSkipBtn.classList.add('hidden');
+                vastSkipBtn.textContent = `Skip Ad in ${timeLeft}s`;
 
                 const timer = setInterval(() => {
                     timeLeft--;
                     vastCountdown.textContent = timeLeft;
+                    vastSkipBtn.textContent = `Skip Ad in ${timeLeft}s`;
                     if (timeLeft <= 0) {
                         clearInterval(timer);
                         vastSkipBtn.classList.remove('hidden');
+                        vastSkipBtn.textContent = 'Skip Ad';
                     }
                 }, 1000);
 
@@ -72,68 +72,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 vastSkipBtn.onclick = endAd;
                 vastVideo.onended = endAd;
+                vastVideo.onerror = endAd; // Graceful fallback if ad fails to load
             } else {
-                if (onComplete) onComplete();
+                if (onComplete) onComplete(); // No ad found, proceed to video
             }
         } catch (e) {
             console.error("VAST Pre-roll failed:", e);
-            if (onComplete) onComplete();
+            if (onComplete) onComplete(); // Graceful fallback
         }
     }
 
-    // Load Video - NO AUTO-PLAY
+    // Load Video (NO Auto-Play until ad is done)
     window.loadPlayerVideo = async function(video, startTime = 0) {
         if (!video) return;
         
-        // Update UI immediately
         playerTitleDisplay.textContent = video.title;
         if (playerLikeBtn) {
-            playerLikeBtn.textContent = '';
             playerLikeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg><span>Like</span>';
+            playerLikeBtn.style.color = 'var(--text-primary)';
+            playerLikeBtn.style.borderColor = 'var(--border-color)';
         }
         if (playerShareBtn) {
-            playerShareBtn.textContent = '';
             playerShareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg><span>Share</span>';
         }
         
         // 1. Play Pre-roll First
         await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
-            // 2. Load Main Video - NO AUTO-PLAY
+            // 2. Start Main Video (User must click play, or we can auto-play if desired)
             videoEl.src = video.playableUrl;
             videoEl.poster = video.thumbnailUrl;
-            videoEl.preload = 'metadata'; // Only load metadata, not full video
+            videoEl.preload = 'metadata';
             videoEl.load();
             
-            // Set start time if needed, but DON'T auto-play
             if (startTime > 0) {
                 videoEl.addEventListener('loadedmetadata', function onMeta() {
                     videoEl.currentTime = startTime;
                     videoEl.removeEventListener('loadedmetadata', onMeta);
                 });
             }
-            
-            // User must click play manually
+            // Auto-play main video after ad
+            videoEl.play().catch(() => {});
         });
         
         // 3. Load Suggestions
         loadSuggestions(video);
     };
 
-    // Suggestions Engine
     async function loadSuggestions(currentVideo) {
         suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Loading suggestions...</div>';
-        
         try {
             const res = await fetch(`https://cumbear-backend.vercel.app/api/videos/related/${encodeURIComponent(currentVideo.category || 'all')}?limit=50`);
             const data = await res.json();
-            
             if (data.success && data.data) {
                 renderSuggestions(data.data, currentVideo._id);
             } else {
                 suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">No suggestions found.</div>';
             }
         } catch (err) { 
-            console.error('Failed to load suggestions:', err); 
             suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Error loading suggestions.</div>'; 
         }
     }
@@ -141,17 +136,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSuggestions(videos, excludeId) {
         suggestionsGrid.innerHTML = '';
         const filtered = videos.filter(v => v._id !== excludeId);
-        
         if (filtered.length === 0) {
             suggestionsGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">No suggestions found.</div>';
             return;
         }
-        
         filtered.forEach((video, index) => {
             if (index > 0 && index % 6 === 0 && window.renderAd) {
                 suggestionsGrid.insertAdjacentHTML('beforeend', window.renderAd('infeed'));
             }
-            
             const card = document.createElement('div');
             card.className = 'video-card';
             card.innerHTML = `
@@ -172,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Like Button with proper icon
     if (playerLikeBtn) {
         playerLikeBtn.addEventListener('click', () => {
             const isLiked = playerLikeBtn.classList.toggle('liked');
@@ -188,27 +179,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Share Button with native share API
     if (playerShareBtn) {
         playerShareBtn.addEventListener('click', async () => {
-            const shareData = {
-                title: playerTitleDisplay.textContent,
-                text: 'Check out this video on CumBear!',
-                url: window.location.href
-            };
-
+            const shareData = { title: playerTitleDisplay.textContent, text: 'Check out this video on CumBear!', url: window.location.href };
             try {
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                } else {
+                if (navigator.share) await navigator.share(shareData);
+                else {
                     await navigator.clipboard.writeText(window.location.href);
                     const originalHTML = playerShareBtn.innerHTML;
                     playerShareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Copied!</span>';
                     setTimeout(() => { playerShareBtn.innerHTML = originalHTML; }, 2000);
                 }
-            } catch (err) {
-                console.log('Share canceled or failed');
-            }
+            } catch (err) {}
         });
     }
 
