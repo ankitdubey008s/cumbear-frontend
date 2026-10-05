@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // 1. Play Pre-roll First (Using EXACT URL you provided)
-        await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
+        await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idzone=6045632', () => {
             // 2. Start Main Video
             console.log('▶️ Starting main video');
             videoEl.src = video.playableUrl;
