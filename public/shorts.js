@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Shorts.js Loaded (3-Second Auto-Skip Pre-roll)');
+    console.log('✅ Shorts.js Loaded');
     
     const shortsContainer = document.getElementById('shortsContainer');
     let activeObserver = null;
@@ -8,47 +8,61 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadShorts() {
         shortsContainer.innerHTML = '<div class="short-loading" style="z-index:50"><div class="short-spinner"></div></div>';
         
-        // 1. Play Vertical VAST Pre-roll with 3-Second Auto-Skip
+        // 1. Play Vertical VAST Pre-roll with DIAGNOSTIC LOGGING
+        const shortsVastUrl = "https://s.magsrv.com/v1/vast.php?idzone=6045638";
+        console.log('🎬 Starting Shorts VAST Pre-roll request to:', shortsVastUrl);
+        
         try {
-            const response = await fetch("https://s.magsrv.com/v1/vast.php?idzone=6045638");
-            const text = await response.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "text/xml");
-            const mediaFile = xmlDoc.querySelector("MediaFile");
+            const response = await fetch(shortsVastUrl);
+            console.log('📡 Shorts VAST Response status:', response.status);
             
-            if (mediaFile && mediaFile.textContent) {
-                const adUrl = mediaFile.textContent.trim();
-                const overlay = document.createElement("div");
-                overlay.className = "short-item";
-                overlay.style.zIndex = "100";
-                overlay.innerHTML = `
-                    <video class="short-video" src="${adUrl}" playsinline muted></video>
-                    <div class="short-info" style="bottom:20px; display:flex; flex-direction:column; align-items:center; gap:10px;">
-                        <div style="color:rgba(255,255,255,0.8); font-size:0.8rem; font-weight:600;">Advertisement</div>
-                        <button class="watch-full-btn" id="skipShortsAd" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(4px);">Skip Ad</button>
-                    </div>
-                `;
-                shortsContainer.innerHTML = "";
-                shortsContainer.appendChild(overlay);
+            if (response.ok) {
+                const text = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(text, "text/xml");
+                const mediaFile = xmlDoc.querySelector("MediaFile");
                 
-                const adVid = overlay.querySelector("video");
-                adVid.muted = true; // Shorts ads must be muted by default
-                adVid.play().catch(() => {});
-                
-                const skipAd = () => {
-                    adVid.pause();
-                    adVid.removeAttribute('src');
-                    overlay.remove();
-                    renderShortsFeed(); // Proceed to load actual shorts
-                };
-                
-                overlay.querySelector("#skipShortsAd").onclick = skipAd;
-                // Auto-skip after 3 seconds to register impression but not ruin UX
-                setTimeout(skipAd, 3000);
-                return; // Stop here, renderShortsFeed will be called on skip
+                if (mediaFile && mediaFile.textContent) {
+                    const adUrl = mediaFile.textContent.trim();
+                    console.log('✅ Shorts Ad Video URL found:', adUrl);
+                    
+                    const overlay = document.createElement("div");
+                    overlay.className = "short-item";
+                    overlay.style.zIndex = "100";
+                    overlay.innerHTML = `
+                        <video class="short-video" src="${adUrl}" playsinline muted></video>
+                        <div class="short-info" style="bottom:20px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                            <div style="color:rgba(255,255,255,0.8); font-size:0.8rem; font-weight:600;">Advertisement</div>
+                            <button class="watch-full-btn" id="skipShortsAd" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(4px);">Skip Ad</button>
+                        </div>
+                    `;
+                    shortsContainer.innerHTML = "";
+                    shortsContainer.appendChild(overlay);
+                    
+                    const adVid = overlay.querySelector("video");
+                    adVid.muted = true;
+                    adVid.play().catch(err => console.warn("Shorts ad autoplay blocked:", err));
+                    
+                    const skipAd = () => {
+                        console.log('🏁 Shorts ad skipped or ended');
+                        adVid.pause();
+                        adVid.removeAttribute('src');
+                        overlay.remove();
+                        renderShortsFeed();
+                    };
+                    
+                    overlay.querySelector("#skipShortsAd").onclick = skipAd;
+                    // Auto-skip after 3 seconds to register impression but not ruin UX
+                    setTimeout(skipAd, 3000);
+                    return; 
+                } else {
+                    console.log('⚠️ No MediaFile in Shorts VAST. Loading feed directly.');
+                }
+            } else {
+                console.error('❌ Shorts VAST Fetch failed with status:', response.status);
             }
         } catch(e) { 
-            console.log("Shorts VAST skipped or failed"); 
+            console.error("❌ CRITICAL: Shorts VAST fetch failed. Is an Ad-Blocker blocking it?", e); 
         }
         
         // 2. If no ad or ad failed, load feed directly

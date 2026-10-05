@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Player.js Loaded (7-Second Pre-roll Enforced)');
+    console.log('✅ Player.js Loaded');
     
     const videoEl = document.getElementById('mainVideo');
     const suggestionsGrid = document.getElementById('suggestionsGrid');
@@ -13,23 +13,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Global Kill Switch
     window.stopPlayer = function() {
+        console.log('🛑 Killing player audio');
         if (videoEl) { videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); }
         if (vastVideo) { vastVideo.pause(); vastVideo.removeAttribute('src'); vastVideo.load(); }
         if (vastOverlay) vastOverlay.classList.add('hidden');
     };
 
-    // VAST Pre-roll Engine (Strict 7-Second Skip)
+    // VAST Pre-roll Engine with DIAGNOSTIC LOGGING
     async function playVastPreRoll(vastUrl, onComplete) {
+        console.log('🎬 Starting VAST Pre-roll request to:', vastUrl);
         try {
             const response = await fetch(vastUrl);
+            console.log('📡 VAST Response status:', response.status);
+            
+            if (!response.ok) {
+                console.error('❌ VAST Fetch failed with status:', response.status);
+                if (onComplete) onComplete();
+                return;
+            }
+
             const text = await response.text();
+            console.log('📜 VAST XML received, length:', text.length);
+            
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(text, "text/xml");
-            const mediaFile = xmlDoc.querySelector("MediaFile");
             
+            const parseError = xmlDoc.querySelector("parsererror");
+            if (parseError) {
+                console.error("❌ VAST XML Parse Error:", parseError);
+                if (onComplete) onComplete();
+                return;
+            }
+
+            const mediaFile = xmlDoc.querySelector("MediaFile");
             if (mediaFile && mediaFile.textContent) {
                 const adVideoUrl = mediaFile.textContent.trim();
-                const skipSeconds = 7; // STRICT 7 SECONDS FOR MAX REVENUE
+                console.log('✅ Ad Video URL found:', adVideoUrl);
+                
+                const skipOffset = mediaFile.getAttribute("skipoffset") || "00:00:07";
+                const skipSeconds = parseInt(skipOffset.split(":").pop()) || 7;
+                console.log('⏱️ Skip seconds enforced:', skipSeconds);
 
                 vastOverlay.classList.remove('hidden');
                 vastVideo.src = adVideoUrl;
@@ -37,8 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const playPromise = vastVideo.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(() => {
-                        vastVideo.muted = true; // Fallback if browser blocks unmuted autoplay
+                    playPromise.catch((err) => {
+                        console.warn("⚠️ Browser blocked unmuted autoplay, muting ad:", err);
+                        vastVideo.muted = true;
                         vastVideo.play();
                     });
                 }
@@ -60,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 1000);
 
                 const endAd = () => {
+                    console.log('🏁 Ad ended or skipped');
                     clearInterval(timer);
                     vastVideo.pause();
                     vastVideo.removeAttribute('src');
@@ -70,13 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 vastSkipBtn.onclick = endAd;
                 vastVideo.onended = endAd;
-                vastVideo.onerror = endAd; // Graceful fallback if ad fails
+                vastVideo.onerror = (e) => {
+                    console.error("❌ VAST Video playback error:", e);
+                    endAd(); // Fallback if ad fails to load
+                };
             } else {
-                if (onComplete) onComplete(); // No ad found, proceed to video
+                console.log('⚠️ No MediaFile found in VAST response (Empty Ad). Proceeding to video.');
+                if (onComplete) onComplete();
             }
         } catch (e) {
-            console.error("VAST Pre-roll failed:", e);
-            if (onComplete) onComplete(); // Graceful fallback
+            console.error("❌ CRITICAL: VAST Pre-roll fetch failed. Is an Ad-Blocker or CORS blocking it?", e);
+            if (onComplete) onComplete();
         }
     }
 
@@ -94,9 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
             playerShareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg><span>Share</span>';
         }
         
-        // 1. Play Pre-roll First
+        // 1. Play Pre-roll First (Using EXACT URL you provided)
         await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
             // 2. Start Main Video
+            console.log('▶️ Starting main video');
             videoEl.src = video.playableUrl;
             videoEl.poster = video.thumbnailUrl;
             videoEl.preload = 'metadata';
@@ -108,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoEl.removeEventListener('loadedmetadata', onMeta);
                 });
             }
-            // Auto-play main video after ad finishes
             videoEl.play().catch(() => {});
         });
         
