@@ -1,3 +1,1 @@
-// Ads are now loaded statically in index.html for maximum reliability.
-// This file is kept for future custom ad logic if needed.
-console.log('✅ Ads loaded statically from index.html');
+window.renderAd=function(type){if(type==='infeed'){return '<div style="grid-column:1/-1;margin:1rem 0;display:flex;justify-content:center;align-items:center;background:var(--bg-card);border-radius:12px;padding:1rem;border:1px solid var(--border-color);min-height:250px;position:relative"><div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Sponsored</div><script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"><\/script><ins class="eas6a97888e2" data-zoneid="6045616"><\/ins><script>(AdProvider=window.AdProvider||[]).push({"serve":{}});<\/script></div>';}return '';};
