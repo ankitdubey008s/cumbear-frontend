@@ -247,7 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const openPlayer = () => {
             stopPreview(card); // Always stop preview if playing
             if (window.loadPlayerVideo) window.loadPlayerVideo(video);
-            if (window.switchView) window.switchView('playerView', true);
+            const params = new URLSearchParams({ v: video._id, t: encodeURIComponent(video.title), thumb: encodeURIComponent(video.thumbnailUrl), dur: video.duration, src: encodeURIComponent(video.playableUrl), cat: video.category || 'all' });
+            window.history.pushState({ view: 'playerView' }, '', `/?${params.toString()}`);
+            if (window.switchView) window.switchView('playerView', false);
         };
 
         // 1. Pointer Down (Start tracking)

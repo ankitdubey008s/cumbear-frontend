@@ -1,11 +1,17 @@
-// --- Age Gate & Global Router ---
+// --- Age Gate & Global Router with Clean URL Support ---
 
 // 1. Age Gate Logic
 document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
     if (localStorage.getItem('cumbear_age_verified') === 'true') {
         document.getElementById('ageGate').classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         initRouter();
+        handleDirectLinks(urlParams);
+    } else {
+        // If not verified, we still need to check for direct links after they verify
+        window.pendingUrlParams = urlParams;
     }
 });
 
@@ -18,6 +24,10 @@ function verifyAge() {
         overlay.classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         initRouter();
+        if (window.pendingUrlParams) {
+            handleDirectLinks(window.pendingUrlParams);
+            window.pendingUrlParams = null;
+        }
     }, 500);
 }
 
@@ -25,10 +35,37 @@ function exitSite() {
     window.location.href = 'https://www.google.com';
 }
 
-// 2. Centralized Router & Back Button System
+// 2. Handle Direct Share Links (No backend fetch needed!)
+function handleDirectLinks(urlParams) {
+    if (urlParams.has('v')) {
+        const video = {
+            _id: urlParams.get('v'),
+            title: urlParams.get('t') || 'CumBear Video',
+            thumbnailUrl: urlParams.get('thumb') || '/cumb.png',
+            duration: urlParams.get('dur') || '00:00',
+            playableUrl: urlParams.get('src') || '',
+            category: urlParams.get('cat') || 'all'
+        };
+        
+        // Wait for player to be ready, then load
+        const checkAndPlay = setInterval(() => {
+            if (window.loadPlayerVideo) {
+                clearInterval(checkAndPlay);
+                window.switchView('playerView', false);
+                window.loadPlayerVideo(video, 0);
+            }
+        }, 100);
+    } else if (urlParams.has('category')) {
+        if (window.performSearch) {
+            window.performSearch(urlParams.get('category'), true);
+        }
+    }
+}
+
+// 3. Centralized Router & Back Button System
 function initRouter() {
     if (!history.state) {
-        history.replaceState({ view: 'homeView' }, '');
+        history.replaceState({ view: 'homeView' }, '', '/');
     }
     
     window.addEventListener('popstate', (event) => {
@@ -49,10 +86,7 @@ window.switchView = function(viewId, pushHistory = true) {
     
     // 🛑 KILL SHORTS if leaving the shorts view
     if (currentViewId === 'shortsView' && viewId !== 'shortsView') {
-        // Pause all shorts videos
-        document.querySelectorAll('.short-video').forEach(v => {
-            v.pause();
-        });
+        document.querySelectorAll('.short-video').forEach(v => v.pause());
     }
     
     // RESET HOME STATE if leaving the home view
@@ -78,19 +112,16 @@ window.switchView = function(viewId, pushHistory = true) {
     const activeLink = document.querySelector(`.nav-link[data-target="${viewId}"]`);
     if (activeLink) activeLink.classList.add('active');
     
-    // Handle specific view resets
     if (viewId === 'categoriesView' && window.showCategoriesView) {
         window.showCategoriesView();
     }
     
-    // Push to history stack if navigating forward
     if (pushHistory) {
-        history.pushState({ view: viewId }, '', `#${viewId}`);
+        history.pushState({ view: viewId }, '', '/');
     }
     
-    // FIX: Instant jump for player, smooth scroll for everything else
     if (viewId === 'playerView') {
-        window.scrollTo(0, 0); // Instant, no animation
+        window.scrollTo(0, 0);
     } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
