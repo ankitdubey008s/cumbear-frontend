@@ -29,13 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (mediaFile && mediaFile.textContent) {
                 const adVideoUrl = mediaFile.textContent.trim();
-                
-                // ENFORCE 7 SECONDS SKIP FOR LONG VIDEOS
-                const skipSeconds = 7; 
+                const skipSeconds = 7; // STRICT 7 SECONDS FOR MAX REVENUE
 
                 vastOverlay.classList.remove('hidden');
                 vastVideo.src = adVideoUrl;
-                vastVideo.muted = false; // Pre-rolls must have sound for max revenue
+                vastVideo.muted = false; // Ads pay more with sound
                 
                 const playPromise = vastVideo.play();
                 if (playPromise !== undefined) {
@@ -72,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 vastSkipBtn.onclick = endAd;
                 vastVideo.onended = endAd;
-                vastVideo.onerror = endAd; // Graceful fallback if ad fails to load
+                vastVideo.onerror = endAd; // Graceful fallback if ad fails
             } else {
                 if (onComplete) onComplete(); // No ad found, proceed to video
             }
@@ -82,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load Video (NO Auto-Play until ad is done)
+    // Load Video
     window.loadPlayerVideo = async function(video, startTime = 0) {
         if (!video) return;
         
@@ -98,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 1. Play Pre-roll First
         await playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', () => {
-            // 2. Start Main Video (User must click play, or we can auto-play if desired)
+            // 2. Start Main Video
             videoEl.src = video.playableUrl;
             videoEl.poster = video.thumbnailUrl;
             videoEl.preload = 'metadata';
@@ -110,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoEl.removeEventListener('loadedmetadata', onMeta);
                 });
             }
-            // Auto-play main video after ad
+            // Auto-play main video after ad finishes
             videoEl.play().catch(() => {});
         });
         

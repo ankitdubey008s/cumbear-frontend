@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Shorts.js Loaded (Instant Skip Pre-roll)');
+    console.log('✅ Shorts.js Loaded (3-Second Auto-Skip Pre-roll)');
     
     const shortsContainer = document.getElementById('shortsContainer');
     let activeObserver = null;
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadShorts() {
         shortsContainer.innerHTML = '<div class="short-loading" style="z-index:50"><div class="short-spinner"></div></div>';
         
-        // 1. Play Vertical VAST Pre-roll with INSTANT SKIP
+        // 1. Play Vertical VAST Pre-roll with 3-Second Auto-Skip
         try {
             const response = await fetch("https://s.magsrv.com/v1/vast.php?idzone=6045638");
             const text = await response.text();
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 overlay.querySelector("#skipShortsAd").onclick = skipAd;
-                // Auto-skip after 3 seconds to not ruin UX, but still register the impression
+                // Auto-skip after 3 seconds to register impression but not ruin UX
                 setTimeout(skipAd, 3000);
                 return; // Stop here, renderShortsFeed will be called on skip
             }
