@@ -1,68 +1,199 @@
-.sticky-ad-wrapper {
-    position: fixed;
-    bottom: var(--footer-height);
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border-color);
-    z-index: 900;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.75rem;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+/* === TOP BANNER (Above Content) === */
+.ad-top-banner{
+  width:100%;
+  max-width:970px;
+  min-height:90px;
+  margin:0.75rem auto;
+  padding:0.75rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(145deg,var(--bg-card) 0%,var(--bg-elevated) 100%);
+  border-radius:12px;
+  border:1px solid rgba(124,29,64,0.15);
+  position:relative;
+  overflow:hidden;
 }
-[data-theme="light"] .sticky-ad-wrapper { background: rgba(255, 255, 255, 0.85); }
-.sticky-close-btn {
-    position: absolute;
-    top: -12px;
-    right: 12px;
-    background: var(--accent-burgundy);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    z-index: 901;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(124, 29, 64, 0.4);
+.ad-top-banner::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(124,29,64,0.5),transparent);
 }
-.sticky-close-btn:active { transform: scale(0.95); }
+.ad-top-banner::after{
+  content:'Advertisement';
+  position:absolute;
+  top:4px;
+  right:8px;
+  font-size:0.6rem;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:1px;
+  font-weight:600;
+  opacity:0.6;
+}
 
-/* VAST Overlay */
-.vast-overlay {
-    position: absolute;
-    inset: 0;
-    background: #000;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* === IN-FEED NATIVE AD (Blends with video cards) === */
+.ad-native-card{
+  background:var(--bg-card);
+  border:1px solid var(--border-color);
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+  cursor:pointer;
+  transition:all var(--transition-fast);
+  animation:fadeIn 0.4s ease;
 }
-.vast-overlay video { width: 100%; height: 100%; object-fit: contain; }
-.vast-skip-btn {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: all var(--transition-fast);
+.ad-native-card:hover{
+  border-color:rgba(124,29,64,0.4);
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,0.3);
 }
-.vast-skip-btn:active { transform: scale(0.95); background: rgba(124, 29, 64, 0.9); }
-.vast-skip-btn.hidden { display: none; }
-.hidden { display: none !important; }
+.ad-native-thumb{
+  width:100%;
+  aspect-ratio:16/9;
+  background:linear-gradient(135deg,var(--accent-dark) 0%,var(--bg-elevated) 100%);
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.ad-native-thumb::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.6) 100%);
+}
+.ad-native-play{
+  width:48px;
+  height:48px;
+  background:rgba(124,29,64,0.9);
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2;
+  box-shadow:0 4px 16px rgba(124,29,64,0.5);
+  animation:pulse 2s ease-in-out infinite;
+}
+.ad-native-play svg{width:22px;height:22px;fill:white;margin-left:3px;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+.ad-native-label{
+  position:absolute;
+  top:8px;
+  left:8px;
+  background:rgba(124,29,64,0.95);
+  color:white;
+  padding:3px 8px;
+  border-radius:4px;
+  font-size:0.65rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  z-index:3;
+  backdrop-filter:blur(4px);
+}
+.ad-native-info{padding:0.75rem;}
+.ad-native-title{
+  font-size:0.85rem;
+  font-weight:700;
+  color:var(--text-primary);
+  line-height:1.3;
+  margin-bottom:4px;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.ad-native-meta{
+  font-size:0.75rem;
+  color:var(--text-muted);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+/* === STICKY BOTTOM AD === */
+.sticky-ad-wrapper{
+  position:fixed;
+  bottom:var(--footer-height);
+  left:0;right:0;
+  background:rgba(0,0,0,0.92);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--border-color);
+  z-index:800;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:0.5rem;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.4);
+  min-height:60px;
+  animation:slideUp 0.4s ease;
+}
+.sticky-close-btn{
+  position:absolute;
+  top:-10px;
+  right:12px;
+  background:var(--accent-burgundy);
+  color:white;
+  border:none;
+  border-radius:50%;
+  width:24px;
+  height:24px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  z-index:801;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 2px 8px rgba(124,29,64,0.5);
+}
+.sticky-close-btn:active{transform:scale(0.9);}
+
+/* === VAST PRE-ROLL === */
+.vast-overlay{
+  position:absolute;
+  inset:0;
+  background:#000;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.vast-overlay video{width:100%;height:100%;object-fit:contain;}
+.vast-skip-btn{
+  position:absolute;
+  bottom:20px;
+  right:20px;
+  background:rgba(0,0,0,0.85);
+  color:white;
+  padding:0.6rem 1.2rem;
+  border-radius:8px;
+  font-weight:700;
+  font-size:0.9rem;
+  cursor:pointer;
+  border:1px solid rgba(255,255,255,0.2);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  transition:all var(--transition-fast);
+  z-index:51;
+}
+.vast-skip-btn:hover{background:rgba(124,29,64,0.9);border-color:var(--accent-burgundy);}
+.vast-skip-btn:active{transform:scale(0.95);}
+
+/* === RESPONSIVE === */
+@media (max-width:768px){
+  .ad-top-banner{
+    min-height:50px;
+    margin:0.5rem;
+    padding:0.5rem;
+  }
+  .sticky-ad-wrapper{
+    padding:0.4rem;
+    min-height:50px;
+  }
+}
