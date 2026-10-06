@@ -1,33 +1,36 @@
-/* === COMPACT TOP BANNER (728x90 style) === */
+/* === PROFESSIONAL TOP BANNER === */
 .ad-top-banner{
   width:100%;
   max-width:728px;
+  margin:0.75rem auto;
+  padding:0;
+  background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1a 100%);
+  border-radius:8px;
+  border:1px solid rgba(124,29,64,0.2);
+  overflow:hidden;
+  position:relative;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+.ad-banner-inner{
   min-height:90px;
-  margin:0.5rem auto;
-  padding:0.5rem;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:var(--bg-card);
-  border-radius:8px;
-  border:1px solid var(--border-color);
-  position:relative;
-  overflow:hidden;
+  padding:0.5rem;
 }
 .ad-top-banner::after{
-  content:'Ad';
+  content:'Advertisement';
   position:absolute;
   top:4px;
-  right:6px;
-  font-size:0.55rem;
-  color:var(--text-muted);
+  right:8px;
+  font-size:0.6rem;
+  color:rgba(255,255,255,0.4);
   text-transform:uppercase;
-  letter-spacing:0.5px;
-  font-weight:700;
-  opacity:0.5;
+  letter-spacing:1px;
+  font-weight:600;
 }
 
-/* === NATIVE IN-FEED AD (xHamster Style) === */
+/* === IN-FEED NATIVE AD (300x250 thumbnail size) === */
 .ad-native-card{
   background:var(--bg-card);
   border:1px solid var(--border-color);
@@ -104,9 +107,9 @@
 /* === STICKY BOTTOM === */
 .sticky-ad-wrapper{
   position:fixed;
-  bottom:var(--footer-height);
+  bottom:0;
   left:0;right:0;
-  background:rgba(0,0,0,0.92);
+  background:rgba(0,0,0,0.95);
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
   border-top:1px solid var(--border-color);
@@ -170,12 +173,12 @@
 .vast-skip-btn:hover{background:rgba(124,29,64,0.9);border-color:var(--accent-burgundy);}
 .vast-skip-btn:active{transform:scale(0.95);}
 
-/* === INSTANT MESSAGE AD === */
+/* === INSTANT MESSAGE (Header Side) === */
 .instant-msg-ad{
   position:fixed;
-  bottom:140px;
+  top:80px;
   right:20px;
-  width:320px;
+  width:300px;
   max-width:calc(100vw - 40px);
   background:var(--bg-card);
   border:1px solid var(--border-color);
@@ -183,8 +186,9 @@
   box-shadow:0 8px 32px rgba(0,0,0,0.5);
   z-index:999;
   overflow:hidden;
-  animation:slideUp 0.4s ease;
+  animation:slideInRight 0.4s ease;
 }
+@keyframes slideInRight{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
 .instant-msg-header{
   background:linear-gradient(135deg,var(--accent-burgundy),var(--accent-dark));
   padding:0.75rem 1rem;
@@ -225,17 +229,49 @@
 .instant-msg-close:active{transform:scale(0.9);}
 .instant-msg-content{
   padding:1rem;
+  min-height:100px;
 }
+
+/* === VIEW TABS === */
+.view-tabs{
+  display:flex;
+  gap:0;
+  margin:0.75rem 1rem;
+  background:var(--bg-card);
+  border-radius:12px;
+  padding:4px;
+  border:1px solid var(--border-color);
+}
+.view-tab{
+  flex:1;
+  padding:0.75rem;
+  background:transparent;
+  border:none;
+  color:var(--text-secondary);
+  font-size:0.9rem;
+  font-weight:600;
+  cursor:pointer;
+  border-radius:8px;
+  transition:all var(--transition-fast);
+}
+.view-tab.active{
+  background:linear-gradient(135deg,var(--accent-burgundy),var(--accent-dark));
+  color:white;
+  box-shadow:0 4px 12px rgba(124,29,64,0.3);
+}
+.view-tab:active{transform:scale(0.98);}
 
 @media (max-width:768px){
   .ad-top-banner{
     max-width:320px;
+    margin:0.5rem auto;
+  }
+  .ad-banner-inner{
     min-height:50px;
-    margin:0.4rem auto;
   }
   .instant-msg-ad{
     width:calc(100vw - 40px);
     right:20px;
-    bottom:120px;
+    top:70px;
   }
 }

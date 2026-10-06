@@ -1,6 +1,3 @@
 User-agent: *
 Allow: /
-Allow: /?v=
-Allow: /?category=
-
 Sitemap: https://cumbear.in/sitemap.xml

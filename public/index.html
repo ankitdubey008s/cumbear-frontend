@@ -23,9 +23,9 @@
 </head>
 <body>
 
-<!-- AGGRESSIVE POPUNDER (Every Click) -->
+<!-- POPUNDER (Every 30 minutes) -->
 <script type="application/javascript">
-(function(){var adConfig={"ads_host":"a.pemsrv.com","syndication_host":"s.pemsrv.com","idzone":6045624,"popup_fallback":false,"popup_force":true,"chrome_enabled":true,"new_tab":true,"frequency_period":1,"frequency_count":1,"trigger_method":3,"trigger_class":"","trigger_delay":0,"capping_enabled":true,"tcf_enabled":true,"agego_cross_site_enabled":true,"only_inline":false};var s=document.createElement("script");s.type="application/javascript";s.async=true;s.src="//a.pemsrv.com/popunder1000.js";s.id="popmagicldr";for(var k in adConfig)if(adConfig.hasOwnProperty(k)&&k!=="ads_host"&&k!=="syndication_host")s.setAttribute("data-msg-"+k,adConfig[k]);var b=document.getElementsByTagName("body")[0];b.firstChild?b.insertBefore(s,b.firstChild):b.appendChild(s);})();
+(function(){var adConfig={"ads_host":"a.pemsrv.com","syndication_host":"s.pemsrv.com","idzone":6045624,"popup_fallback":false,"popup_force":true,"chrome_enabled":true,"new_tab":true,"frequency_period":30,"frequency_count":1,"trigger_method":3,"trigger_class":"","trigger_delay":0,"capping_enabled":true,"tcf_enabled":true,"agego_cross_site_enabled":true,"only_inline":false};var s=document.createElement("script");s.type="application/javascript";s.async=true;s.src="//a.pemsrv.com/popunder1000.js";s.id="popmagicldr";for(var k in adConfig)if(adConfig.hasOwnProperty(k)&&k!=="ads_host"&&k!=="syndication_host")s.setAttribute("data-msg-"+k,adConfig[k]);var b=document.getElementsByTagName("body")[0];b.firstChild?b.insertBefore(s,b.firstChild):b.appendChild(s);})();
 </script>
 
 <!-- AGE GATE -->
@@ -86,20 +86,43 @@
 </div>
 </aside>
 
+<!-- INSTANT MESSAGE AD (Header Side) -->
+<div id="instantMsgAd" class="instant-msg-ad" style="display:none;">
+<div class="instant-msg-header">
+<div class="instant-msg-title">New Message</div>
+<button class="instant-msg-close" onclick="document.getElementById('instantMsgAd').style.display='none'">✕</button>
+</div>
+<div class="instant-msg-content">
+<script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+<ins class="eas6a97888e6" data-zoneid="6045630"></ins>
+<script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+</div>
+</div>
+
 <!-- MAIN -->
 <main>
 
 <!-- HOME VIEW -->
 <section id="homeView" class="view-section active">
+<!-- Categories -->
 <div class="horizontal-cats" id="horizontalCats"><button class="h-cat-chip active" data-cat="all">All</button></div>
 
-<!-- COMPACT TOP BANNER (728x90) -->
+<!-- Top Banner (Professional Container) -->
 <div class="ad-top-banner">
+<div class="ad-banner-inner">
 <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
 <ins class="eas6a97888e2" data-zoneid="6045618"></ins>
 <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
 </div>
+</div>
 
+<!-- Tabs (Home/Shorts) -->
+<div class="view-tabs">
+<button class="view-tab active" data-view="homeView">Home</button>
+<button class="view-tab" data-view="shortsView">Shorts</button>
+</div>
+
+<!-- Filter Bar -->
 <div class="filter-bar">
 <div class="filter-title">Latest</div>
 <div class="filter-dropdown">
@@ -112,9 +135,10 @@
 </div>
 </div>
 </div>
+
+<!-- Video Grid -->
 <div class="video-grid" id="videoGrid"></div>
 <div class="pagination" id="paginationContainer"></div>
-<footer class="site-footer" id="siteFooter"></footer>
 </section>
 
 <!-- SHORTS VIEW -->
@@ -164,25 +188,6 @@
 <ins class="eas6a97888e17" data-zoneid="6045626"></ins>
 <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
 </div>
-
-<!-- INSTANT MESSAGE AD -->
-<div id="instantMsgAd" class="instant-msg-ad" style="display:none;">
-<div class="instant-msg-header">
-<div class="instant-msg-title">New Message</div>
-<button class="instant-msg-close" onclick="document.getElementById('instantMsgAd').style.display='none'">✕</button>
-</div>
-<div class="instant-msg-content">
-<script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-<ins class="eas6a97888e6" data-zoneid="6045630"></ins>
-<script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
-</div>
-</div>
-
-<!-- BOTTOM NAV -->
-<footer class="bottom-nav" id="bottomNav">
-<button class="nav-item active" data-view="homeView"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">Home</span></button>
-<button class="nav-item" data-view="shortsView"><svg class="nav-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span class="nav-label">Shorts</span></button>
-</footer>
 
 </div>
 

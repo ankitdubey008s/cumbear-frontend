@@ -1,38 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Main Pages -->
-  <url>
-    <loc>https://cumbear.in/</loc>
-    <priority>1.0</priority>
-    <changefreq>daily</changefreq>
-  </url>
-  <url>
-    <loc>https://cumbear.in/?v=shorts</loc>
-    <priority>0.9</priority>
-    <changefreq>daily</changefreq>
-  </url>
-  
-  <!-- Top Categories (Update these to match your actual top categories) -->
-  <url>
-    <loc>https://cumbear.in/?category=american</loc>
-    <priority>0.8</priority>
-    <changefreq>weekly</changefreq>
-  </url>
-  <url>
-    <loc>https://cumbear.in/?category=milf</loc>
-    <priority>0.8</priority>
-    <changefreq>weekly</changefreq>
-  </url>
-  <url>
-    <loc>https://cumbear.in/?category=teen</loc>
-    <priority>0.8</priority>
-    <changefreq>weekly</changefreq>
-  </url>
-
-  <!-- Legal & Support Pages -->
-  <url>
-    <loc>https://support.cumbear.in/</loc>
-    <priority>0.5</priority>
-    <changefreq>monthly</changefreq>
-  </url>
+<url><loc>https://cumbear.in/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
+<url><loc>https://cumbear.in/?category=american</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+<url><loc>https://cumbear.in/?category=milf</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+<url><loc>https://cumbear.in/?category=teen</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+<url><loc>https://cumbear.in/?category=asian</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+<url><loc>https://cumbear.in/?category=latina</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+<url><loc>https://support.cumbear.in/</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
 </urlset>
