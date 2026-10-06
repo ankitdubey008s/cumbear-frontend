@@ -39,3 +39,29 @@ switchView(view,true);
 if(view==='shortsView'&&window.loadShorts)window.loadShorts();
 }
 });
+
+// Age gate checkbox logic
+document.addEventListener('DOMContentLoaded',()=>{
+const wrapper=document.getElementById('ageCheckboxWrapper');
+const checkbox=document.getElementById('ageCheckbox');
+const enterBtn=document.getElementById('enterBtn');
+if(wrapper&&checkbox&&enterBtn){
+wrapper.onclick=()=>{
+checkbox.classList.toggle('checked');
+enterBtn.disabled=!checkbox.classList.contains('checked');
+};
+}
+});
+
+// Age gate checkbox logic
+document.addEventListener('DOMContentLoaded',()=>{
+const wrapper=document.getElementById('ageCheckboxWrapper');
+const checkbox=document.getElementById('ageCheckbox');
+const enterBtn=document.getElementById('enterBtn');
+if(wrapper && checkbox && enterBtn){
+  wrapper.onclick=()=>{
+    checkbox.classList.toggle('checked');
+    enterBtn.disabled=!checkbox.classList.contains('checked');
+  };
+}
+});

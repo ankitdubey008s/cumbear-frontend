@@ -28,20 +28,33 @@
 (function(){var adConfig={"ads_host":"a.pemsrv.com","syndication_host":"s.pemsrv.com","idzone":6045624,"popup_fallback":false,"popup_force":true,"chrome_enabled":true,"new_tab":true,"frequency_period":30,"frequency_count":1,"trigger_method":3,"trigger_class":"","trigger_delay":0,"capping_enabled":true,"tcf_enabled":true,"agego_cross_site_enabled":true,"only_inline":false};var s=document.createElement("script");s.type="application/javascript";s.async=true;s.src="//a.pemsrv.com/popunder1000.js";s.id="popmagicldr";for(var k in adConfig)if(adConfig.hasOwnProperty(k)&&k!=="ads_host"&&k!=="syndication_host")s.setAttribute("data-msg-"+k,adConfig[k]);var b=document.getElementsByTagName("body")[0];b.firstChild?b.insertBefore(s,b.firstChild):b.appendChild(s);})();
 </script>
 
-<!-- AGE GATE -->
+<!-- PREMIUM AGE GATE -->
 <div class="age-gate-overlay" id="ageGate">
 <div class="age-gate-container">
 <img src="/cumb.png" alt="CumBear" class="brand-logo">
 <h1 class="gate-title">Age Verification Required</h1>
+<p class="gate-subtitle">You must be 18 or older to enter this site</p>
+
 <div class="disclaimer-box">
-<p class="disclaimer-text"><strong>WARNING:</strong> This website contains strictly age-restricted material intended for adults only. By proceeding, you legally affirm that you are at least 18 years of age.</p>
-<p class="disclaimer-text">You voluntarily consent to view such material. If you are not of legal age, you must exit immediately.</p>
+<p class="disclaimer-text"><strong>WARNING:</strong> This website contains sexually explicit material intended for adults only. By entering this site, you legally affirm under penalty of perjury that you are at least <strong>18 years of age</strong> (or the age of majority in your jurisdiction).</p>
+<p class="disclaimer-text">All content on this site depicts consensual activities between adults. If adult content offends you, or if you are not of legal age, please <strong>exit now</strong>.</p>
+<p class="disclaimer-text">By clicking "ENTER", you agree to our <a href="https://support.cumbear.in" target="_blank">Terms of Service</a> and <a href="https://support.cumbear.in" target="_blank">Privacy Policy</a>.</p>
 </div>
+
+<div class="age-checkbox-wrapper" id="ageCheckboxWrapper">
+<div class="age-checkbox" id="ageCheckbox"></div>
+<div class="age-checkbox-label">I confirm that I am at least <strong>18 years old</strong> and consent to viewing adult content.</div>
+</div>
+
 <div class="button-wrapper">
-<button class="btn-exit" onclick="window.location.href='https://google.com'">Exit Website</button>
-<button class="btn-enter" onclick="verifyAge()">I am 18+ Years Old</button>
+<button class="btn-exit" onclick="window.location.href='https://google.com'">Exit</button>
+<button class="btn-enter" id="enterBtn" onclick="verifyAge()" disabled>Enter Site</button>
 </div>
-<p class="security-note">Secure verification required</p>
+
+<div class="age-gate-footer">
+© 2026 CumBear. All rights reserved.<br>
+<a href="https://support.cumbear.in" target="_blank">18 U.S.C. 2257 Record-Keeping Requirements</a> | <a href="https://support.cumbear.in" target="_blank">DMCA</a>
+</div>
 </div>
 </div>
 
@@ -107,7 +120,7 @@
 <!-- Categories -->
 <div class="horizontal-cats" id="horizontalCats"><button class="h-cat-chip active" data-cat="all">All</button></div>
 
-<!-- Top Banner (Professional Container) -->
+<!-- Top Banner -->
 <div class="ad-top-banner">
 <div class="ad-banner-inner">
 <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
