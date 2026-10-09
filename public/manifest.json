@@ -1,0 +1,26 @@
+{
+  "name": "CumBear - Premium Adult Videos",
+  "short_name": "CumBear",
+  "description": "Premium adult video streaming platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#7c1d40",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/cumb.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/cumb.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "adult"],
+  "lang": "en"
+}

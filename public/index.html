@@ -2,10 +2,16 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<title>CumBear - Premium Video Experience</title>
+<meta name="theme-color" content="#7c1d40">
+<title>CumBear</title>
 <link rel="canonical" href="https://cumbear.in/">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/cumb.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -23,39 +29,26 @@
 </head>
 <body>
 
-<!-- POPUNDER (Every 30 minutes) -->
+<!-- POPUNDER -->
 <script type="application/javascript">
 (function(){var adConfig={"ads_host":"a.pemsrv.com","syndication_host":"s.pemsrv.com","idzone":6045624,"popup_fallback":false,"popup_force":true,"chrome_enabled":true,"new_tab":true,"frequency_period":30,"frequency_count":1,"trigger_method":3,"trigger_class":"","trigger_delay":0,"capping_enabled":true,"tcf_enabled":true,"agego_cross_site_enabled":true,"only_inline":false};var s=document.createElement("script");s.type="application/javascript";s.async=true;s.src="//a.pemsrv.com/popunder1000.js";s.id="popmagicldr";for(var k in adConfig)if(adConfig.hasOwnProperty(k)&&k!=="ads_host"&&k!=="syndication_host")s.setAttribute("data-msg-"+k,adConfig[k]);var b=document.getElementsByTagName("body")[0];b.firstChild?b.insertBefore(s,b.firstChild):b.appendChild(s);})();
 </script>
 
-<!-- PREMIUM AGE GATE -->
+<!-- AGE GATE -->
 <div class="age-gate-overlay" id="ageGate">
-<div class="age-gate-container">
-<img src="/cumb.png" alt="CumBear" class="brand-logo">
-<h1 class="gate-title">Age Verification Required</h1>
-<p class="gate-subtitle">You must be 18 or older to enter this site</p>
-
-<div class="disclaimer-box">
-<p class="disclaimer-text"><strong>WARNING:</strong> This website contains sexually explicit material intended for adults only. By entering this site, you legally affirm under penalty of perjury that you are at least <strong>18 years of age</strong> (or the age of majority in your jurisdiction).</p>
-<p class="disclaimer-text">All content on this site depicts consensual activities between adults. If adult content offends you, or if you are not of legal age, please <strong>exit now</strong>.</p>
-<p class="disclaimer-text">By clicking "ENTER", you agree to our <a href="https://support.cumbear.in" target="_blank">Terms of Service</a> and <a href="https://support.cumbear.in" target="_blank">Privacy Policy</a>.</p>
-</div>
-
-<div class="age-checkbox-wrapper" id="ageCheckboxWrapper">
-<div class="age-checkbox" id="ageCheckbox"></div>
-<div class="age-checkbox-label">I confirm that I am at least <strong>18 years old</strong> and consent to viewing adult content.</div>
-</div>
-
-<div class="button-wrapper">
-<button class="btn-exit" onclick="window.location.href='https://google.com'">Exit</button>
-<button class="btn-enter" id="enterBtn" onclick="verifyAge()" disabled>Enter Site</button>
-</div>
-
-<div class="age-gate-footer">
-© 2026 CumBear. All rights reserved.<br>
-<a href="https://support.cumbear.in" target="_blank">18 U.S.C. 2257 Record-Keeping Requirements</a> | <a href="https://support.cumbear.in" target="_blank">DMCA</a>
-</div>
-</div>
+  <div class="age-gate-container">
+    <img src="/cumb.png" alt="CumBear" class="brand-logo">
+    <h1 class="gate-title">Age Verification Required</h1>
+    <div class="disclaimer-box">
+      <p class="disclaimer-text"><strong>WARNING:</strong> This website contains strictly age-restricted material intended for adults only. By proceeding, you legally affirm that you are at least 18 years of age.</p>
+      <p class="disclaimer-text">You voluntarily consent to view such material. If you are not of legal age, you must exit immediately.</p>
+    </div>
+    <div class="button-wrapper">
+      <button class="btn-exit" onclick="window.location.href='https://google.com'">Exit Website</button>
+      <button class="btn-enter" onclick="verifyAge()">I am 18+ Years Old</button>
+    </div>
+    <p class="security-note">🔒 Secure verification required</p>
+  </div>
 </div>
 
 <!-- MAIN APP -->
@@ -63,147 +56,170 @@
 
 <!-- HEADER -->
 <header class="site-header" id="siteHeader">
-<button class="header-btn" id="menuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-<div class="header-logo-container" id="homeLogoBtn"><img src="/cumb.png" alt="CumBear"></div>
-<button class="header-btn" id="searchBtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+  <button class="header-btn" id="menuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <div class="header-logo-container" id="homeLogoBtn"><img src="/cumb.png" alt="CumBear"></div>
+  <button class="header-btn" id="searchBtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
 </header>
 
 <!-- SIDEBAR -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="site-sidebar" id="siteSidebar">
-<div class="sidebar-header">
-<img src="/cumb.png" class="sidebar-logo">
-<button class="close-btn" id="closeSidebar">✕</button>
-</div>
-<div class="sidebar-content">
-<div class="sidebar-section-title">Settings</div>
-<div class="control-group">
-<div class="control-row"><span class="control-label">Theme</span><button class="theme-toggle-btn" id="themeToggleBtn">Light Mode</button></div>
-<div class="control-row clickable-row" id="gridViewRow"><span class="control-label">Grid View</span><span class="control-value" id="gridValueDisplay">1 Column</span></div>
-<div class="control-row clickable-row" id="languageRow"><span class="control-label">Language</span><span class="control-value" id="langValueDisplay">English</span></div>
-</div>
-<div class="sidebar-divider"></div>
-<div class="sidebar-section-title">Navigate</div>
-<div class="nav-links">
-<a class="nav-link active" data-target="homeView"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</a>
-<a class="nav-link" data-target="shortsView"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Shorts</a>
-<a class="nav-link" data-target="categoriesView"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Categories</a>
-</div>
-<div class="sidebar-divider"></div>
-<div class="sidebar-section-title">Legal</div>
-<div class="nav-links">
-<a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Support</a>
-<a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Privacy</a>
-<a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="12" y1="20" x2="12" y2="15"/></svg>Report</a>
-</div>
-</div>
-</aside>
+  <div class="sidebar-header">
+    <img src="/cumb.png" class="sidebar-logo">
+    <button class="close-btn" id="closeSidebar">✕</button>
+  </div>
+  <div class="sidebar-content">
 
-<!-- INSTANT MESSAGE AD (Header Side) -->
-<div id="instantMsgAd" class="instant-msg-ad" style="display:none;">
-<div class="instant-msg-header">
-<div class="instant-msg-title">New Message</div>
-<button class="instant-msg-close" onclick="document.getElementById('instantMsgAd').style.display='none'">✕</button>
-</div>
-<div class="instant-msg-content">
-<script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-<ins class="eas6a97888e6" data-zoneid="6045630"></ins>
-<script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
-</div>
-</div>
+    <!-- CUMBEAR APP INSTALL BUTTON (TOP) -->
+    <button class="app-install-btn" id="appInstallBtn">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <div class="app-install-text">
+        <div class="app-install-title">CumBear App</div>
+        <div class="app-install-subtitle">Install on your device</div>
+      </div>
+    </button>
+
+    <div class="sidebar-section-title">Settings</div>
+    <div class="control-group">
+      <div class="control-row"><span class="control-label">Theme</span><button class="theme-toggle-btn" id="themeToggleBtn">Light Mode</button></div>
+      <div class="control-row clickable-row" id="gridViewRow"><span class="control-label">Grid View</span><span class="control-value" id="gridValueDisplay">1 Column</span></div>
+      <div class="control-row clickable-row" id="languageRow"><span class="control-label">Language</span><span class="control-value" id="langValueDisplay">English</span></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-title">Navigate</div>
+    <div class="nav-links">
+      <a class="nav-link active" data-target="homeView"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</a>
+      <a class="nav-link" data-target="shortsView"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Shorts</a>
+      <a class="nav-link" data-target="categoriesView"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Categories</a>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-title">Follow Us</div>
+    <div class="social-grid">
+      <a href="https://www.facebook.com/share/1Cj5K1UMPX/" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Facebook">
+        <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      </a>
+      <a href="https://t.me/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Telegram">
+        <svg viewBox="0 0 24 24"><path d="M21.2 4.4L2.4 11.1c-1.3.5-1.3 1.2-.2 1.5l4.8 1.5 11.1-7c.5-.3 1-.1.6.2l-9 8.1-.3 4.8c.5 0 .7-.2 1-.5l2.3-2.2 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5z"/></svg>
+      </a>
+      <a href="https://x.com/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="X">
+        <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@cumbear" target="_blank" rel="noopener" class="social-icon-btn" aria-label="YouTube">
+        <svg viewBox="0 0 24 24"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
+      </a>
+      <a href="https://www.tiktok.com/@cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="TikTok">
+        <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/cumbear_offical" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Instagram">
+        <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.2.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.2.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2-.1-1.2-.1-1.6-.1-4.8s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4 1.2-.1 1.6-.1 4.8-.1M12 0C8.7 0 8.3 0 7.1.1 5.8.1 5 .3 4.2.6c-.8.3-1.5.7-2.2 1.4C1.3 2.7.9 3.4.6 4.2.3 5 .1 5.8.1 7.1 0 8.3 0 8.7 0 12s0 3.7.1 4.9c.1 1.3.3 2.1.6 2.9.3.8.7 1.5 1.4 2.2.7.7 1.4 1.1 2.2 1.4.8.3 1.6.5 2.9.6 1.2.1 1.6.1 4.9.1s3.7 0 4.9-.1c1.3-.1 2.1-.3 2.9-.6.8-.3 1.5-.7 2.2-1.4.7-.7 1.1-1.4 1.4-2.2.3-.8.5-1.6.6-2.9.1-1.2.1-1.6.1-4.9s0-3.7-.1-4.9c-.1-1.3-.3-2.1-.6-2.9-.3-.8-.7-1.5-1.4-2.2C21.3 1.3 20.6.9 19.8.6 19 .3 18.2.1 16.9.1 15.7 0 15.3 0 12 0zm0 5.8A6.2 6.2 0 1 0 18.2 12 6.2 6.2 0 0 0 12 5.8zm0 10.2A4 4 0 1 1 16 12a4 4 0 0 1-4 4zm6.4-11.8a1.4 1.4 0 1 0 1.4 1.4 1.4 1.4 0 0 0-1.4-1.4z"/></svg>
+      </a>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-title">Legal</div>
+    <div class="nav-links">
+      <a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Support</a>
+      <a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Privacy</a>
+      <a class="nav-link" href="https://support.cumbear.in" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="12" y1="20" x2="12" y2="15"/></svg>Report</a>
+    </div>
+  </div>
+</aside>
 
 <!-- MAIN -->
 <main>
 
 <!-- HOME VIEW -->
 <section id="homeView" class="view-section active">
-<!-- Categories -->
-<div class="horizontal-cats" id="horizontalCats"><button class="h-cat-chip active" data-cat="all">All</button></div>
+  <div class="horizontal-cats" id="horizontalCats"><button class="h-cat-chip active" data-cat="all">All</button></div>
 
-<!-- Top Banner -->
-<div class="ad-top-banner">
-<div class="ad-banner-inner">
-<script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-<ins class="eas6a97888e2" data-zoneid="6045618"></ins>
-<script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
-</div>
-</div>
+  <!-- MOBILE BANNER (320x250) -->
+  <div class="ad-top-banner-mobile">
+    <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+    <ins class="eas6a97888e2" data-zoneid="6045616"></ins>
+    <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+  </div>
 
-<!-- Tabs (Home/Shorts) -->
-<div class="view-tabs">
-<button class="view-tab active" data-view="homeView">Home</button>
-<button class="view-tab" data-view="shortsView">Shorts</button>
-</div>
+  <!-- DESKTOP BANNER (970x250) -->
+  <div class="ad-top-banner-desktop">
+    <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+    <ins class="eas6a97888e2" data-zoneid="6045618"></ins>
+    <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+  </div>
+  </div>
 
-<!-- Filter Bar -->
-<div class="filter-bar">
-<div class="filter-title">Latest</div>
-<div class="filter-dropdown">
-<button class="filter-btn" id="filterBtn"><span>Popular</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
-<div class="filter-menu" id="filterMenu">
-<div class="filter-option active" data-sort="">Popular</div>
-<div class="filter-option" data-sort="newest">Newest</div>
-<div class="filter-option" data-sort="views">Most Watched</div>
-<div class="filter-option" data-sort="duration">Longest</div>
-</div>
-</div>
-</div>
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="homeView">Home</button>
+    <button class="view-tab" data-view="shortsView">Shorts</button>
+  </div>
 
-<!-- Video Grid -->
-<div class="video-grid" id="videoGrid"></div>
-<div class="pagination" id="paginationContainer"></div>
+  <div class="filter-bar">
+    <div class="filter-title">Latest</div>
+    <div class="filter-dropdown">
+      <button class="filter-btn" id="filterBtn"><span>Popular</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="filter-menu" id="filterMenu">
+        <div class="filter-option active" data-sort="">Popular</div>
+        <div class="filter-option" data-sort="newest">Newest</div>
+        <div class="filter-option" data-sort="views">Most Watched</div>
+        <div class="filter-option" data-sort="duration">Longest</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-grid" id="videoGrid"></div>
+  <div class="pagination" id="paginationContainer"></div>
+  <footer class="site-footer" id="siteFooter"></footer>
 </section>
 
 <!-- SHORTS VIEW -->
 <section id="shortsView" class="view-section hidden">
-<div class="shorts-container" id="shortsContainer"></div>
+  <div class="shorts-container" id="shortsContainer"></div>
 </section>
 
 <!-- CATEGORIES VIEW -->
 <section id="categoriesView" class="view-section hidden">
-<form class="search-header" id="searchForm">
-<div class="search-input-wrapper">
-<svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-<input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
-</div>
-<button type="submit" class="search-submit-btn">Search</button>
-</form>
-<div class="categories-hub" id="categoriesHub">
-<h2 class="categories-hub-title">Categories</h2>
-<div class="categories-grid" id="categoriesGrid"></div>
-</div>
+  <form class="search-header" id="searchForm">
+    <div class="search-input-wrapper">
+      <svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
+    </div>
+    <button type="submit" class="search-submit-btn">Search</button>
+  </form>
+  <div class="categories-hub" id="categoriesHub">
+    <h2 class="categories-hub-title">Categories</h2>
+    <div class="categories-grid" id="categoriesGrid"></div>
+  </div>
 </section>
 
 <!-- PLAYER VIEW -->
 <section id="playerView" class="view-section hidden">
-<div id="vastOverlay" class="vast-overlay hidden">
-<video id="vastVideo" playsinline></video>
-<div class="vast-skip-btn hidden" id="vastSkipBtn">Skip Ad</div>
-</div>
-<div class="player-container"><video id="mainVideo" controls playsinline></video></div>
-<div class="player-info">
-<h1 class="player-title" id="playerTitleDisplay"></h1>
-<div class="player-actions">
-<button class="action-btn" id="playerLikeBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span>Like</span></button>
-<button class="action-btn" id="playerShareBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>Share</span></button>
-</div>
-</div>
-<h3 class="suggestions-title">Suggested</h3>
-<div class="video-grid" id="suggestionsGrid" style="grid-template-columns:repeat(2,1fr)"></div>
+  <div id="vastOverlay" class="vast-overlay hidden">
+    <video id="vastVideo" playsinline></video>
+    <div class="vast-skip-btn hidden" id="vastSkipBtn">Skip Ad</div>
+  </div>
+  <div class="player-container"><video id="mainVideo" controls playsinline></video></div>
+  <div class="player-info">
+    <h1 class="player-title" id="playerTitleDisplay"></h1>
+    <div class="player-actions">
+      <button class="action-btn" id="playerLikeBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span>Like</span></button>
+      <button class="action-btn" id="playerShareBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>Share</span></button>
+    </div>
+  </div>
+  <h3 class="suggestions-title">Suggested</h3>
+  <div class="video-grid" id="suggestionsGrid" style="grid-template-columns:repeat(2,1fr)"></div>
 </section>
 
 </main>
 
 <!-- STICKY BOTTOM -->
 <div id="stickyAdContainer" class="sticky-ad-wrapper">
-<button class="sticky-close-btn" onclick="this.parentElement.style.display='none'">✕</button>
-<script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-<ins class="eas6a97888e17" data-zoneid="6045626"></ins>
-<script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+  <button class="sticky-close-btn" onclick="this.parentElement.style.display='none'">✕</button>
+  <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+  <ins class="eas6a97888e17" data-zoneid="6045626"></ins>
+  <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
 </div>
 
 </div>
 
+<script src="/sanitize.js"></script>
 <script src="/script.js"></script>
 <script src="/header.js"></script>
 <script src="/sidebar.js"></script>

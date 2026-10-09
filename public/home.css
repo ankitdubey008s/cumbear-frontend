@@ -1,32 +1,37 @@
 /* --- Home Screen: Professional Tube Layout --- */
 
 /* Horizontal Categories */
-.horizontal-cats {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding: 0.75rem 0.5rem;
-    scrollbar-width: none;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    position: sticky;
-    top: 60px;
-    z-index: 90;
+.horizontal-cats { margin-top: 0;
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.4rem 0.5rem;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 50px;
+  z-index: 90;
 }
 .horizontal-cats::-webkit-scrollbar { display: none; }
 .h-cat-chip {
-    flex-shrink: 0;
-    padding: 0.4rem 1rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0.3rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
 }
 .h-cat-chip.active {
     background: var(--accent-burgundy);
