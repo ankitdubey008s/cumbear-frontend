@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('❌ Fetch error:', e);
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red">Error loading videos. Check console.</div>';
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red">Error: ${e.message}</div>';
     }
   }
 
