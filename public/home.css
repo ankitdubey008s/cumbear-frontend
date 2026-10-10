@@ -262,3 +262,40 @@
 /* --- Fix Black Screen --- */
 .video-thumb.video-ready img { opacity: 0 !important; transition: opacity 0.2s ease; }
 .video-thumb.video-ready video { display: block !important; }
+
+/* === GIANT-LEVEL NATIVE AD CARD === */
+.native-ad-card {
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.native-ad-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(124, 29, 64, 0.3);
+}
+.native-ad-card .video-title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.native-ad-card .video-stats span {
+  color: var(--accent-burgundy);
+  font-weight: 700;
+}
+
+/* === SPONSORED BADGE (Compliance) === */
+.sponsored-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fbbf24; /* Gold text */
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 4;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}

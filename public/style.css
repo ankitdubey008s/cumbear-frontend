@@ -287,3 +287,15 @@ main {
   margin-top: 0.5rem !important;
   padding-top: 0 !important;
 }
+/* Ensure top banner is compact and gap-free */
+.ad-top-banner-mobile, .ad-top-banner-desktop {
+  margin: 0.5rem auto !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.video-grid {
+  margin-top: 0.5rem !important;
+}
