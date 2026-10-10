@@ -251,3 +251,39 @@ main { padding-top: 50px; margin-top: 0; min-height: 100vh; padding-bottom: calc
   height: 20px;
   fill: currentColor;
 }
+
+/* ==========================================
+   GAP SQUASHER (Fixes the huge black space)
+   ========================================== */
+main {
+  padding-top: 50px !important; /* Only enough for the header */
+  margin-top: 0 !important;
+  min-height: auto !important;
+}
+
+.ad-top-banner-mobile, 
+.ad-top-banner-desktop {
+  margin: 0.5rem auto !important;
+  padding: 0 !important;
+  height: auto !important; /* Let the ad dictate its own height */
+  min-height: 0 !important;
+}
+
+#homeView {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.view-tabs {
+  margin-top: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.filter-bar {
+  margin-top: 0.5rem !important;
+}
+
+.video-grid {
+  margin-top: 0.5rem !important;
+  padding-top: 0 !important;
+}
