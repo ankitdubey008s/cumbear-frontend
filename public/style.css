@@ -299,3 +299,64 @@ main {
 .video-grid {
   margin-top: 0.5rem !important;
 }
+
+/* === TOP BANNER (Natural Size, Responsive) === */
+.top-banner-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+}
+.top-banner-container .ad-desktop { display: none; }
+.top-banner-container .ad-mobile { display: block; }
+
+@media (min-width: 768px) {
+  .top-banner-container .ad-mobile { display: none; }
+  .top-banner-container .ad-desktop { display: block; }
+}
+
+/* === STICKY BANNER (Reappears every 30s) === */
+.sticky-ad-container {
+  position: fixed;
+  bottom: 65px; /* Just above bottom nav */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: none; /* Controlled by JS */
+  background: transparent;
+  padding: 0;
+}
+.sticky-close-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: #7c1d40;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 901;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* === INSTANT MESSAGE AD (Auto 1min show, 5s hide) === */
+.instant-msg-ad {
+  position: fixed;
+  top: 60px; /* Below header */
+  right: 10px;
+  z-index: 950;
+  display: none; /* Controlled by JS */
+}
+.instant-msg-ad iframe, .instant-msg-ad ins {
+  max-width: 320px !important;
+}

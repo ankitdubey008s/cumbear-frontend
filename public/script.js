@@ -81,3 +81,40 @@ document.addEventListener('click', e => {
     if (view === 'shortsView' && window.loadShorts) window.loadShorts();
   }
 });
+
+// === AD LOGIC: INSTANT MESSAGE (Show 1 min, Hide 5s) ===
+setInterval(() => {
+  const msgAd = document.getElementById('instant-msg-ad');
+  if (msgAd) {
+    msgAd.style.display = 'block';
+    setTimeout(() => {
+      msgAd.style.display = 'none';
+    }, 5000); // Hide after 5 seconds
+  }
+}, 60000); // Every 1 minute
+
+// === AD LOGIC: STICKY BANNER (Reappear after 30s of activity) ===
+let stickyClosedAt = 0;
+const stickyContainer = document.getElementById('sticky-ad-container');
+const stickyCloseBtn = document.getElementById('sticky-close-btn');
+
+function checkStickyAd() {
+  if (stickyContainer && (Date.now() - stickyClosedAt > 30000)) {
+    stickyContainer.style.display = 'block';
+  }
+}
+
+if (stickyCloseBtn && stickyContainer) {
+  stickyCloseBtn.addEventListener('click', () => {
+    stickyContainer.style.display = 'none';
+    stickyClosedAt = Date.now();
+  });
+  
+  // Show initially after 2 seconds
+  setTimeout(() => { stickyContainer.style.display = 'block'; }, 2000);
+
+  // Reset timer on user activity
+  ['click', 'scroll', 'touchstart', 'mousemove'].forEach(evt => {
+    window.addEventListener(evt, checkStickyAd, { passive: true });
+  });
+}

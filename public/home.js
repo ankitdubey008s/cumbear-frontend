@@ -147,3 +147,37 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
   loadVideos();
 });
+
+// === SHORTS VAST PRE-ROLL (0s Skip) ===
+window.playShortsVast = async function(videoElement, mainVideoUrl) {
+  return new Promise(async (resolve) => {
+    try {
+      const response = await fetch('https://s.magsrv.com/v1/vast.php?idzone=6045638');
+      const text = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(text, "text/xml");
+      const mediaFile = xmlDoc.querySelector("MediaFile");
+      
+      if (mediaFile && mediaFile.textContent.trim()) {
+        const adVideoUrl = mediaFile.textContent.trim();
+        videoElement.src = adVideoUrl;
+        videoElement.muted = false;
+        videoElement.play();
+        
+        videoElement.onended = () => {
+          videoElement.src = mainVideoUrl;
+          videoElement.play();
+          resolve();
+        };
+      } else {
+        videoElement.src = mainVideoUrl;
+        videoElement.play();
+        resolve();
+      }
+    } catch (e) {
+      videoElement.src = mainVideoUrl;
+      videoElement.play();
+      resolve();
+    }
+  });
+};

@@ -1,9 +1,98 @@
-document.addEventListener('DOMContentLoaded',()=>{
-var vid=document.getElementById('mainVideo'),sg=document.getElementById('suggestionsGrid'),vo=document.getElementById('vastOverlay'),vv=document.getElementById('vastVideo'),vs=document.getElementById('vastSkipBtn'),pt=document.getElementById('playerTitleDisplay'),lb=document.getElementById('playerLikeBtn'),sb=document.getElementById('playerShareBtn');
-window.stopPlayer=function(){if(vid){vid.pause();vid.removeAttribute('src');vid.load();}if(vv){vv.pause();vv.removeAttribute('src');vv.load();}if(vo)vo.classList.add('hidden');};
-async function vast(url,cb){try{var r=await fetch(url);if(!r.ok){if(cb)cb();return;}var t=await r.text();var x=new DOMParser().parseFromString(t,'text/xml');var m=x.querySelector('MediaFile');if(m&&m.textContent){var au=m.textContent.trim();vo.classList.remove('hidden');vv.src=au;vv.muted=false;vv.play().catch(()=>{vv.muted=true;vv.play();});var tl=7;vs.textContent='Skip Ad in '+tl+'s';vs.classList.add('hidden');var ti=setInterval(()=>{tl--;vs.textContent='Skip Ad in '+tl+'s';if(tl<=0){clearInterval(ti);vs.classList.remove('hidden');vs.textContent='Skip Ad';}},1000);var end=()=>{clearInterval(ti);vv.pause();vv.removeAttribute('src');vv.load();vo.classList.add('hidden');if(cb)cb();};vs.onclick=end;vv.onended=end;vv.onerror=end;}else{if(cb)cb();}}catch(e){console.log('VAST failed:',e);if(cb)cb();}}
-window.loadPlayerVideo=async function(video){if(!video)return;pt.textContent=video.title;vid.poster=video.thumbnailUrl;vid.src=video.playableUrl;vid.load();await vast('https://s.magsrv.com/v1/vast.php?idzone=6045632',()=>{/* Pre-roll done, but DON'T auto-play */});
-sg.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted)">Loading...</div>';try{var r=await fetch('https://cumbear-backend.vercel.app/api/videos/related/'+encodeURIComponent(video.category||'all')+'?limit=50');var d=await r.json();if(d.success){sg.innerHTML='';d.data.filter(v=>v._id!==video._id).forEach((v,i)=>{if(i>0&&i%6===0&&window.renderAd)sg.insertAdjacentHTML('beforeend',window.renderAd('infeed'));var c=document.createElement('div');c.className='video-card';c.innerHTML='<div class="video-thumb"><img src="'+v.thumbnailUrl+'" loading="lazy"><span class="duration-badge">'+v.duration+'</span></div><div class="video-info"><div class="video-title" style="font-size:0.9rem">'+v.title+'</div></div>';c.onclick=()=>{window.scrollTo(0,0);window.loadPlayerVideo(v);};sg.appendChild(c);});}}catch(e){sg.innerHTML='';}};
-if(lb)lb.onclick=()=>{var l=lb.classList.toggle('liked');lb.querySelector('svg').setAttribute('fill',l?'currentColor':'none');lb.style.color=l?'var(--accent-burgundy)':'';lb.querySelector('span').textContent=l?'Liked':'Like';};
-if(sb)sb.onclick=async()=>{try{if(navigator.share)await navigator.share({title:pt.textContent,url:location.href});else{await navigator.clipboard.writeText(location.href);sb.querySelector('span').textContent='Copied!';setTimeout(()=>{sb.querySelector('span').textContent='Share';},2000);}}catch(e){}};
-});
+// === VAST PRE-ROLL PLAYER LOGIC ===
+window.playVastPreRoll = async function(vastUrl, skipDelay, mainVideoUrl, videoElement) {
+  return new Promise(async (resolve) => {
+    try {
+      const response = await fetch(vastUrl);
+      const text = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(text, "text/xml");
+      const mediaFile = xmlDoc.querySelector("MediaFile");
+      
+      if (mediaFile && mediaFile.textContent.trim()) {
+        const adVideoUrl = mediaFile.textContent.trim();
+        
+        // Create Overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'vast-overlay';
+        overlay.innerHTML = `
+          <video id="vastVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+          <button id="vastSkip" class="vast-skip-btn">Skip in ${skipDelay}s</button>
+        `;
+        document.body.appendChild(overlay);
+        
+        const v = document.getElementById('vastVideo');
+        v.src = adVideoUrl;
+        v.muted = false; // Unmute for ad
+        
+        let timeLeft = skipDelay;
+        const skipBtn = document.getElementById('vastSkip');
+        
+        const timer = setInterval(() => {
+          timeLeft--;
+          if (timeLeft <= 0) {
+            skipBtn.textContent = "Skip Ad";
+            skipBtn.style.background = "rgba(124, 29, 64, 0.9)";
+            skipBtn.onclick = () => {
+              clearInterval(timer);
+              overlay.remove();
+              resolve();
+            };
+          } else {
+            skipBtn.textContent = `Skip in ${timeLeft}s`;
+          }
+        }, 1000);
+
+        v.onended = () => {
+          clearInterval(timer);
+          overlay.remove();
+          resolve();
+        };
+        
+        v.onerror = () => {
+          clearInterval(timer);
+          overlay.remove();
+          resolve(); // Proceed on error
+        };
+      } else {
+        resolve(); // No ad found, proceed
+      }
+    } catch (e) {
+      console.error("VAST error:", e);
+      resolve(); // Proceed on error
+    }
+  });
+};
+
+// Override the default player loader to inject VAST
+const originalLoadPlayer = window.loadPlayerVideoById;
+window.loadPlayerVideoById = async function(videoId) {
+  try {
+    const res = await fetch(`https://cumbear-backend.vercel.app/api/videos/${videoId}`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      const video = data.data;
+      const videoEl = document.getElementById('mainPlayerVideo');
+      
+      if (videoEl) {
+        // 1. Play VAST Pre-Roll (7 second skip)
+        await window.playVastPreRoll(
+          'https://s.magsrv.com/v1/vast.php?idz=6045632', 
+          7, 
+          video.playableUrl, 
+          videoEl
+        );
+        
+        // 2. Play Main Video
+        videoEl.src = video.playableUrl;
+        videoEl.muted = false;
+        videoEl.play();
+        
+        // Update UI
+        document.getElementById('playerTitle').textContent = video.title;
+        document.getElementById('playerCategory').textContent = video.category || 'Premium';
+      }
+    }
+  } catch (e) {
+    console.error("Player load error:", e);
+  }
+};
