@@ -5,29 +5,27 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let page = 1;
   let currentCategory = 'all';
+  let currentSort = 'gem'; // DEFAULT TO GEM CONTENT
   const API_URL = 'https://cumbear-backend.vercel.app';
   
-  // === CRAKREVENUE SMARTLINKS ===
   const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
   const NATIVE_URL = 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN';
 
-  // 1. GIANT-LEVEL POPUNDER (Triggers ONLY once per session)
+  // 1. SESSION POPUNDER
   if (!sessionStorage.getItem('popTriggered')) {
     document.body.addEventListener('click', function handleFirstClick(e) {
-      // Only trigger on left click, not on links/buttons that should behave normally
       if (e.target.tagName === 'A' || e.target.closest('a') || e.target.tagName === 'BUTTON') return;
-      
       window.open(POP_URL, '_blank', 'noopener,noreferrer');
       sessionStorage.setItem('popTriggered', 'true');
       document.body.removeEventListener('click', handleFirstClick);
-    }, { capture: true }); // Capture phase ensures it fires before other click handlers
+    }, { capture: true });
   }
 
   // 2. Load Categories
   async function loadCategories() {
     if (!cats) return;
     try {
-      const res = await fetch(`${API_URL}/api/categories`);
+      const res = await fetch(`${API_URL}/api/categories?t=${Date.now()}`);
       const data = await res.json();
       if (data.success && data.data) {
         cats.innerHTML = '';
@@ -49,13 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { console.error('Category load error:', err); }
   }
 
-  // 3. Load Videos
+  // 3. Load Videos (WITH CACHE BUSTER & GEM SORT)
   async function loadVideos() {
     if (!grid) return;
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading videos...</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading premium content...</div>';
     
     try {
-      let url = `${API_URL}/api/videos?page=${page}&limit=50`;
+      // Cache buster ensures browser never shows old, stale data
+      const cacheBuster = Date.now();
+      let url = `${API_URL}/api/videos?page=${page}&limit=50&sort=${currentSort}&_=${cacheBuster}`;
+      
       if (currentCategory && currentCategory !== 'all') {
         url += `&category=${encodeURIComponent(currentCategory)}`;
       }
@@ -67,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderVideos(data.data);
         renderPagination(data.pagination.totalPages);
       } else {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No videos found.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No premium videos found in this category.</div>';
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -75,12 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 4. Render Videos + NATIVE AD INJECTION
+  // 4. Render Videos + NATIVE AD
   function renderVideos(videos) {
     grid.innerHTML = '';
-    
     videos.forEach((video, index) => {
-      // === INJECT NATIVE AD AFTER THE 5TH VIDEO (Index 4) ===
       if (index === 5 && page === 1) {
         const adCard = document.createElement('a');
         adCard.href = NATIVE_URL;
@@ -95,16 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="video-info">
             <div class="video-title">Meet Local Singles Near You - Click to Chat</div>
-            <div class="video-stats">
-              <span>100% Free</span>
-              <span>Join Now</span>
-            </div>
+            <div class="video-stats"><span>100% Free</span><span>Join Now</span></div>
           </div>
         `;
         grid.appendChild(adCard);
       }
 
-      // Render Normal Video Card
       const card = document.createElement('div');
       card.className = 'video-card';
       const safeTitle = (video.title || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -118,9 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="video-info" onclick="window.openPlayer('${video._id}')">
           <div class="video-title">${safeTitle}</div>
-          <div class="video-stats">
-            <span>${video.category || 'Uncategorized'}</span>
-          </div>
+          <div class="video-stats"><span>${video.category || 'Premium'}</span></div>
         </div>
       `;
       grid.appendChild(card);
@@ -145,14 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. Global Player Opener
   window.openPlayer = function(videoId) {
     history.pushState({ view: 'playerView' }, '', `/?v=${videoId}`);
     if (window.switchView) window.switchView('playerView', false);
     if (window.loadPlayerVideoById) window.loadPlayerVideoById(videoId);
   };
 
-  // Initial Load
   loadCategories();
   loadVideos();
 });
