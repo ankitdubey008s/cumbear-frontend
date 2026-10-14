@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let page = 1;
   let currentCategory = 'all';
-  let currentSort = 'newest';
+  let currentSort = 'gem';
   const API_URL = 'https://cumbear-backend.vercel.app';
   
   const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
