@@ -11,10 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
   const NATIVE_URL = 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN';
 
-  // 1. SESSION POPUNDER
+  // 1. FIXED POPUNDER: Ignores Nav, Sidebar, and UI elements
   if (!sessionStorage.getItem('popTriggered')) {
     document.body.addEventListener('click', function handleFirstClick(e) {
-      if (e.target.tagName === 'A' || e.target.closest('a') || e.target.tagName === 'BUTTON') return;
+      // IGNORE clicks on links, buttons, nav, sidebar, and ads
+      const ignoreTargets = ['A', 'BUTTON', 'INPUT', 'TEXTAREA'];
+      const ignoreClasses = ['nav-link', 'sidebar', 'sidebar-overlay', 'h-cat-chip', 'page-btn', 'view-tab', 'menu-btn'];
+      
+      if (ignoreTargets.includes(e.target.tagName)) return;
+      if (e.target.closest('a') || e.target.closest('button')) return;
+      if (ignoreClasses.some(cls => e.target.closest(`.${cls}`))) return;
+
       window.open(POP_URL, '_blank', 'noopener,noreferrer');
       sessionStorage.setItem('popTriggered', 'true');
       document.body.removeEventListener('click', handleFirstClick);
@@ -47,17 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { console.error('Category load error:', err); }
   }
 
-  // 3. Load Videos (GEM FEED)
+  // 3. Load Videos
   async function loadVideos() {
     if (!grid) return;
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading premium gems...</div>';
     
     try {
-      const cacheBuster = Date.now();
-      let url = `${API_URL}/api/videos?page=${page}&limit=50&sort=${currentSort}&_=${cacheBuster}`;
-      if (currentCategory && currentCategory !== 'all') {
-        url += `&category=${encodeURIComponent(currentCategory)}`;
-      }
+      let url = `${API_URL}/api/videos?page=${page}&limit=50&sort=${currentSort}&_=${Date.now()}`;
+      if (currentCategory && currentCategory !== 'all') url += `&category=${encodeURIComponent(currentCategory)}`;
       
       const res = await fetch(url);
       const data = await res.json();
@@ -69,12 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No gems found.</div>';
       }
     } catch (err) {
-      console.error('Fetch error:', err);
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red;">Error: ${err.message}</div>`;
     }
   }
 
-  // 4. Render Grid + Native Ad
+  // 4. Render Grid
   function renderVideos(videos) {
     grid.innerHTML = '';
     videos.forEach((video, index) => {
@@ -84,17 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adCard.target = '_blank';
         adCard.rel = 'noopener noreferrer';
         adCard.className = 'video-card native-ad-card';
-        adCard.innerHTML = `
-          <div class="video-thumb">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=225&fit=crop" loading="lazy">
-            <span class="duration-badge">HD</span>
-            <span class="sponsored-badge">Sponsored</span>
-          </div>
-          <div class="video-info">
-            <div class="video-title">Meet Local Singles Near You</div>
-            <div class="video-stats"><span>100% Free</span><span>Join Now</span></div>
-          </div>
-        `;
+        adCard.innerHTML = `<div class="video-thumb"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=225&fit=crop" loading="lazy"><span class="duration-badge">HD</span><span class="sponsored-badge">Sponsored</span></div><div class="video-info"><div class="video-title">Meet Local Singles Near You</div><div class="video-stats"><span>100% Free</span><span>Join Now</span></div></div>`;
         grid.appendChild(adCard);
       }
 
@@ -102,18 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'video-card';
       const safeTitle = (video.title || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const duration = video.duration ? video.duration.replace('HD ', '') : '00:00';
-      const thumb = video.thumbnailUrl || '/cumb.png';
       
-      card.innerHTML = `
-        <div class="video-thumb" onclick="window.openPlayer('${video._id}')">
-          <img src="${thumb}" loading="lazy" onerror="this.src='/cumb.png'">
-          <span class="duration-badge">${duration}</span>
-        </div>
-        <div class="video-info" onclick="window.openPlayer('${video._id}')">
-          <div class="video-title">${safeTitle}</div>
-          <div class="video-stats"><span>${video.category || 'Premium'}</span></div>
-        </div>
-      `;
+      card.innerHTML = `<div class="video-thumb" onclick="window.openPlayer('${video._id}')"><img src="${video.thumbnailUrl || '/cumb.png'}" loading="lazy" onerror="this.src='/cumb.png'"><span class="duration-badge">${duration}</span></div><div class="video-info" onclick="window.openPlayer('${video._id}')"><div class="video-title">${safeTitle}</div><div class="video-stats"><span>${video.category || 'Premium'}</span></div></div>`;
       grid.appendChild(card);
     });
   }
@@ -121,8 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderPagination(totalPages) {
     if (!pag) return;
     pag.innerHTML = '';
-    const maxPages = Math.min(totalPages, 10);
-    for (let i = 1; i <= maxPages; i++) {
+    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
       const btn = document.createElement('button');
       btn.className = `page-btn ${i === page ? 'active' : ''}`;
       btn.textContent = i;
@@ -137,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.loadPlayerVideoById) window.loadPlayerVideoById(videoId);
   };
 
-  // Expose for router
   window.loadHomeVideos = loadVideos;
   window.resetHomeState = () => { currentCategory = 'all'; page = 1; loadVideos(); };
 
