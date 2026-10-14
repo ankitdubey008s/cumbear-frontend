@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
   const NATIVE_URL = 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN';
 
+  // 1. SESSION POPUNDER
   if (!sessionStorage.getItem('popTriggered')) {
     document.body.addEventListener('click', function handleFirstClick(e) {
       if (e.target.tagName === 'A' || e.target.closest('a') || e.target.tagName === 'BUTTON') return;
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { capture: true });
   }
 
+  // 2. Load Categories
   async function loadCategories() {
     if (!cats) return;
     try {
@@ -45,9 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { console.error('Category load error:', err); }
   }
 
+  // 3. Load Videos (GEM FEED)
   async function loadVideos() {
     if (!grid) return;
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading content...</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading premium gems...</div>';
     
     try {
       const cacheBuster = Date.now();
@@ -56,28 +59,22 @@ document.addEventListener('DOMContentLoaded', () => {
         url += `&category=${encodeURIComponent(currentCategory)}`;
       }
       
-      console.log('🔍 Fetching URL:', url);
       const res = await fetch(url);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      
       const data = await res.json();
-      console.log('✅ API Response:', data);
       
       if (data.success && data.data && data.data.length > 0) {
         renderVideos(data.data);
         renderPagination(data.pagination.totalPages);
       } else {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No videos found.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No gems found.</div>';
       }
     } catch (err) {
-      console.error('❌ CRITICAL FETCH ERROR:', err);
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red;">Error: ${err.message}. Check Console (F12).</div>`;
+      console.error('Fetch error:', err);
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red;">Error: ${err.message}</div>`;
     }
   }
 
+  // 4. Render Grid + Native Ad
   function renderVideos(videos) {
     grid.innerHTML = '';
     videos.forEach((video, index) => {
@@ -89,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adCard.className = 'video-card native-ad-card';
         adCard.innerHTML = `
           <div class="video-thumb">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=225&fit=crop" loading="lazy" alt="Sponsored">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=225&fit=crop" loading="lazy">
             <span class="duration-badge">HD</span>
             <span class="sponsored-badge">Sponsored</span>
           </div>
@@ -109,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       card.innerHTML = `
         <div class="video-thumb" onclick="window.openPlayer('${video._id}')">
-          <img src="${thumb}" loading="lazy" onerror="this.src='/cumb.png'" alt="Thumbnail">
+          <img src="${thumb}" loading="lazy" onerror="this.src='/cumb.png'">
           <span class="duration-badge">${duration}</span>
         </div>
         <div class="video-info" onclick="window.openPlayer('${video._id}')">
@@ -129,11 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const btn = document.createElement('button');
       btn.className = `page-btn ${i === page ? 'active' : ''}`;
       btn.textContent = i;
-      btn.onclick = () => {
-        page = i;
-        loadVideos();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      };
+      btn.onclick = () => { page = i; loadVideos(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
       pag.appendChild(btn);
     }
   }
@@ -143,6 +136,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.switchView) window.switchView('playerView', false);
     if (window.loadPlayerVideoById) window.loadPlayerVideoById(videoId);
   };
+
+  // Expose for router
+  window.loadHomeVideos = loadVideos;
+  window.resetHomeState = () => { currentCategory = 'all'; page = 1; loadVideos(); };
 
   loadCategories();
   loadVideos();

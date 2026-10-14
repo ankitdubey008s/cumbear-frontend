@@ -470,3 +470,88 @@ main {
 .view-tab:active {
   transform: scale(0.95);
 }
+
+/* === IMMERSIVE SHORTS FEED === */
+.shorts-container {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  background: #000;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.shorts-container::-webkit-scrollbar { display: none; }
+
+.short-card {
+  height: 100vh;
+  width: 100%;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.short-video {
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain; /* Keeps aspect ratio clean */
+  background: #000;
+}
+
+.short-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem 1rem 5rem 1rem; /* Extra padding for bottom nav */
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  color: white;
+  pointer-events: none; /* Let clicks pass through to video */
+}
+
+.short-info h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.short-category {
+  background: #7c1d40;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.short-actions {
+  position: absolute;
+  right: 10px;
+  bottom: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  pointer-events: auto;
+}
+
+.short-action-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 1.2rem;
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+/* === HIDE ADS WHEN IN SHORTS MODE === */
+body.shorts-active .top-banner-container,
+body.shorts-active .sticky-ad-container,
+body.shorts-active .instant-msg-ad,
+body.shorts-active .view-tabs {
+  display: none !important;
+}
