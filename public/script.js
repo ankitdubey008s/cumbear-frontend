@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // 1. Age Gate Check
   if (localStorage.getItem('age') === '1') {
-    document.getElementById('ageGate').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
+    const ageGate = document.getElementById('ageGate');
+    const mainApp = document.getElementById('mainApp');
+    if (ageGate) ageGate.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
     initRouter();
     checkURL();
   }
@@ -9,17 +12,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function verifyAge() {
   localStorage.setItem('age', '1');
-  document.getElementById('ageGate').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
-  initRouter();
-  checkURL();
+  const ageGate = document.getElementById('ageGate');
+  const mainApp = document.getElementById('mainApp');
+  if (ageGate) {
+    ageGate.style.opacity = '0';
+    setTimeout(() => {
+      ageGate.classList.add('hidden');
+      if (mainApp) mainApp.classList.remove('hidden');
+      initRouter();
+      checkURL();
+    }, 300);
+  }
 }
 
+// 2. Deep Linking (e.g., cumbear.in/?v=12345)
 async function checkURL() {
   const params = new URLSearchParams(location.search);
   if (params.has('v')) {
     const vidId = params.get('v');
-    // Wait for player.js to load
     const checkPlayer = setInterval(() => {
       if (window.loadPlayerVideoById) {
         clearInterval(checkPlayer);
@@ -39,52 +49,70 @@ async function checkURL() {
   }
 }
 
+// 3. Master Router Initialization
 function initRouter() {
-  if (!history.state) history.replaceState({ view: 'homeView' }, '', '/');
-  window.addEventListener('popstate', function (e) { 
-    window.switchView((e.state && e.state.view) || 'homeView', false); 
+  if (!history.state) {
+    history.replaceState({ view: 'homeView' }, '', '/');
+  }
+  window.addEventListener('popstate', function (e) {
+    const targetView = (e.state && e.state.view) || 'homeView';
+    window.switchView(targetView, false);
   });
 }
 
-window.switchView = function (id, push) {
-  // Stop shorts if leaving shorts view
-  if (id !== 'shortsView' && window.stopShorts) window.stopShorts();
-  
-  // Hide all views, show target
-  document.querySelectorAll('.view-section').forEach(s => { 
-    s.classList.add('hidden'); 
-    s.classList.remove('active'); 
-  });
-  const target = document.getElementById(id);
-  if (target) { 
-    target.classList.remove('hidden'); 
-    target.classList.add('active'); 
+// 4. Global View Switcher
+window.switchView = function (id, pushHistory = true) {
+  // Stop Shorts if leaving the shorts view
+  if (id !== 'shortsView' && window.stopShorts) {
+    window.stopShorts();
   }
-  
-  // Update bottom nav
+
+  // Hide all views
+  document.querySelectorAll('.view-section').forEach(s => {
+    s.classList.add('hidden');
+    s.classList.remove('active');
+  });
+
+  // Show target view
+  const target = document.getElementById(id);
+  if (target) {
+    target.classList.remove('hidden');
+    target.classList.add('active');
+  }
+
+  // Update Bottom Nav Active State
   document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
   const activeNav = document.querySelector(`.nav-item[data-view="${id}"]`);
   if (activeNav) activeNav.classList.add('active');
-  
-  // Update sidebar links
-  document.querySelectorAll('.sidebar .nav-link').forEach(l => {
-    l.classList.toggle('active', l.getAttribute('data-target') === id);
-  });
 
-  if (push) history.pushState({ view: id }, '', '/');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Update Sidebar Active State
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const activeSidebarLink = document.querySelector(`.nav-link[data-target="${id}"]`);
+  if (activeSidebarLink) activeSidebarLink.classList.add('active');
+
+  // Push to history if navigating forward
+  if (pushHistory) {
+    history.pushState({ view: id }, '', '/');
+  }
+
+  // Smooth scroll to top (instant for player)
+  if (id === 'playerView') {
+    window.scrollTo(0, 0);
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Close sidebar if it's open
+  if (window.closeSidebar) window.closeSidebar();
 };
 
-// Global click delegation for view tabs
+// 5. Global Click Delegation for Bottom Nav
 document.addEventListener('click', function (e) {
-  const tab = e.target.closest('.nav-item, .nav-link');
-  if (tab) {
-    const targetView = tab.getAttribute('data-view') || tab.getAttribute('data-target');
+  const navItem = e.target.closest('.nav-item');
+  if (navItem) {
+    const targetView = navItem.getAttribute('data-view');
     if (targetView) {
       window.switchView(targetView, true);
-      // Close sidebar if open
-      document.getElementById('siteSidebar').classList.remove('active');
-      document.getElementById('sidebarOverlay').classList.remove('active');
     }
   }
 });

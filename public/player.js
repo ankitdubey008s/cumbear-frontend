@@ -9,45 +9,36 @@ window.playVastPreRoll = async function(vastUrl, skipDelay) {
       
       if (mediaFile && mediaFile.textContent.trim()) {
         const adVideoUrl = mediaFile.textContent.trim();
-        const overlay = document.getElementById('vastOverlay');
-        const v = document.getElementById('vastVideo');
-        const skipBtn = document.getElementById('vastSkipBtn');
+        const overlay = document.createElement('div');
+        overlay.className = 'vast-overlay';
+        overlay.innerHTML = `
+          <video id="vastVideoPlayer" autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000;"></video>
+          <button id="vastSkipBtnPlayer" class="vast-skip-btn">Skip in ${skipDelay}s</button>
+        `;
+        document.body.appendChild(overlay);
         
-        overlay.classList.remove('hidden');
+        const v = document.getElementById('vastVideoPlayer');
         v.src = adVideoUrl;
         v.muted = false;
-        v.play().catch(() => {});
         
         let timeLeft = skipDelay;
-        skipBtn.classList.remove('hidden');
-        skipBtn.textContent = `Skip in ${timeLeft}s`;
+        const skipBtn = document.getElementById('vastSkipBtnPlayer');
         
         const timer = setInterval(() => {
           timeLeft--;
           if (timeLeft <= 0) {
             skipBtn.textContent = "Skip Ad";
-            skipBtn.style.background = "var(--accent-burgundy)";
-            skipBtn.onclick = () => {
-              clearInterval(timer);
-              overlay.classList.add('hidden');
-              v.pause();
-              v.src = "";
-              resolve();
-            };
+            skipBtn.style.background = "rgba(124, 29, 64, 0.9)";
+            skipBtn.onclick = () => { clearInterval(timer); overlay.remove(); resolve(); };
           } else {
             skipBtn.textContent = `Skip in ${timeLeft}s`;
           }
         }, 1000);
         
-        v.onended = () => { clearInterval(timer); overlay.classList.add('hidden'); resolve(); };
-        v.onerror = () => { clearInterval(timer); overlay.classList.add('hidden'); resolve(); };
-      } else {
-        resolve(); // No ad found
-      }
-    } catch (e) {
-      console.error("VAST error:", e);
-      resolve(); // Proceed on error
-    }
+        v.onended = () => { clearInterval(timer); overlay.remove(); resolve(); };
+        v.onerror = () => { clearInterval(timer); overlay.remove(); resolve(); };
+      } else { resolve(); }
+    } catch (e) { console.error("VAST error:", e); resolve(); }
   });
 };
 
@@ -59,54 +50,45 @@ window.loadPlayerVideoById = async function(videoId) {
       const video = data.data;
       const videoEl = document.getElementById('mainVideo'); // FIXED ID
       
-      // 1. Play VAST Pre-Roll (7 second skip)
       await window.playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', 7);
       
-      // 2. Play Main Video
       videoEl.src = video.playableUrl;
+      videoEl.poster = video.thumbnailUrl;
       videoEl.muted = false;
       videoEl.play().catch(() => {});
       
-      // Update UI (FIXED IDs)
-      document.getElementById('playerTitleDisplay').textContent = video.title;
-      
-      // Load suggestions
-      if (window.loadSuggestions) window.loadSuggestions(video.category);
+      document.getElementById('playerTitleDisplay').textContent = video.title; // FIXED ID
+      loadSuggestions(video.category, video._id);
     }
-  } catch (e) {
-    console.error("Player load error:", e);
-  }
+  } catch (e) { console.error("Player load error:", e); }
 };
 
-window.loadSuggestions = async function(category) {
+async function loadSuggestions(category, excludeId) {
   const grid = document.getElementById('suggestionsGrid');
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;">Loading...</div>';
+  if (!grid) return;
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">Loading...</div>';
   try {
-    const res = await fetch(`https://cumbear-backend.vercel.app/api/videos?category=${encodeURIComponent(category)}&limit=10&sort=views`);
+    const res = await fetch(`https://cumbear-backend.vercel.app/api/videos?category=${encodeURIComponent(category)}&limit=12&sort=views`);
     const data = await res.json();
     if (data.success && data.data) {
+      const videos = data.data.filter(v => v._id !== excludeId);
       grid.innerHTML = '';
-      data.data.forEach(v => {
+      videos.forEach(video => {
         const card = document.createElement('div');
         card.className = 'video-card';
+        const duration = video.duration ? video.duration.replace('HD ', '') : '00:00';
         card.innerHTML = `
-          <div class="video-thumb" onclick="window.openPlayer('${v._id}')">
-            <img src="${v.thumbnailUrl}" loading="lazy" onerror="this.src='/cumb.png'">
-            <span class="duration-badge">${v.duration.replace('HD ', '')}</span>
+          <div class="video-thumb" onclick="window.openPlayer('${video._id}')">
+            <img src="${video.thumbnailUrl}" loading="lazy" onerror="this.src='/cumb.png'">
+            <span class="duration-badge">${duration}</span>
           </div>
-          <div class="video-info" onclick="window.openPlayer('${v._id}')">
-            <div class="video-title">${v.title}</div>
-            <div class="video-stats"><span>${v.views ? (v.views/1000).toFixed(1)+'k' : '0'} views</span></div>
+          <div class="video-info" onclick="window.openPlayer('${video._id}')">
+            <div class="video-title">${video.title}</div>
+            <div class="video-stats"><span>${video.views ? (video.views/1000).toFixed(1)+'k' : '0'} views</span></div>
           </div>
         `;
         grid.appendChild(card);
       });
     }
-  } catch (e) { console.error(e); }
-};
-
-window.openPlayer = function(videoId) {
-  history.pushState({ view: 'playerView' }, '', `/?v=${videoId}`);
-  window.switchView('playerView', false);
-  window.loadPlayerVideoById(videoId);
-};
+  } catch (e) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:red;">Error loading suggestions.</div>'; }
+}
