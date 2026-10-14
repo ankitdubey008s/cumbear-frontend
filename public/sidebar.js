@@ -1,243 +1,60 @@
-// ============================================
-// CUMBEAR ULTRA PREMIUM - Sidebar & Settings
-// ============================================
+(function () {
+  function init() {
+    // 1. Delete ALL old / duplicate sidebars and overlays
+    document.querySelectorAll('.sidebar, .app-sidebar, #appSidebar, .sidebar-overlay, #sidebarOverlay, #sidebar, .cb-sidebar, .cb-overlay')
+      .forEach(function (el) { el.remove(); });
 
-const LANGUAGES = [
-    { code: 'en', name: 'English', native: 'English' },
-    { code: 'es', name: 'Spanish', native: 'Español' },
-    { code: 'fr', name: 'French', native: 'Français' },
-    { code: 'de', name: 'German', native: 'Deutsch' },
-    { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
-    { code: 'zh-CN', name: 'Chinese (Simplified)', native: '中文 (简体)' },
-    { code: 'ru', name: 'Russian', native: 'Русский' },
-    { code: 'ar', name: 'Arabic', native: 'العربية' },
-    { code: 'pt', name: 'Portuguese', native: 'Português' },
-    { code: 'ja', name: 'Japanese', native: '日本語' },
-    { code: 'ko', name: 'Korean', native: '한국어' },
-    { code: 'it', name: 'Italian', native: 'Italiano' },
-    { code: 'tr', name: 'Turkish', native: 'Türkçe' },
-    { code: 'nl', name: 'Dutch', native: 'Nederlands' },
-    { code: 'pl', name: 'Polish', native: 'Polski' },
-    { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia' },
-    { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt' },
-    { code: 'th', name: 'Thai', native: 'ไทย' }
-];
+    // 2. Overlay
+    var overlay = document.createElement('div');
+    overlay.className = 'cb-overlay';
+    overlay.id = 'cbOverlay';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const menuBtn = document.getElementById('menuBtn');
-    const closeBtn = document.getElementById('closeSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    const sidebar = document.getElementById('siteSidebar');
-    const themeBtn = document.getElementById('themeToggleBtn');
+    // 3. Simple Sidebar: Install + Socials + Support ONLY
+    var sb = document.createElement('aside');
+    sb.className = 'cb-sidebar';
+    sb.id = 'cbSidebar';
+    sb.innerHTML =
+      '<div class="cb-head"><span class="cb-logo">CumBear</span>' +
+      '<button class="cb-close" id="cbClose" aria-label="Close">✕</button></div>' +
+      '<div class="cb-body">' +
+        '<button class="cb-install" id="cbInstall">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+          '<span>Download CumBear App</span>' +
+        '</button>' +
+        '<div class="cb-section"><h4>Follow Us</h4>' +
+          '<a class="cb-link" href="https://x.com/cumbear" target="_blank" rel="noopener">𝕏 Twitter / X</a>' +
+          '<a class="cb-link" href="https://instagram.com/cumbear" target="_blank" rel="noopener">📸 Instagram</a>' +
+          '<a class="cb-link" href="https://t.me/cumbear" target="_blank" rel="noopener">✈️ Telegram</a>' +
+        '</div>' +
+        '<div class="cb-section"><h4>Help</h4>' +
+          '<a class="cb-link cb-support" href="mailto:support@cumbear.in">💬 Support</a>' +
+        '</div>' +
+      '</div>';
 
-    // --- 1. Sidebar Open/Close ---
-    window.openSidebar = () => {
-        if (!sidebar || !overlay) return;
-        sidebar.classList.add('active');
-        overlay.classList.add('active');
-        history.pushState({ sidebarOpen: true }, '');
-    };
+    document.body.appendChild(overlay);
+    document.body.appendChild(sb);
 
-    window.closeSidebar = () => {
-        if (!sidebar || !overlay) return;
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    };
+    // 4. Open / Close
+    function openSb() { sb.classList.add('open'); overlay.classList.add('open'); }
+    function closeSb() { sb.classList.remove('open'); overlay.classList.remove('open'); }
+    document.getElementById('cbClose').addEventListener('click', closeSb);
+    overlay.addEventListener('click', closeSb);
 
-    window.addEventListener('popstate', () => {
-        if (sidebar && sidebar.classList.contains('active')) {
-            window.closeSidebar();
-        }
+    // 5. CAPTURE hamburger click BEFORE old code or ads can touch it
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('.menu-btn, #menuBtn, .hamburger, .header-menu');
+      if (t) { e.preventDefault(); e.stopPropagation(); openSb(); }
+    }, true);
+
+    // 6. PWA Install
+    var deferred = null;
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; });
+    document.getElementById('cbInstall').addEventListener('click', function () {
+      if (deferred) { deferred.prompt(); deferred = null; }
+      else { alert('Open your browser menu and tap "Add to Home Screen" or "Install App".'); }
     });
+  }
 
-    if (menuBtn) menuBtn.addEventListener('click', window.openSidebar);
-    if (closeBtn) closeBtn.addEventListener('click', window.closeSidebar);
-    if (overlay) overlay.addEventListener('click', window.closeSidebar);
-
-    // --- 2. Swipe Gestures ---
-    let touchStartX = 0, touchStartY = 0;
-    document.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }, { passive: true });
-
-    document.addEventListener('touchend', e => {
-        const diffX = e.changedTouches[0].screenX - touchStartX;
-        const diffY = e.changedTouches[0].screenY - touchStartY;
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-            if (diffX > 0 && touchStartX < 40 && sidebar && !sidebar.classList.contains('active')) {
-                window.openSidebar();
-            } else if (diffX < 0 && sidebar && sidebar.classList.contains('active')) {
-                window.closeSidebar();
-            }
-        }
-    }, { passive: true });
-
-    // --- 3. Theme Toggle ---
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('cumbear_theme', newTheme);
-            themeBtn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-        });
-    }
-
-    // --- 4. Helper: Dynamic Modal Creator ---
-    function createModal(id, title, contentHTML) {
-        let modal = document.getElementById(id);
-        if (modal) modal.remove();
-        
-        modal = document.createElement('div');
-        modal.className = 'fullscreen-modal';
-        modal.id = id;
-        modal.innerHTML = `
-            <div class="modal-header">
-                <div class="modal-title">${title}</div>
-                <button class="modal-close" onclick="document.getElementById('${id}').classList.remove('active')">✕</button>
-            </div>
-            <div class="modal-content">${contentHTML}</div>
-        `;
-        document.body.appendChild(modal);
-        setTimeout(() => modal.classList.add('active'), 10);
-        return modal;
-    }
-
-    // --- 5. Grid View Modal ---
-    const gridRow = document.getElementById('gridViewRow');
-    if (gridRow) {
-        gridRow.addEventListener('click', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            window.closeSidebar();
-            const currentGrid = localStorage.getItem('cumbear_grid') || '1';
-            const gridHTML = `
-                <div class="grid-option ${currentGrid === '1' ? 'active' : ''}" data-value="1">
-                    <div class="grid-label">1 Column (Cinema)</div>
-                    <div class="grid-preview one-col"><div class="grid-bar"></div></div>
-                </div>
-                <div class="grid-option ${currentGrid === '2' ? 'active' : ''}" data-value="2">
-                    <div class="grid-label">2 Columns (Standard)</div>
-                    <div class="grid-preview two-col"><div class="grid-bar"></div><div class="grid-bar"></div></div>
-                </div>
-                <div class="grid-option ${currentGrid === '4' ? 'active' : ''}" data-value="4">
-                    <div class="grid-label">4 Columns (Dense)</div>
-                    <div class="grid-preview four-col"><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div><div class="grid-bar"></div></div>
-                </div>
-            `;
-            const modal = createModal('gridModal', 'Grid View', gridHTML);
-            
-            modal.querySelectorAll('.grid-option').forEach(opt => {
-                opt.addEventListener('click', () => {
-                    const value = opt.getAttribute('data-value');
-                    modal.querySelectorAll('.grid-option').forEach(o => o.classList.remove('active'));
-                    opt.classList.add('active');
-                    document.documentElement.style.setProperty('--grid-cols', value);
-                    localStorage.setItem('cumbear_grid', value);
-                    const labels = { '1': '1 Column', '2': '2 Columns', '4': '4 Columns' };
-                    const display = document.getElementById('gridValueDisplay');
-                    if (display) display.textContent = labels[value];
-                    setTimeout(() => modal.classList.remove('active'), 300);
-                });
-            });
-        });
-    }
-
-    // --- 6. Language Modal ---
-    const langRow = document.getElementById('languageRow');
-    if (langRow) {
-        langRow.addEventListener('click', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            window.closeSidebar();
-            const currentLang = localStorage.getItem('cumbear_lang') || 'en';
-            const langHTML = `
-                <div class="modal-search-wrapper">
-                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" class="modal-search-input" id="langSearchInput" placeholder="Search language...">
-                </div>
-                <div id="langListContainer"></div>
-            `;
-            const modal = createModal('langModal', 'Select Language', langHTML);
-            
-            const searchInput = modal.querySelector('#langSearchInput');
-            const listContainer = modal.querySelector('#langListContainer');
-            
-            const renderLangs = (filter = '') => {
-                const filtered = LANGUAGES.filter(l => 
-                    l.name.toLowerCase().includes(filter.toLowerCase()) || 
-                    l.native.toLowerCase().includes(filter.toLowerCase())
-                );
-                listContainer.innerHTML = filtered.map(l => `
-                    <div class="lang-option ${l.code === currentLang ? 'active' : ''}" data-code="${l.code}">
-                        <div><div class="lang-name">${l.name}</div><div class="lang-native">${l.native}</div></div>
-                        <div class="lang-check">✓</div>
-                    </div>
-                `).join('');
-                
-                listContainer.querySelectorAll('.lang-option').forEach(opt => {
-                    opt.addEventListener('click', () => {
-                        const code = opt.getAttribute('data-code');
-                        const lang = LANGUAGES.find(l => l.code === code);
-                        listContainer.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
-                        opt.classList.add('active');
-                        const display = document.getElementById('langValueDisplay');
-                        if (display) display.textContent = lang.name;
-                        localStorage.setItem('cumbear_lang', code);
-                        
-                        // Trigger Google Translate
-                        if (code !== 'en') {
-                            const langMap = { 'es': '/en/es', 'fr': '/en/fr', 'de': '/en/de', 'hi': '/en/hi', 'zh-CN': '/en/zh-CN', 'ru': '/en/ru', 'ar': '/en/ar', 'pt': '/en/pt', 'ja': '/en/ja', 'ko': '/en/ko', 'it': '/en/it', 'tr': '/en/tr', 'nl': '/en/nl', 'pl': '/en/pl', 'id': '/en/id', 'vi': '/en/vi', 'th': '/en/th' };
-                            if (langMap[code]) {
-                                document.cookie = `googtrans=${langMap[code]}; path=/;`;
-                                document.cookie = `googtrans=${langMap[code]}; path=/; domain=.cumbear.in;`;
-                                location.reload();
-                            }
-                        } else {
-                            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                            location.reload();
-                        }
-                    });
-                });
-            };
-            
-            renderLangs();
-            setTimeout(() => searchInput.focus(), 400);
-            searchInput.addEventListener('input', (e) => renderLangs(e.target.value));
-        });
-    }
-
-    // --- 7. BULLETPROOF Navigation Links ---
-    const navLinks = document.querySelectorAll('.nav-link[data-target]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            // CRITICAL: Stop default behavior AND stop event bubbling to prevent ad hijacking
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const targetView = link.getAttribute('data-target');
-            if (window.switchView) {
-                window.switchView(targetView, true);
-            }
-            window.closeSidebar();
-        });
-    });
-
-    // --- 8. Initialize State ---
-    const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
-    const savedGrid = localStorage.getItem('cumbear_grid') || '1';
-    const savedLang = localStorage.getItem('cumbear_lang') || 'en';
-    
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.documentElement.style.setProperty('--grid-cols', savedGrid);
-    if (themeBtn) themeBtn.textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-    
-    const gridLabels = { '1': '1 Column', '2': '2 Columns', '4': '4 Columns' };
-    const gridDisplay = document.getElementById('gridValueDisplay');
-    if (gridDisplay) gridDisplay.textContent = gridLabels[savedGrid] || '1 Column';
-    
-    const langDisplay = document.getElementById('langValueDisplay');
-    if (langDisplay) {
-        const langObj = LANGUAGES.find(l => l.code === savedLang);
-        if (langObj) langDisplay.textContent = langObj.name;
-    }
-});
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
