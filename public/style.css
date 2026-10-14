@@ -424,3 +424,49 @@ main {
   z-index: 950;
   display: none;
 }
+
+/* === PREMIUM HOME & SHORTS TABS === */
+.view-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  background: transparent;
+}
+
+.view-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px; /* Perfect pill shape */
+  background: rgba(255, 255, 255, 0.05);
+  color: #a0a0a0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.view-tab svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+}
+
+/* Active State (Glowing Burgundy) */
+.view-tab.active {
+  background: linear-gradient(135deg, #7c1d40, #9b2d52);
+  color: #ffffff;
+  border-color: #7c1d40;
+  box-shadow: 0 4px 15px rgba(124, 29, 64, 0.5);
+}
+
+.view-tab:active {
+  transform: scale(0.95);
+}
