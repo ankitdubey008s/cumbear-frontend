@@ -1,0 +1,613 @@
+:root {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0f;
+  --bg-card: #0f0f1a;
+  --bg-elevated: #1a1a2e;
+  --accent-burgundy: #7c1d40;
+  --accent-burgundy-light: #9b2d52;
+  --accent-dark: #5a1528;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #616168;
+  --border-color: #1f1f2a;
+  --header-height: 60px;
+  --footer-height: 60px;
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  --bg-card: #ffffff;
+  --bg-elevated: #fafafa;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --border-color: #e4e4e7;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Roboto', -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; line-height: 1.6; }
+.hidden { display: none !important; }
+
+/* ==========================================
+   PREMIUM AGE GATE (GUARANTEED WORKING)
+   ========================================== */
+.age-gate-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #1a0a10 0%, #000000 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.age-gate-container {
+  background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 520px;
+  text-align: center;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(124, 29, 64, 0.3);
+  animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.age-gate-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-burgundy), transparent);
+  opacity: 0.6;
+}
+
+.brand-logo {
+  max-width: 220px;
+  height: auto;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 10px 30px rgba(124, 29, 64, 0.5));
+  border-radius: 16px;
+  border: 2px solid var(--accent-burgundy);
+  background: #000;
+}
+
+.gate-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-burgundy-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.disclaimer-box {
+  background: rgba(124, 29, 64, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.disclaimer-text {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.disclaimer-text:last-child { margin-bottom: 0; }
+.disclaimer-text strong { color: var(--text-primary); font-weight: 700; }
+
+.button-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.btn-exit, .btn-enter {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.btn-exit {
+  background: transparent;
+  border: 1.5px solid var(--border-color);
+  color: var(--text-muted);
+}
+.btn-exit:active { transform: scale(0.98); border-color: var(--text-muted); }
+
+.btn-enter {
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  color: white;
+  box-shadow: 0 8px 24px rgba(124, 29, 64, 0.5);
+}
+.btn-enter:active { transform: scale(0.98); box-shadow: 0 4px 16px rgba(124, 29, 64, 0.4); }
+
+.security-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ==========================================
+   REST OF THE SITE STYLES
+   ========================================== */
+main { padding-top: 50px; margin-top: 0; min-height: 100vh; padding-bottom: calc(var(--footer-height) + 80px); }
+.view-section { animation: fadeIn 0.3s ease; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--accent-burgundy); border-radius: 4px; }
+
+@media (max-width: 480px) {
+  .age-gate-container { padding: 2rem 1.5rem; }
+  .brand-logo { max-width: 180px; }
+  .gate-title { font-size: 1.4rem; }
+}
+
+/* === CUMBEAR APP BUTTON (Top of Sidebar) === */
+.app-install-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  border: 1px solid var(--accent-burgundy);
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 0.5rem;
+  box-shadow: 0 4px 16px rgba(124, 29, 64, 0.3);
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+.app-install-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(124, 29, 64, 0.4);
+}
+.app-install-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+  flex-shrink: 0;
+}
+.app-install-text {
+  flex: 1;
+}
+.app-install-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.app-install-subtitle {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+/* === SOCIAL LINKS GRID === */
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.social-icon-btn {
+  aspect-ratio: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+.social-icon-btn:active {
+  background: var(--accent-burgundy);
+  color: white;
+  transform: scale(0.92);
+  border-color: var(--accent-burgundy);
+}
+.social-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* ==========================================
+   GAP SQUASHER (Fixes the huge black space)
+   ========================================== */
+main {
+  padding-top: 50px !important; /* Only enough for the header */
+  margin-top: 0 !important;
+  min-height: auto !important;
+}
+
+.ad-top-banner-mobile, 
+.ad-top-banner-desktop {
+  margin: 0.5rem auto !important;
+  padding: 0 !important;
+  height: auto !important; /* Let the ad dictate its own height */
+  min-height: 0 !important;
+}
+
+#homeView {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.view-tabs {
+  margin-top: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.filter-bar {
+  margin-top: 0.5rem !important;
+}
+
+.video-grid {
+  margin-top: 0.5rem !important;
+  padding-top: 0 !important;
+}
+/* Ensure top banner is compact and gap-free */
+.ad-top-banner-mobile, .ad-top-banner-desktop {
+  margin: 0.5rem auto !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.video-grid {
+  margin-top: 0.5rem !important;
+}
+
+/* === TOP BANNER (Natural Size, Responsive) === */
+.top-banner-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+}
+.top-banner-container .ad-desktop { display: none; }
+.top-banner-container .ad-mobile { display: block; }
+
+@media (min-width: 768px) {
+  .top-banner-container .ad-mobile { display: none; }
+  .top-banner-container .ad-desktop { display: block; }
+}
+
+/* === STICKY BANNER (Reappears every 30s) === */
+.sticky-ad-container {
+  position: fixed;
+  bottom: 65px; /* Just above bottom nav */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: none; /* Controlled by JS */
+  background: transparent;
+  padding: 0;
+}
+.sticky-close-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: #7c1d40;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 901;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* === INSTANT MESSAGE AD (Auto 1min show, 5s hide) === */
+.instant-msg-ad {
+  position: fixed;
+  top: 60px; /* Below header */
+  right: 10px;
+  z-index: 950;
+  display: none; /* Controlled by JS */
+}
+.instant-msg-ad iframe, .instant-msg-ad ins {
+  max-width: 320px !important;
+}
+
+/* === STRICT AD RESET: NO HOLDERS, NO BACKGROUNDS === */
+.top-banner-container,
+.sticky-ad-container,
+.instant-msg-ad,
+.ad-mobile,
+.ad-desktop {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.top-banner-container {
+  width: 100%;
+  margin: 0.5rem 0 !important;
+}
+.top-banner-container .ad-desktop { display: none; }
+.top-banner-container .ad-mobile { display: block; width: 100%; }
+
+@media (min-width: 768px) {
+  .top-banner-container .ad-mobile { display: none; }
+  .top-banner-container .ad-desktop { display: block; width: 100%; }
+}
+
+.sticky-ad-container {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: none;
+}
+
+.sticky-close-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #7c1d40;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 901;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.instant-msg-ad {
+  position: fixed;
+  top: 60px;
+  right: 10px;
+  z-index: 950;
+  display: none;
+}
+
+/* === PREMIUM HOME & SHORTS TABS === */
+.view-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  background: transparent;
+}
+
+.view-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px; /* Perfect pill shape */
+  background: rgba(255, 255, 255, 0.05);
+  color: #a0a0a0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.view-tab svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+}
+
+/* Active State (Glowing Burgundy) */
+.view-tab.active {
+  background: linear-gradient(135deg, #7c1d40, #9b2d52);
+  color: #ffffff;
+  border-color: #7c1d40;
+  box-shadow: 0 4px 15px rgba(124, 29, 64, 0.5);
+}
+
+.view-tab:active {
+  transform: scale(0.95);
+}
+
+/* === IMMERSIVE SHORTS FEED === */
+.shorts-container {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  background: #000;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.shorts-container::-webkit-scrollbar { display: none; }
+
+.short-card {
+  height: 100vh;
+  width: 100%;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.short-video {
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain; /* Keeps aspect ratio clean */
+  background: #000;
+}
+
+.short-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem 1rem 5rem 1rem; /* Extra padding for bottom nav */
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  color: white;
+  pointer-events: none; /* Let clicks pass through to video */
+}
+
+.short-info h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.short-category {
+  background: #7c1d40;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.short-actions {
+  position: absolute;
+  right: 10px;
+  bottom: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  pointer-events: auto;
+}
+
+.short-action-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 1.2rem;
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+/* === HIDE ADS WHEN IN SHORTS MODE === */
+body.shorts-active .top-banner-container,
+body.shorts-active .sticky-ad-container,
+body.shorts-active .instant-msg-ad,
+body.shorts-active .view-tabs {
+  display: none !important;
+}
+
+/* === ULTIMATE SIDEBAR === */
+.sidebar-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 998;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
+.app-sidebar {
+  position: fixed; top: 0; left: -300px; width: 280px; height: 100%;
+  background: #121212; z-index: 999;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto; border-right: 1px solid #333;
+}
+.app-sidebar.active { left: 0; }
+
+.sidebar-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.5rem; border-bottom: 1px solid #333;
+}
+.sidebar-header h2 { color: #fff; margin: 0; font-size: 1.5rem; }
+.close-btn { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+
+.sidebar-content { padding: 1rem; }
+
+.install-btn {
+  width: 100%; padding: 1rem; margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #7c1d40, #9b2d52);
+  color: white; border: none; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(124, 29, 64, 0.4);
+}
+
+.menu-section { margin-bottom: 1.5rem; }
+.menu-section h3 {
+  color: #888; font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 1px; margin: 0 0 0.5rem 1rem;
+}
+
+.menu-link, .social-link {
+  display: block; width: 100%; padding: 0.8rem 1rem; margin-bottom: 0.25rem;
+  background: rgba(255,255,255,0.05); color: #fff;
+  border: none; border-radius: 8px; text-align: left;
+  font-size: 0.95rem; cursor: pointer; text-decoration: none;
+  transition: background 0.2s;
+}
+.menu-link:active, .social-link:active { background: rgba(255,255,255,0.1); }
+
+/* === AD ISOLATION: Hide ads on non-content pages === */
+body.ads-hidden .top-banner-container,
+body.ads-hidden .sticky-ad-container,
+body.ads-hidden .instant-msg-ad {
+  display: none !important;
+}
