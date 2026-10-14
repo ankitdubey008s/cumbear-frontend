@@ -5,13 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let page = 1;
   let currentCategory = 'all';
-  let currentSort = 'gem'; // DEFAULT TO GEM CONTENT
+  let currentSort = 'newest';
   const API_URL = 'https://cumbear-backend.vercel.app';
   
   const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
   const NATIVE_URL = 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN';
 
-  // 1. SESSION POPUNDER
   if (!sessionStorage.getItem('popTriggered')) {
     document.body.addEventListener('click', function handleFirstClick(e) {
       if (e.target.tagName === 'A' || e.target.closest('a') || e.target.tagName === 'BUTTON') return;
@@ -21,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { capture: true });
   }
 
-  // 2. Load Categories
   async function loadCategories() {
     if (!cats) return;
     try {
@@ -47,36 +45,39 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { console.error('Category load error:', err); }
   }
 
-  // 3. Load Videos (WITH CACHE BUSTER & GEM SORT)
   async function loadVideos() {
     if (!grid) return;
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading premium content...</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">Loading content...</div>';
     
     try {
-      // Cache buster ensures browser never shows old, stale data
       const cacheBuster = Date.now();
       let url = `${API_URL}/api/videos?page=${page}&limit=50&sort=${currentSort}&_=${cacheBuster}`;
-      
       if (currentCategory && currentCategory !== 'all') {
         url += `&category=${encodeURIComponent(currentCategory)}`;
       }
       
+      console.log('🔍 Fetching URL:', url);
       const res = await fetch(url);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
+      console.log('✅ API Response:', data);
       
       if (data.success && data.data && data.data.length > 0) {
         renderVideos(data.data);
         renderPagination(data.pagination.totalPages);
       } else {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No premium videos found in this category.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;">No videos found.</div>';
       }
     } catch (err) {
-      console.error('Fetch error:', err);
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red;">Error loading videos.</div>`;
+      console.error('❌ CRITICAL FETCH ERROR:', err);
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:red;">Error: ${err.message}. Check Console (F12).</div>`;
     }
   }
 
-  // 4. Render Videos + NATIVE AD
   function renderVideos(videos) {
     grid.innerHTML = '';
     videos.forEach((video, index) => {
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="sponsored-badge">Sponsored</span>
           </div>
           <div class="video-info">
-            <div class="video-title">Meet Local Singles Near You - Click to Chat</div>
+            <div class="video-title">Meet Local Singles Near You</div>
             <div class="video-stats"><span>100% Free</span><span>Join Now</span></div>
           </div>
         `;
@@ -120,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Render Pagination
   function renderPagination(totalPages) {
     if (!pag) return;
     pag.innerHTML = '';
@@ -147,37 +147,3 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
   loadVideos();
 });
-
-// === SHORTS VAST PRE-ROLL (0s Skip) ===
-window.playShortsVast = async function(videoElement, mainVideoUrl) {
-  return new Promise(async (resolve) => {
-    try {
-      const response = await fetch('https://s.magsrv.com/v1/vast.php?idzone=6045638');
-      const text = await response.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(text, "text/xml");
-      const mediaFile = xmlDoc.querySelector("MediaFile");
-      
-      if (mediaFile && mediaFile.textContent.trim()) {
-        const adVideoUrl = mediaFile.textContent.trim();
-        videoElement.src = adVideoUrl;
-        videoElement.muted = false;
-        videoElement.play();
-        
-        videoElement.onended = () => {
-          videoElement.src = mainVideoUrl;
-          videoElement.play();
-          resolve();
-        };
-      } else {
-        videoElement.src = mainVideoUrl;
-        videoElement.play();
-        resolve();
-      }
-    } catch (e) {
-      videoElement.src = mainVideoUrl;
-      videoElement.play();
-      resolve();
-    }
-  });
-};
