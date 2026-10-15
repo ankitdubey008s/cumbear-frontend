@@ -1,7 +1,8 @@
 /**
  * ==========================================================================
  * CUMBEAR PLAYER CONTROLLER
- * Features: Native Chrome Player, Multi-Language Captions, No-Download, VAST Pre-Roll
+ * Features: Native Player, Actual Poster Cover, 1s Hold & Slide-to-Preview
+ *           for Recommended Videos Grid
  * ==========================================================================
  */
 
@@ -9,7 +10,7 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  const VAST_PLAYER_URL = 'https://s.magsrv.com/v1/vast.php?idz=6045632';
+  const VAST_PLAYER_URL = 'https://s.magsrv.com/v1/vast.php?idz=6056604';
 
   let currentVideo = null;
 
@@ -19,16 +20,32 @@
     return String(num);
   }
 
+  function getRandomViews() {
+    return Math.floor(Math.random() * (10000000 - 10000 + 1)) + 10000;
+  }
+
+  function getRandomLikeRate() {
+    return Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+  }
+
   function generateVttBlob(title, langLabel) {
-    const vtt = `WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n[${langLabel}] ${title}\n\n00:00:06.000 --> 00:00:15.000\nWatch full premium scenes on CumBear.in\n`;
+    const vtt = `WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n[${langLabel}] ${title}\n\n00:00:06.000 --> 00:00:15.000\nWatch uncut scenes on CumBear.in\n`;
     return URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }));
   }
 
   window.loadPlayerVideoById = async function (videoId) {
     const titleEl = document.getElementById('playerTitle');
     const videoEl = document.getElementById('mainPlayerVideo');
+    const posterCover = document.getElementById('playerPosterCover');
+    const posterImg = document.getElementById('playerPosterImg');
 
     if (titleEl) titleEl.textContent = 'Loading video...';
+
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.src = '';
+      videoEl.load();
+    }
 
     try {
       const res = await fetch(`${API_BASE}/api/videos/${videoId}`);
@@ -42,14 +59,24 @@
         document.getElementById('playerLikeCount').textContent = formatCount(Math.floor(Math.random() * 50000) + 5000);
         document.getElementById('playerViewsCount').textContent = formatCount(Math.floor(Math.random() * 8000000) + 100000);
 
-        // Configure Native Player with disabled downloads
+        if (posterImg) {
+          posterImg.src = currentVideo.thumbnailUrl || '/cumb.png';
+          posterImg.onerror = () => { posterImg.src = '/cumb.png'; };
+        }
+        if (posterCover) {
+          posterCover.classList.remove('hidden');
+          posterCover.onclick = async () => {
+            posterCover.classList.add('hidden');
+            await startPlaybackSequence(videoEl, currentVideo);
+          };
+        }
+
         videoEl.setAttribute('controls', '');
         videoEl.setAttribute('controlslist', 'nodownload');
         videoEl.setAttribute('playsinline', '');
         videoEl.setAttribute('webkit-playsinline', '');
         videoEl.oncontextmenu = (e) => e.preventDefault();
 
-        // Inject Multi-Language Caption Tracks
         videoEl.querySelectorAll('track').forEach(t => t.remove());
         const languages = [
           { code: 'en', label: 'English', default: true },
@@ -72,8 +99,6 @@
           videoEl.appendChild(track);
         });
 
-        // Run Pre-roll Ad then play main video
-        await playVastPreRoll(videoEl, currentVideo.playableUrl);
         loadRelatedVideos(currentVideo.category);
       }
     } catch (err) {
@@ -81,6 +106,10 @@
       console.error(err);
     }
   };
+
+  async function startPlaybackSequence(videoEl, video) {
+    await playVastPreRoll(videoEl, video.playableUrl);
+  }
 
   async function playVastPreRoll(mainVideoEl, sourceUrl) {
     const overlay = document.getElementById('playerVastOverlay');
@@ -103,7 +132,7 @@
       if (mediaUrl) {
         overlay.classList.remove('hidden');
         vastVideo.src = mediaUrl;
-        vastVideo.muted = true; // Auto-play safely across modern browsers
+        vastVideo.muted = true;
         vastVideo.playsInline = true;
 
         let timeLeft = 7;
@@ -112,7 +141,6 @@
 
         await vastVideo.play().catch(() => {});
 
-        // Unmute on tap if browser blocked audio
         vastVideo.addEventListener('click', () => { vastVideo.muted = false; }, { once: true });
 
         const timer = setInterval(() => {
@@ -146,7 +174,7 @@
         return;
       }
     } catch (e) {
-      console.warn('Player VAST failed, bypassing:', e);
+      console.warn('Player VAST bypassed:', e);
     }
 
     overlay.classList.add('hidden');
@@ -155,6 +183,7 @@
     mainVideoEl.play().catch(() => {});
   }
 
+  // --- Recommended Videos (Same card design & Hold-to-Preview) ---
   async function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
@@ -171,11 +200,16 @@
           const card = document.createElement('div');
           card.className = 'video-card';
           const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
+          const views = formatCount(getRandomViews());
+          const likeRate = getRandomLikeRate();
           const safeTitle = (v.title || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
           card.innerHTML = `
             <div class="video-thumb">
-              <img src="${v.thumbnailUrl || '/cumb.png'}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
+              <img class="hd-thumb" src="${v.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
+              <div class="preview-video-holder"></div>
+              <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
+              <div class="preview-loading"><div class="preview-spinner"></div></div>
               <span class="duration-badge">${duration}</span>
             </div>
             <div class="video-info">
@@ -183,20 +217,165 @@
               <div class="video-meta-row">
                 <span class="provider-tag">${v.category || 'CumBear'}</span>
                 <span>•</span>
-                <span>${formatCount(Math.floor(Math.random() * 500000) + 10000)} views</span>
+                <span>${views} views</span>
+                <span>•</span>
+                <span>${likeRate}%</span>
               </div>
             </div>
           `;
-          card.addEventListener('click', () => {
-            window.loadPlayerVideoById(v._id);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          });
+
+          attachHoldAndSlidePreview(card, v);
           grid.appendChild(card);
         });
       }
     } catch (e) {
       console.warn('Failed loading suggestions:', e);
     }
+  }
+
+  function attachHoldAndSlidePreview(card, video) {
+    const thumb = card.querySelector('.video-thumb');
+    const title = card.querySelector('.video-title');
+    const holder = card.querySelector('.preview-video-holder');
+    const timeline = card.querySelector('.preview-timeline');
+    const timelineFill = card.querySelector('.preview-timeline-fill');
+    const loading = card.querySelector('.preview-loading');
+
+    let pressTimer = null;
+    let isPreviewPlaying = false;
+    let startX = 0;
+    let startY = 0;
+    let heldDown = false;
+    let videoEl = null;
+
+    thumb.addEventListener('contextmenu', (e) => e.preventDefault());
+    thumb.querySelectorAll('img').forEach(img => {
+      img.addEventListener('dragstart', (e) => e.preventDefault());
+    });
+
+    function stopPreview() {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+      if (isPreviewPlaying) {
+        isPreviewPlaying = false;
+        if (videoEl) {
+          videoEl.pause();
+          videoEl.src = '';
+          videoEl.load();
+          videoEl.remove();
+          videoEl = null;
+        }
+        thumb.classList.remove('previewing');
+        title.classList.remove('previewing-text');
+        if (timeline) timeline.classList.remove('active');
+        if (loading) loading.classList.remove('active');
+        if (timelineFill) timelineFill.style.width = '0%';
+      }
+    }
+
+    function startPreview() {
+      document.querySelectorAll('.video-thumb.previewing').forEach(el => {
+        const v = el.querySelector('video');
+        if (v) { v.pause(); v.src = ''; v.load(); v.remove(); }
+        el.classList.remove('previewing');
+      });
+
+      isPreviewPlaying = true;
+      thumb.classList.add('previewing');
+      title.classList.add('previewing-text');
+      if (timeline) timeline.classList.add('active');
+      if (loading) loading.classList.add('active');
+
+      videoEl = document.createElement('video');
+      videoEl.setAttribute('muted', '');
+      videoEl.muted = true;
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
+      videoEl.preload = 'auto';
+      videoEl.src = video.playableUrl;
+      videoEl.playbackRate = 1.0;
+
+      videoEl.oncanplay = () => {
+        if (loading) loading.classList.remove('active');
+        videoEl.play().catch(() => stopPreview());
+      };
+
+      videoEl.ontimeupdate = () => {
+        if (videoEl.currentTime > 60) {
+          stopPreview();
+          return;
+        }
+        if (timelineFill) {
+          timelineFill.style.width = `${(videoEl.currentTime / 60) * 100}%`;
+        }
+      };
+
+      videoEl.onerror = () => stopPreview();
+      holder.appendChild(videoEl);
+    }
+
+    thumb.addEventListener('pointerdown', (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      heldDown = true;
+
+      if (isPreviewPlaying) {
+        stopPreview();
+        heldDown = false;
+        return;
+      }
+
+      pressTimer = setTimeout(() => {
+        if (heldDown) {
+          startPreview();
+        }
+      }, 1000);
+    });
+
+    thumb.addEventListener('pointermove', (e) => {
+      if (!heldDown && !isPreviewPlaying) return;
+
+      const diffX = Math.abs(e.clientX - startX);
+      const diffY = Math.abs(e.clientY - startY);
+
+      if (!isPreviewPlaying && (diffX > 10 || diffY > 10)) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      } else if (isPreviewPlaying && videoEl && videoEl.duration) {
+        const rect = thumb.getBoundingClientRect();
+        const scrubRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        videoEl.currentTime = scrubRatio * Math.min(videoEl.duration, 60);
+      }
+    });
+
+    thumb.addEventListener('pointerup', () => {
+      heldDown = false;
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+        if (!isPreviewPlaying) {
+          stopPreview();
+          window.loadPlayerVideoById(video._id);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    });
+
+    thumb.addEventListener('pointercancel', () => {
+      heldDown = false;
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    });
+
+    card.querySelector('.video-info').addEventListener('click', () => {
+      stopPreview();
+      window.loadPlayerVideoById(video._id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {

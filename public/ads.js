@@ -1,88 +1,64 @@
 /**
  * ==========================================================================
- * CUMBEAR AD UTILITY CONTROLLER (ExoClick Sizing, Banners & Popunders)
+ * CUMBEAR AD UTILITY CONTROLLER (ExoClick & CrakRevenue Integration)
  * ==========================================================================
  */
 
 (function () {
   'use strict';
 
-  const stickyContainer = document.getElementById('stickyAdContainer');
-  const stickyCloseBtn = document.getElementById('stickyCloseBtn');
-  let stickyTimer = null;
+  // --- 1. Video Slider Popup Ad (Zone 6056606) ---
+  const videoSliderEl = document.getElementById('videoSliderPopup');
+  const videoSliderClose = document.getElementById('videoSliderCloseBtn');
+  let sliderTimer = null;
+  let hasScrolled = false;
 
-  function showStickyAd() {
-    if (!stickyContainer) return;
+  function showVideoSlider() {
+    if (!videoSliderEl) return;
     const isShortsView = document.getElementById('shortsView')?.classList.contains('active');
     if (isShortsView) {
-      stickyContainer.style.display = 'none';
+      videoSliderEl.style.display = 'none';
       return;
     }
 
-    stickyContainer.style.display = 'flex';
+    videoSliderEl.style.display = 'block';
     try {
       (window.AdProvider = window.AdProvider || []).push({ "serve": {} });
-    } catch (err) {}
+    } catch (e) {}
   }
 
-  function hideStickyAd() {
-    if (!stickyContainer) return;
-    stickyContainer.style.display = 'none';
+  function hideVideoSlider() {
+    if (!videoSliderEl) return;
+    videoSliderEl.style.display = 'none';
 
-    if (stickyTimer) clearTimeout(stickyTimer);
-    stickyTimer = setTimeout(() => {
-      showStickyAd();
-    }, 30000);
+    // Reappear after 45 seconds
+    if (sliderTimer) clearTimeout(sliderTimer);
+    sliderTimer = setTimeout(() => {
+      showVideoSlider();
+    }, 45000);
   }
 
-  if (stickyCloseBtn) {
-    stickyCloseBtn.addEventListener('click', (e) => {
+  if (videoSliderClose) {
+    videoSliderClose.addEventListener('click', (e) => {
       e.stopPropagation();
-      hideStickyAd();
+      hideVideoSlider();
     });
   }
 
-  // --- Instant Message Ad (Auto-Hides in 5s, repeats every 60s) ---
-  const instantMsgEl = document.getElementById('instantMsgAd');
-  let hasScrolled = false;
-
-  function triggerInstantMessage() {
-    if (!instantMsgEl) return;
-    const isShortsView = document.getElementById('shortsView')?.classList.contains('active');
-    if (isShortsView) return;
-
-    instantMsgEl.classList.remove('hidden');
-    instantMsgEl.style.display = 'block';
-
-    try {
-      (window.AdProvider = window.AdProvider || []).push({ "serve": {} });
-    } catch (err) {}
-
-    setTimeout(() => {
-      if (instantMsgEl) {
-        instantMsgEl.classList.add('hidden');
-        instantMsgEl.style.display = 'none';
-      }
-    }, 5000);
-  }
-
+  // Trigger slider after scroll down
   window.addEventListener('scroll', () => {
-    if (!hasScrolled && window.scrollY > 120) {
+    if (!hasScrolled && window.scrollY > 150) {
       hasScrolled = true;
-      triggerInstantMessage();
-
-      setInterval(() => {
-        triggerInstantMessage();
-      }, 60000);
+      setTimeout(showVideoSlider, 3000);
     }
   }, { passive: true });
 
-  // --- Random Popunder Trigger (Between 45s and 90s) ---
-  const POP_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
+  // --- 2. CrakRevenue Dating Popunder on User Click ---
+  const CRAK_POPS_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
   let canPop = false;
 
   function scheduleNextPop() {
-    const randomDelay = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
+    const randomDelay = Math.floor(Math.random() * (75000 - 35000 + 1)) + 35000;
     setTimeout(() => {
       canPop = true;
     }, randomDelay);
@@ -90,17 +66,25 @@
 
   document.body.addEventListener('click', (e) => {
     if (!canPop) return;
-    const ignoreTags = ['INPUT', 'TEXTAREA', 'BUTTON'];
-    if (ignoreTags.includes(e.target.tagName)) return;
+    const ignoreTags = ['INPUT', 'TEXTAREA', 'BUTTON', 'A'];
+    if (ignoreTags.includes(e.target.tagName) || e.target.closest('a') || e.target.closest('button')) return;
 
-    window.open(POP_URL, '_blank', 'noopener,noreferrer');
+    window.open(CRAK_POPS_URL, '_blank', 'noopener,noreferrer');
     canPop = false;
     scheduleNextPop();
   });
 
   scheduleNextPop();
 
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(showStickyAd, 1500);
-  });
+  // Hide ads on shorts view
+  const originalSwitchView = window.switchView;
+  if (originalSwitchView) {
+    window.switchView = function (viewId, pushHistory = true) {
+      originalSwitchView(viewId, pushHistory);
+
+      if (viewId === 'shortsView') {
+        if (videoSliderEl) videoSliderEl.style.display = 'none';
+      }
+    };
+  }
 })();
