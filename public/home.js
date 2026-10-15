@@ -1,6 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR HOME VIEW CONTROLLER (Optimized Feed & Native Long-Press Engine)
+ * CUMBEAR HOME VIEW CONTROLLER (1-Sec Hold & Slide-to-Preview Engine)
  * ==========================================================================
  */
 
@@ -125,7 +125,7 @@
         adCard.rel = 'noopener noreferrer';
         adCard.innerHTML = `
           <div class="crak-thumb-box">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=280&fit=crop" loading="lazy" decoding="async">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=640&h=360&fit=crop" loading="lazy" decoding="async">
             <span class="sponsored-pill">Sponsored</span>
           </div>
           <div class="video-info">
@@ -146,7 +146,7 @@
 
       card.innerHTML = `
         <div class="video-thumb">
-          <img src="${video.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
+          <img class="hd-thumb" src="${video.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
           <div class="preview-video-holder"></div>
           <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
           <div class="preview-loading"><div class="preview-spinner"></div></div>
@@ -164,12 +164,13 @@
         </div>
       `;
 
-      attachHoldToPreview(card, video);
+      attachSlideAndHoldGestures(card, video);
       grid.appendChild(card);
     });
   }
 
-  function attachHoldToPreview(card, video) {
+  // 1-Sec Hold & Slide-To-Preview Scrubbing
+  function attachSlideAndHoldGestures(card, video) {
     const thumb = card.querySelector('.video-thumb');
     const title = card.querySelector('.video-title');
     const holder = card.querySelector('.preview-video-holder');
@@ -183,11 +184,8 @@
     let startY = 0;
     let videoEl = null;
 
-    // Hard block context menu & dragging on mobile Chrome
     thumb.addEventListener('contextmenu', (e) => e.preventDefault());
-    thumb.querySelectorAll('img').forEach(img => {
-      img.addEventListener('dragstart', (e) => e.preventDefault());
-    });
+    thumb.querySelectorAll('img').forEach(img => img.addEventListener('dragstart', (e) => e.preventDefault()));
 
     function stopPreview() {
       if (pressTimer) {
@@ -229,7 +227,7 @@
       videoEl.muted = true;
       videoEl.setAttribute('playsinline', '');
       videoEl.setAttribute('webkit-playsinline', '');
-      videoEl.preload = 'metadata';
+      videoEl.preload = 'auto';
       videoEl.src = video.playableUrl;
       videoEl.playbackRate = 2.0;
 
@@ -255,25 +253,28 @@
     thumb.addEventListener('pointerdown', (e) => {
       startX = e.clientX;
       startY = e.clientY;
+      // Exact 1-second hold threshold
       pressTimer = setTimeout(() => {
         startPreview();
-      }, 450);
+      }, 1000);
     });
 
+    // Slide across thumbnail to seek/scrub preview instantly
     thumb.addEventListener('pointermove', (e) => {
-      if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) {
-        if (pressTimer) {
+      if (!isPreviewing) {
+        if (Math.abs(e.clientX - startX) > 12 && Math.abs(e.clientY - startY) < 12) {
           clearTimeout(pressTimer);
-          pressTimer = null;
+          startPreview();
         }
+      } else if (videoEl && videoEl.duration) {
+        const rect = thumb.getBoundingClientRect();
+        const scrubRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        videoEl.currentTime = scrubRatio * Math.min(videoEl.duration, 60);
       }
     });
 
     thumb.addEventListener('pointerup', () => {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
+      clearTimeout(pressTimer);
       if (isPreviewing) {
         stopPreview();
       } else {

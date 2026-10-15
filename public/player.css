@@ -24,6 +24,52 @@
   background: #000000;
 }
 
+/* Initial Poster Cover & Click-to-Play Trigger */
+.player-poster-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.player-poster-cover.hidden { display: none !important; }
+
+.player-poster-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: contrast(1.04) brightness(0.95);
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.player-big-play-btn {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  background: rgba(124, 29, 64, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 28px rgba(124, 29, 64, 0.6);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.player-big-play-btn svg {
+  width: 34px;
+  height: 34px;
+  fill: #ffffff;
+  margin-left: 4px;
+}
+.player-poster-cover:hover .player-big-play-btn {
+  transform: scale(1.1);
+}
+.player-poster-cover:active .player-big-play-btn {
+  transform: scale(0.95);
+}
+
 /* 7-Second VAST Pre-Roll Overlay */
 .player-vast-overlay {
   position: absolute;
@@ -64,12 +110,9 @@
   background: var(--accent-burgundy);
   border-color: var(--accent-burgundy);
 }
+.vast-skip-btn:active { transform: scale(0.95); }
 
-.vast-skip-btn:active {
-  transform: scale(0.95);
-}
-
-/* Player Meta & Horizontal Action Row */
+/* Player Meta & Actions */
 .player-meta-box {
   padding: 14px;
 }
@@ -104,13 +147,11 @@
   transition: all var(--transition-fast);
   outline: none;
 }
-
 .player-action-pill:active {
   transform: scale(0.94);
   background: var(--accent-burgundy);
   border-color: var(--accent-burgundy);
 }
-
 .player-action-pill svg {
   width: 17px;
   height: 17px;
@@ -123,10 +164,7 @@
   cursor: default;
   color: var(--text-muted);
 }
-
-.views-pill svg {
-  stroke: var(--text-muted);
-}
+.views-pill svg { stroke: var(--text-muted); }
 
 .related-section {
   padding: 14px 10px 0;

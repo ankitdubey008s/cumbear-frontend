@@ -1,6 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER (Stream Playback & VAST Pre-Roll Fix)
+ * CUMBEAR SHORTS CONTROLLER (16:9 Display, 2x Lock, Double-Tap Like)
  * ==========================================================================
  */
 
@@ -42,13 +42,12 @@
             shortsData.unshift(matched);
           }
         }
-
         renderShortsFeed();
       } else {
         container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;">No shorts available.</div>';
       }
     } catch (err) {
-      container.innerHTML = `<div style="color:#ef4444;text-align:center;padding:4rem;">Error loading shorts: ${err.message}</div>`;
+      container.innerHTML = `<div style="color:#ef4444;text-align:center;padding:4rem;">Error: ${err.message}</div>`;
     }
   };
 
@@ -81,7 +80,26 @@
       const safeTitle = (video.title || 'Untitled Short').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       card.innerHTML = `
-        <video class="short-video-element" playsinline webkit-playsinline loop preload="metadata" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
+        <div class="short-video-stage">
+          <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
+          <video class="short-video-element" playsinline webkit-playsinline loop preload="auto" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
+          
+          <div class="center-play-hud">
+            <svg class="hud-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg class="hud-pause hidden" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </div>
+
+          <div class="double-tap-heart">
+            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </div>
+        </div>
+
+        <div class="speed-indicator-pill">
+          <span>⚡ 2X SPEED</span>
+        </div>
+
+        <div class="side-hold-zone left"></div>
+        <div class="side-hold-zone right"></div>
         <div class="short-scrim"></div>
 
         <div class="short-progress-track">
@@ -121,7 +139,7 @@
         <div class="short-info-zone">
           <div class="short-creator">
             <span class="short-creator-badge"></span>
-            <span>${video.category || 'CumBear'}</span>
+            <span>CumBear</span>
           </div>
           <div class="short-title-text">${safeTitle}</div>
           <button class="watch-full-btn" onclick="window.openPlayer('${video._id}')">
@@ -132,7 +150,7 @@
 
         <div class="preview-ended-overlay hidden">
           <div class="preview-ended-title">3-Minute Preview Ended</div>
-          <div class="preview-ended-subtitle">Watch the full video on CumBear Player</div>
+          <div class="preview-ended-subtitle">Watch the full uncut video on CumBear Player</div>
           <button class="watch-full-btn" onclick="window.openPlayer('${video._id}')">Watch Full Scene</button>
         </div>
       `;
@@ -149,13 +167,113 @@
     const shareBtn = card.querySelector('.share-btn');
     const moreBtn = card.querySelector('.more-btn');
     const videoEl = card.querySelector('video');
+    const poster = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
+    const speedPill = card.querySelector('.speed-indicator-pill');
+    const heart = card.querySelector('.double-tap-heart');
+    const hud = card.querySelector('.center-play-hud');
+    const hudPlay = card.querySelector('.hud-play');
+    const hudPause = card.querySelector('.hud-pause');
+    const sideZones = card.querySelectorAll('.side-hold-zone');
 
-    card.addEventListener('click', (e) => {
+    let lastTap = 0;
+    let holdTimer = null;
+    let isSpeedLocked = false;
+    let isHoldingSpeed = false;
+    let holdStartY = 0;
+
+    videoEl.addEventListener('playing', () => {
+      poster.classList.add('loaded');
+    });
+
+    function showHud(isPaused) {
+      if (isPaused) {
+        hudPlay.classList.remove('hidden');
+        hudPause.classList.add('hidden');
+      } else {
+        hudPlay.classList.add('hidden');
+        hudPause.classList.remove('hidden');
+      }
+      hud.classList.add('show');
+      setTimeout(() => { hud.classList.remove('show'); }, 500);
+    }
+
+    function triggerLike() {
+      likeBtn.classList.add('liked');
+      heart.classList.remove('animate');
+      void heart.offsetWidth;
+      heart.classList.add('animate');
+    }
+
+    // Tap & Double Tap Logic
+    card.addEventListener('pointerup', (e) => {
       if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn')) return;
-      if (videoEl.paused) videoEl.play();
-      else videoEl.pause();
+      if (isHoldingSpeed) return;
+
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        triggerLike();
+      } else {
+        setTimeout(() => {
+          if (Date.now() - lastTap >= 280) {
+            if (videoEl.paused) {
+              videoEl.play();
+              showHud(false);
+            } else {
+              videoEl.pause();
+              showHud(true);
+            }
+          }
+        }, 280);
+      }
+      lastTap = now;
+    });
+
+    // Hold at side for 2x & pull down to lock at 2x
+    sideZones.forEach(zone => {
+      zone.addEventListener('pointerdown', (e) => {
+        holdStartY = e.clientY;
+        holdTimer = setTimeout(() => {
+          isHoldingSpeed = true;
+          videoEl.playbackRate = 2.0;
+          speedPill.classList.add('active');
+          speedPill.innerHTML = '<span>⚡ 2X SPEED (Pull down to lock)</span>';
+        }, 300);
+      });
+
+      zone.addEventListener('pointermove', (e) => {
+        if (!isHoldingSpeed) return;
+        const deltaY = e.clientY - holdStartY;
+        if (deltaY > 50 && !isSpeedLocked) {
+          isSpeedLocked = true;
+          speedPill.classList.add('locked');
+          speedPill.innerHTML = '<span>🔒 2X SPEED LOCKED</span>';
+        }
+      });
+
+      const releaseSpeed = () => {
+        clearTimeout(holdTimer);
+        if (isHoldingSpeed && !isSpeedLocked) {
+          isHoldingSpeed = false;
+          videoEl.playbackRate = 1.0;
+          speedPill.classList.remove('active');
+        }
+      };
+
+      zone.addEventListener('pointerup', releaseSpeed);
+      zone.addEventListener('pointercancel', releaseSpeed);
+      zone.addEventListener('pointerleave', releaseSpeed);
+    });
+
+    // Tap screen when locked to unlock 2x speed
+    card.addEventListener('click', () => {
+      if (isSpeedLocked) {
+        isSpeedLocked = false;
+        isHoldingSpeed = false;
+        videoEl.playbackRate = 1.0;
+        speedPill.classList.remove('active', 'locked');
+      }
     });
 
     if (likeBtn) {
@@ -214,6 +332,7 @@
           if (videoEl) {
             videoEl.pause();
             videoEl.currentTime = 0;
+            videoEl.playbackRate = 1.0;
           }
         }
       });
@@ -247,7 +366,7 @@
           return;
         }
       } catch (err) {
-        console.warn('VAST short pre-roll bypassed:', err);
+        console.warn('VAST short pre-roll skipped:', err);
       }
     }
 
