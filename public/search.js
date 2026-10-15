@@ -1,127 +1,161 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const searchInput = document.getElementById('searchInput');
-  const searchForm = document.getElementById('searchForm');
-  const categoriesGrid = document.getElementById('categoriesGrid');
-  const searchResultsHeader = document.getElementById('searchResultsHeader');
-  const currentSearchTerm = document.getElementById('currentSearchTerm');
-  const backToCategoriesBtn = document.getElementById('backToCategoriesBtn');
-  const categoriesHub = document.getElementById('categoriesHub');
-  const videoGrid = document.getElementById('videoGrid');
+/**
+ * ==========================================================================
+ * CUMBEAR SEARCH & CATEGORIES CONTROLLER
+ * ==========================================================================
+ */
 
-  if (searchForm) {
-    searchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (searchInput.value.trim()) performSearch(searchInput.value.trim());
+(function () {
+  'use strict';
+
+  const API_BASE = 'https://cumbear-backend.vercel.app';
+  let searchPage = 1;
+  let activeSearchTerm = '';
+
+  const fallbackCategories = [
+    'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
+    'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
+    'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
+    'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
+  ];
+
+  // --- 1. Populate Search Categories Hub (20 Images) ---
+  function initCategoriesHub() {
+    const hubGrid = document.getElementById('searchCategoriesGrid');
+    if (!hubGrid) return;
+
+    hubGrid.innerHTML = '';
+    fallbackCategories.forEach((catName, idx) => {
+      const imgIdx = idx + 1;
+      const card = document.createElement('div');
+      card.className = 'image-cat-card';
+      card.innerHTML = `
+        <img src="/categories/${imgIdx}.jpg" alt="${catName}" loading="lazy" onerror="this.src='/cumb.png'">
+        <div class="image-cat-overlay">
+          <span class="image-cat-title">${catName}</span>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        executeSearch(catName);
+      });
+      hubGrid.appendChild(card);
     });
   }
 
-  if (backToCategoriesBtn) {
-    backToCategoriesBtn.addEventListener('click', () => {
-      searchInput.value = '';
-      showCategoriesView();
-    });
-  }
+  // --- 2. Execute Search via Backend Search Parameter ---
+  async function executeSearch(term, page = 1) {
+    if (!term || !term.trim()) return;
+    activeSearchTerm = term.trim();
+    searchPage = page;
 
-  window.showCategoriesView = function() {
-    if (searchResultsHeader) searchResultsHeader.classList.add('hidden');
-    if (categoriesHub) categoriesHub.classList.remove('hidden');
-    if (videoGrid) videoGrid.innerHTML = '';
-    if (window.switchView) window.switchView('categoriesView', false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    const hubSection = document.getElementById('searchCategoriesHub');
+    const resultsSection = document.getElementById('searchResultsSection');
+    const resultTitle = document.getElementById('searchResultTitle');
+    const resultsGrid = document.getElementById('searchVideoGrid');
+    const input = document.getElementById('searchInput');
 
-  window.performSearch = async function(term, isCategory = false) {
-    if (categoriesHub) categoriesHub.classList.add('hidden');
-    if (searchResultsHeader) searchResultsHeader.classList.remove('hidden');
-    if (currentSearchTerm) currentSearchTerm.textContent = isCategory ? `Category: ${term}` : `Results for: "${term}"`;
-    
-    if (window.switchView) window.switchView('homeView', true);
-    
-    if (videoGrid) {
-      videoGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Loading...</div>';
+    if (input) input.value = activeSearchTerm;
+    if (hubSection) hubSection.classList.add('hidden');
+    if (resultsSection) resultsSection.classList.remove('hidden');
+    if (resultTitle) resultTitle.textContent = `Results for: "${activeSearchTerm}"`;
+
+    if (resultsGrid) {
+      resultsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);font-weight:700;">Searching matching scenes...</div>';
     }
 
     try {
-      const queryParam = isCategory ? `category=${encodeURIComponent(term)}` : `search=${encodeURIComponent(term)}`;
-      const res = await fetch(`https://cumbear-backend.vercel.app/api/videos?${queryParam}&limit=50`);
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/api/videos?page=${searchPage}&limit=50&category=${encodeURIComponent(activeSearchTerm)}&_=${Date.now()}`);
+      const json = await res.json();
 
-      if (data.success && data.data && videoGrid) {
-        if (data.data.length === 0) {
-          videoGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No videos found.</div>';
-        } else {
-          renderSearchResults(data.data);
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        renderSearchResults(json.data);
+        renderSearchPagination(json.pagination ? json.pagination.totalPages : 10);
+      } else {
+        if (resultsGrid) {
+          resultsGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No videos matching "${activeSearchTerm}". Try another search term.</div>`;
         }
-      } else if (videoGrid) {
-        videoGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No videos found.</div>';
       }
-    } catch (err) {
-      if (videoGrid) videoGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:red;">Error loading results.</div>';
-    }
-  };
-
-  async function loadCategories() {
-    if (!categoriesGrid) return;
-    try {
-      const res = await fetch('https://cumbear-backend.vercel.app/api/categories');
-      const data = await res.json();
-      if (data.success && data.data) {
-        renderCategories(data.data.sort((a, b) => b.count - a.count).slice(0, 20));
+    } catch (e) {
+      if (resultsGrid) {
+        resultsGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:#ef4444;">Search error: ${e.message}</div>`;
       }
-    } catch (err) {
-      categoriesGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-muted);">Failed to load categories.</p>';
     }
-  }
-
-  function renderCategories(categories) {
-    categoriesGrid.innerHTML = categories.map((cat, index) => `
-      <div class="category-card" data-category="${cat._id}">
-        <div class="category-thumb">
-          <img src="/categories/${(index % 20) + 1}.jpg" alt="${cat._id}" loading="lazy" onerror="this.style.opacity='0'">
-        </div>
-        <div class="category-info">
-          <div class="category-name">${cat._id}</div>
-          <div class="category-count">${formatViews(cat.count)} videos</div>
-        </div>
-      </div>
-    `).join('');
-
-    document.querySelectorAll('.category-card').forEach(card => {
-      card.addEventListener('click', () => performSearch(card.getAttribute('data-category'), true));
-    });
   }
 
   function renderSearchResults(videos) {
-    videoGrid.innerHTML = '';
-    videos.forEach((video, index) => {
-      if (index > 0 && index % 5 === 0 && window.renderAd) {
-        videoGrid.insertAdjacentHTML('beforeend', window.renderAd('infeed'));
-      }
+    const grid = document.getElementById('searchVideoGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
 
-      const cleanDuration = video.duration.replace('HD ', '');
+    videos.forEach(v => {
       const card = document.createElement('div');
       card.className = 'video-card';
+      const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
+      const safeTitle = (v.title || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
       card.innerHTML = `
-        <div class="video-thumb" onclick="window.openPlayer('${video._id}')">
-          <img src="${video.thumbnailUrl}" loading="lazy">
-          <span class="duration-badge">${cleanDuration}</span>
+        <div class="video-thumb">
+          <img src="${v.thumbnailUrl || '/cumb.png'}" loading="lazy" onerror="this.src='/cumb.png'">
+          <span class="duration-badge">${duration}</span>
         </div>
-        <div class="video-info" onclick="window.openPlayer('${video._id}')">
-          <div class="video-title">${video.title}</div>
-          <div class="video-stats">
-            <span>${video.category || 'Premium'}</span>
+        <div class="video-info">
+          <div class="video-title">${safeTitle}</div>
+          <div class="video-meta-row">
+            <span class="provider-tag">${v.category || 'CumBear'}</span>
           </div>
         </div>
       `;
-      videoGrid.appendChild(card);
+      card.addEventListener('click', () => {
+        if (window.switchView) window.switchView('playerView', true);
+        if (typeof window.loadPlayerVideoById === 'function') {
+          window.loadPlayerVideoById(v._id);
+        }
+      });
+      grid.appendChild(card);
     });
   }
 
-  function formatViews(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return num;
+  function renderSearchPagination(totalPages) {
+    const wrapper = document.getElementById('searchPaginationWrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = '';
+    const max = Math.min(totalPages, 10);
+    for (let i = 1; i <= max; i++) {
+      const btn = document.createElement('button');
+      btn.className = `page-btn ${i === searchPage ? 'active' : ''}`;
+      btn.textContent = i;
+      btn.addEventListener('click', () => {
+        executeSearch(activeSearchTerm, i);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      wrapper.appendChild(btn);
+    }
   }
 
-  loadCategories();
-});
+  document.addEventListener('DOMContentLoaded', () => {
+    initCategoriesHub();
+
+    const input = document.getElementById('searchInput');
+    const submitBtn = document.getElementById('searchSubmitBtn');
+    const backBtn = document.getElementById('backToHubBtn');
+
+    if (submitBtn && input) {
+      submitBtn.addEventListener('click', () => executeSearch(input.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') executeSearch(input.value);
+      });
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        const hubSection = document.getElementById('searchCategoriesHub');
+        const resultsSection = document.getElementById('searchResultsSection');
+        if (resultsSection) resultsSection.classList.add('hidden');
+        if (hubSection) hubSection.classList.remove('hidden');
+        if (input) input.value = '';
+      });
+    }
+  });
+
+  window.performSearch = executeSearch;
+})();

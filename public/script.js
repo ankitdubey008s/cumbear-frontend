@@ -1,96 +1,188 @@
-document.addEventListener('DOMContentLoaded', function () {
-  // 1. Age Gate Check
-  if (localStorage.getItem('cumbear_age_verified') === 'true') {
-    document.getElementById('ageGate').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    initRouter();
-    checkURL();
-  }
-});
+/**
+ * ==========================================================================
+ * CUMBEAR SPA CORE ROUTER & LIFECYCLE (2026 Engine)
+ * ==========================================================================
+ */
 
-function verifyAge() {
-  localStorage.setItem('cumbear_age_verified', 'true');
-  const gate = document.getElementById('ageGate');
-  gate.style.opacity = '0';
-  gate.style.transition = 'opacity 0.5s ease';
-  setTimeout(() => {
-    gate.classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    initRouter();
-    checkURL();
-  }, 500);
-}
+(function () {
+  'use strict';
 
-// 2. URL Router (Handles /shorts/123 or ?v=123)
-async function checkURL() {
-  const path = window.location.pathname;
-  const params = new URLSearchParams(location.search);
-  
-  // Handle /shorts/:id
-  if (path.startsWith('/shorts/')) {
-    const videoId = path.split('/shorts/')[1];
-    if (videoId && window.loadPlayerVideoById) {
-      window.switchView('playerView', false);
-      window.loadPlayerVideoById(videoId);
+  // --- 1. Age Verification Gate Logic ---
+  window.verifyAge = function () {
+    try {
+      localStorage.setItem('cumbear_age_verified', '1');
+    } catch (e) {
+      console.warn('LocalStorage unavailable:', e);
     }
-  } 
-  // Handle ?v=123
-  else if (params.has('v')) {
-    const vidId = params.get('v');
-    const checkPlayer = setInterval(() => {
-      if (window.loadPlayerVideoById) {
-        clearInterval(checkPlayer);
-        window.switchView('playerView', false);
-        window.loadPlayerVideoById(vidId);
+    const gate = document.getElementById('ageGate');
+    const app = document.getElementById('mainApp');
+    if (gate) gate.classList.add('hidden');
+    if (app) app.classList.remove('hidden');
+
+    // Trigger router and resolve initial state once verified
+    initRouter();
+    resolveInitialRoute();
+  };
+
+  function checkAgeStatus() {
+    let verified = false;
+    try {
+      verified = localStorage.getItem('cumbear_age_verified') === '1';
+    } catch (e) {
+      verified = false;
+    }
+
+    const gate = document.getElementById('ageGate');
+    const app = document.getElementById('mainApp');
+
+    if (verified) {
+      if (gate) gate.classList.add('hidden');
+      if (app) app.classList.remove('hidden');
+      initRouter();
+      resolveInitialRoute();
+    } else {
+      if (gate) gate.classList.remove('hidden');
+      if (app) app.classList.add('hidden');
+    }
+  }
+
+  // --- 2. View Switching & Router Engine ---
+  const validViews = ['homeView', 'shortsView', 'categoriesView', 'playerView'];
+
+  window.switchView = function (viewId, pushHistory = true) {
+    if (!validViews.includes(viewId)) {
+      viewId = 'homeView';
+    }
+
+    // Stop and unload shorts playback if navigating away from shorts
+    if (viewId !== 'shortsView' && typeof window.stopShorts === 'function') {
+      window.stopShorts();
+    }
+
+    // Pause player video if navigating away from player
+    if (viewId !== 'playerView') {
+      const playerVid = document.getElementById('mainPlayerVideo');
+      if (playerVid && !playerVid.paused) {
+        playerVid.pause();
       }
-    }, 100);
+    }
+
+    // Toggle active classes on sections
+    document.querySelectorAll('.view-section').forEach(sec => {
+      sec.classList.add('hidden');
+      sec.classList.remove('active');
+    });
+
+    const targetSec = document.getElementById(viewId);
+    if (targetSec) {
+      targetSec.classList.remove('hidden');
+      targetSec.classList.add('active');
+    }
+
+    // Sync active state on tabs (Home/Shorts pill buttons)
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.getAttribute('data-view') === viewId);
+    });
+
+    // Sync active state on sidebar links
+    document.querySelectorAll('.site-sidebar .nav-link').forEach(link => {
+      link.classList.toggle('active', link.getAttribute('data-view') === viewId);
+    });
+
+    // Update Browser History Stack
+    if (pushHistory) {
+      let targetPath = '/';
+      if (viewId === 'shortsView') targetPath = '/shorts';
+      else if (viewId === 'categoriesView') targetPath = '/?categories=1';
+      else if (viewId === 'homeView') targetPath = '/';
+
+      history.pushState({ view: viewId }, '', targetPath);
+    }
+
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // --- 3. Initial URL & Deep-Link Resolver ---
+  function resolveInitialRoute() {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+
+    // Deep link: Shorts URL (e.g. /shorts or /shorts/123)
+    if (path.startsWith('/shorts')) {
+      const parts = path.split('/').filter(Boolean);
+      const shortId = parts[1] || null;
+      window.switchView('shortsView', false);
+      if (typeof window.loadShorts === 'function') {
+        window.loadShorts(shortId);
+      }
+      return;
+    }
+
+    // Deep link: Player Video URL (/?v=VIDEO_ID)
+    if (params.has('v')) {
+      const videoId = params.get('v');
+      window.switchView('playerView', false);
+      if (typeof window.loadPlayerVideoById === 'function') {
+        window.loadPlayerVideoById(videoId);
+      }
+      return;
+    }
+
+    // Deep link: Category filter (/?category=MILF)
+    if (params.has('category')) {
+      const category = params.get('category');
+      window.switchView('homeView', false);
+      if (typeof window.setCategoryFilter === 'function') {
+        window.setCategoryFilter(category);
+      }
+      return;
+    }
+
+    // Deep link: Search term (/?search=blonde)
+    if (params.has('search')) {
+      const searchTerm = params.get('search');
+      window.switchView('categoriesView', false);
+      if (typeof window.performSearch === 'function') {
+        window.performSearch(searchTerm);
+      }
+      return;
+    }
+
+    // Default route
+    window.switchView('homeView', false);
   }
-}
 
-// 3. Global Router Initialization
-function initRouter() {
-  if (!history.state) history.replaceState({ view: 'homeView' }, '', '/');
-  window.addEventListener('popstate', function (e) { 
-    window.switchView((e.state && e.state.view) || 'homeView', false); 
-  });
-}
+  // --- 4. History Popstate Listener ---
+  function initRouter() {
+    window.addEventListener('popstate', (e) => {
+      if (e.state && e.state.view) {
+        window.switchView(e.state.view, false);
+      } else {
+        resolveInitialRoute();
+      }
+    });
 
-// 4. Global View Switcher
-window.switchView = function (id, pushHistory = true) {
-  // Stop shorts if leaving shorts view
-  if (id !== 'shortsView' && window.stopShorts) window.stopShorts();
-  
-  // Hide all views
-  document.querySelectorAll('.view-section').forEach(s => { 
-    s.classList.add('hidden'); 
-    s.classList.remove('active'); 
-  });
-  
-  // Show target view
-  const target = document.getElementById(id);
-  if (target) { 
-    target.classList.remove('hidden'); 
-    target.classList.add('active'); 
+    // Delegate view-tab clicks (Home / Shorts pills)
+    document.addEventListener('click', (e) => {
+      const tab = e.target.closest('.view-tab');
+      if (tab) {
+        e.preventDefault();
+        const targetView = tab.getAttribute('data-view');
+        if (targetView) {
+          window.switchView(targetView, true);
+          if (targetView === 'shortsView' && typeof window.loadShorts === 'function') {
+            window.loadShorts();
+          }
+        }
+      }
+    });
   }
-  
-  // Update bottom tabs
-  document.querySelectorAll('.view-tab').forEach(l => l.classList.remove('active'));
-  const activeTab = document.querySelector(`.view-tab[data-view="${id}"]`);
-  if (activeTab) activeTab.classList.add('active');
-  
-  // Update sidebar links
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  const activeSidebar = document.querySelector(`.nav-link[data-target="${id}"]`);
-  if (activeSidebar) activeSidebar.classList.add('active');
 
-  if (pushHistory) history.pushState({ view: id }, '', '/');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-// 5. Global Click Delegation for Tabs
-document.addEventListener('click', function (e) {
-  const tab = e.target.closest('.view-tab');
-  if (tab) {
-    window.switchView(tab.dataset.view, true);
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAgeStatus);
+  } else {
+    checkAgeStatus();
   }
-});
+})();

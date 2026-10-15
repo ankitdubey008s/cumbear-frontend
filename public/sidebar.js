@@ -1,58 +1,102 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const menuBtn = document.getElementById('menuBtn');
-  const closeBtn = document.getElementById('closeSidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const sidebar = document.getElementById('siteSidebar');
-  const installBtn = document.getElementById('appInstallBtn');
-  const themeBtn = document.getElementById('themeToggleBtn');
+/**
+ * ==========================================================================
+ * CUMBEAR SIDEBAR & PWA INSTALL CONTROLLER
+ * ==========================================================================
+ */
 
-  // 1. Sidebar Toggle
-  const openSidebar = () => {
-    if (sidebar) sidebar.classList.add('active');
-    if (overlay) overlay.classList.add('active');
-  };
-  const closeSidebar = () => {
-    if (sidebar) sidebar.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-  };
+(function () {
+  'use strict';
 
-  if (menuBtn) menuBtn.addEventListener('click', openSidebar);
-  if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
-  if (overlay) overlay.addEventListener('click', closeSidebar);
+  let deferredPrompt = null;
 
-  // 2. PWA Install
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
-      else { alert('Open browser menu and select "Add to Home Screen".'); }
-    });
-  }
-
-  // 3. Theme Toggle
-  if (themeBtn) {
-    themeBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      const newTheme = current === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('cumbear_theme', newTheme);
-      themeBtn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-    });
-  }
-
-  // 4. Load saved theme
-  const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  if (themeBtn) themeBtn.textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-
-  // 5. Navigation links
-  document.querySelectorAll('.nav-link[data-target]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = link.getAttribute('data-target');
-      if (window.switchView) window.switchView(target, true);
-      closeSidebar();
-    });
+  // Catch PWA install prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
   });
-});
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('siteSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const closeBtn = document.getElementById('closeSidebar');
+    const installBtn = document.getElementById('appInstallBtn');
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const navLinks = document.querySelectorAll('.site-sidebar .nav-link');
+
+    // --- Sidebar Open / Close API ---
+    window.openSidebar = function () {
+      if (sidebar) sidebar.classList.add('active');
+      if (overlay) overlay.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    };
+
+    window.closeSidebar = function () {
+      if (sidebar) sidebar.classList.remove('active');
+      if (overlay) overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', window.closeSidebar);
+    }
+
+    if (overlay) {
+      overlay.addEventListener('click', window.closeSidebar);
+    }
+
+    // --- Sidebar Navigation Links ---
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetView = link.getAttribute('data-view');
+        if (targetView && window.switchView) {
+          window.closeSidebar();
+          window.switchView(targetView, true);
+
+          if (targetView === 'shortsView' && typeof window.loadShorts === 'function') {
+            window.loadShorts();
+          }
+        }
+      });
+    });
+
+    // --- PWA Installation Trigger ---
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            console.log('User accepted CumBear install');
+          }
+          deferredPrompt = null;
+        } else {
+          alert('To install CumBear App:\n\nTap browser menu (⋮) -> Select "Add to Home Screen" or "Install App".');
+        }
+      });
+    }
+
+    // --- Theme Toggle System ---
+    const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
+    applyTheme(savedTheme);
+
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(newTheme);
+      });
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('cumbear_theme', theme);
+      } catch (e) {}
+
+      if (themeBtn) {
+        themeBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+  });
+})();

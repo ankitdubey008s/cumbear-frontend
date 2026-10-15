@@ -1,43 +1,98 @@
+/* ==========================================================================
+   HEADER COMPONENT (Fixed Top - One UI Glassmorphic Design)
+   ========================================================================== */
+
 .site-header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 56px;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(12px);
+  height: var(--header-height);
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1rem;
+  padding: 0 14px;
   z-index: 1000;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
-[data-theme="light"] .site-header { background: rgba(255, 255, 255, 0.95); }
+
+[data-theme="light"] .site-header {
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Header Icons (Left Search & Right Menu) */
 .header-btn {
   background: transparent;
   border: none;
   color: var(--text-primary);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  min-width: 40px;
-  min-height: 40px;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+  min-height: 42px;
+  min-width: 42px;
+  outline: none;
 }
-.header-btn:active { background: rgba(124, 29, 64, 0.15); }
-.header-btn svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.header-btn:active {
+  background: rgba(124, 29, 64, 0.2);
+  transform: scale(0.92);
+}
+
+.header-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Logo (Dead Center) */
 .header-logo-container {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   cursor: pointer;
-  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.header-logo-container img { height: 40px; width: auto; object-fit: contain; }
+
+.header-logo-container img {
+  height: 36px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  transition: transform var(--transition-fast);
+}
+
+.header-logo-container:active img {
+  transform: scale(0.94);
+}
+
 @media (min-width: 768px) {
-  .site-header { height: 60px; padding: 0 1.5rem; }
-  .header-logo-container img { height: 44px; }
+  .site-header {
+    padding: 0 24px;
+  }
+  .header-logo-container img {
+    height: 42px;
+    max-width: 160px;
+  }
+  .header-btn svg {
+    width: 24px;
+    height: 24px;
+  }
 }

@@ -1,80 +1,138 @@
-.search-header {
+/* ==========================================================================
+   SEARCH & CATEGORY HUB COMPONENT
+   ========================================================================== */
+
+.search-header-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   position: sticky;
-  top: 56px;
-  z-index: 90;
+  top: var(--header-height);
+  z-index: 100;
+  border-bottom: 1px solid var(--border-color);
 }
-.search-input-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
-.search-input {
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper svg {
+  position: absolute;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-muted);
+  stroke-width: 2.2;
+  fill: none;
+  pointer-events: none;
+}
+
+#searchInput {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  padding: 10px 38px 10px 42px;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 24px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 22px;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
   outline: none;
+  transition: all var(--transition-fast);
 }
-.search-input:focus { border-color: var(--accent-burgundy); }
-.search-icon-inline { position: absolute; left: 1rem; color: var(--text-muted); pointer-events: none; }
-.search-submit-btn {
-  background: var(--accent-burgundy);
+
+#searchInput:focus {
+  border-color: var(--accent-burgundy);
+  box-shadow: 0 0 0 3px rgba(124, 29, 64, 0.2);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
   border: none;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+.search-submit-btn {
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  border: none;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 22px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
+  outline: none;
 }
-.categories-hub-title { padding: 1.5rem 1rem 0.75rem; font-size: 1.15rem; font-weight: 800; }
-.categories-grid {
+
+.search-submit-btn:active {
+  transform: scale(0.95);
+}
+
+.search-categories-hub {
+  padding: 16px 12px;
+}
+
+.search-hub-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+.search-categories-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  padding: 0.5rem 1rem 1.5rem;
+  gap: 12px;
 }
-@media (min-width: 768px) { .categories-grid { grid-template-columns: repeat(3, 1fr); } }
-.category-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
+
+@media (min-width: 600px) {
+  .search-categories-grid { grid-template-columns: repeat(3, 1fr); }
 }
-.category-thumb {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: var(--bg-secondary);
-  position: relative;
-  overflow: hidden;
+
+@media (min-width: 1024px) {
+  .search-categories-grid { grid-template-columns: repeat(4, 1fr); }
 }
-.category-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-.category-info { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); }
-.category-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.25rem; }
-.category-count { font-size: 0.8rem; color: var(--text-muted); }
+
 .search-results-header {
-  padding: 1rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 14px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  position: sticky;
-  top: 56px;
-  z-index: 90;
 }
-.back-btn {
+
+.back-to-hub-btn {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  cursor: pointer;
-  padding: 0.5rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.back-to-hub-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
 }
