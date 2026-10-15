@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchBtn = document.getElementById('searchBtn');
   const homeLogoBtn = document.getElementById('homeLogoBtn');
 
-  // 1. Hamburger (Right) -> Opens Sidebar
+  // Hamburger -> Opens sidebar
   if (menuBtn) {
     menuBtn.addEventListener('click', () => {
       const sidebar = document.getElementById('siteSidebar');
@@ -15,21 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Search (Left) -> Opens Categories/Search View & Focuses Input
+  // Search -> Opens categories view
   if (searchBtn) {
     searchBtn.addEventListener('click', () => {
       if (window.switchView) window.switchView('categoriesView', true);
       setTimeout(() => {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-          searchInput.focus();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        const input = document.getElementById('searchInput');
+        if (input) { input.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
       }, 300);
     });
   }
 
-  // 3. Logo (Center) -> Goes Home
+  // Logo -> Go home
   if (homeLogoBtn) {
     homeLogoBtn.addEventListener('click', () => {
       if (window.switchView) window.switchView('homeView', true);
