@@ -1,0 +1,91 @@
+/* === SIDEBAR OVERLAY === */
+.sidebar-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); 
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  z-index: 1001; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.sidebar-overlay.active { opacity: 1; pointer-events: all; }
+
+/* === SIDEBAR CONTAINER === */
+.site-sidebar {
+  position: fixed; top: 0; left: 0; width: 280px; max-width: 85vw; height: 100%;
+  background-color: var(--bg-primary); border-right: 1px solid var(--border-color);
+  z-index: 1002; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.site-sidebar.active { transform: translateX(0); }
+
+/* === SIDEBAR HEADER === */
+.sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem; border-bottom: 1px solid var(--border-color);
+  position: sticky; top: 0; z-index: 10; background-color: var(--bg-primary);
+}
+.sidebar-logo { height: 40px; width: auto; border-radius: 8px; border: 1.5px solid var(--accent-burgundy); }
+.close-btn {
+  background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);
+  width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; font-size: 1.2rem; transition: all 0.2s;
+}
+.close-btn:active { background: var(--border-color); }
+
+/* === SIDEBAR CONTENT === */
+.sidebar-content { padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 1.5rem; flex: 1; }
+.sidebar-section { margin-bottom: 0.5rem; }
+.section-title {
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 700; padding-left: 0.25rem;
+}
+
+/* === INSTALL APP BUTTON === */
+.app-install-btn {
+  display: flex; align-items: center; gap: 0.85rem; padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  border: 1px solid var(--accent-burgundy); border-radius: 12px; color: white;
+  cursor: pointer; transition: all 0.2s; width: 100%; text-align: left;
+  box-shadow: 0 4px 16px rgba(124, 29, 64, 0.3); font-family: inherit;
+}
+.app-install-btn:active { transform: scale(0.98); }
+.app-install-btn svg { width: 24px; height: 24px; stroke: white; stroke-width: 2; fill: none; flex-shrink: 0; }
+.app-install-text { flex: 1; }
+.app-install-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; }
+.app-install-subtitle { font-size: 0.7rem; opacity: 0.85; font-weight: 500; }
+
+/* === THEME SWITCHER === */
+.theme-switcher {
+  display: flex; gap: 0.5rem; background: var(--bg-card);
+  padding: 0.25rem; border-radius: 10px; border: 1px solid var(--border-color);
+}
+.theme-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.6rem; background: transparent; border: none; border-radius: 8px;
+  color: var(--text-secondary); font-family: inherit; font-size: 0.85rem;
+  font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.theme-btn svg { width: 16px; height: 16px; }
+.theme-btn.active {
+  background: var(--accent-burgundy); color: white;
+  box-shadow: 0 2px 8px rgba(124, 29, 64, 0.4);
+}
+
+/* === SOCIAL GRID === */
+.social-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.social-icon {
+  aspect-ratio: 1; background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); text-decoration: none; transition: all 0.2s;
+}
+.social-icon svg { width: 22px; height: 22px; }
+.social-icon:active {
+  background: var(--accent-burgundy); color: white;
+  border-color: var(--accent-burgundy); transform: scale(0.95);
+}
+
+/* === SIDEBAR LINKS === */
+.sidebar-link {
+  display: block; padding: 0.85rem 1rem; background: var(--bg-card);
+  border: 1px solid var(--border-color); border-radius: 10px;
+  color: var(--text-primary); text-decoration: none; font-size: 0.9rem;
+  font-weight: 500; margin-bottom: 0.5rem; transition: all 0.2s;
+}
+.sidebar-link:active { background: var(--bg-elevated); transform: scale(0.98); }

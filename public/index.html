@@ -2,16 +2,20 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#7c1d40">
 <title>CumBear - Premium Video Streaming</title>
 <link rel="canonical" href="https://www.cumbear.in/">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/cumb.png">
-<meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.magsrv.com; Sec-CH-UA-Mobile https://s.magsrv.com; Sec-CH-UA-Platform https://s.magsrv.com;">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Ad Client Hints -->
+<meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.magsrv.com; Sec-CH-UA-Mobile https://s.magsrv.com; Sec-CH-UA-Arch https://s.magsrv.com; Sec-CH-UA-Model https://s.magsrv.com; Sec-CH-UA-Platform https://s.magsrv.com; Sec-CH-UA-Platform-Version https://s.magsrv.com; Sec-CH-UA-Bitness https://s.magsrv.com; Sec-CH-UA-Full-Version-List https://s.magsrv.com; Sec-CH-UA-Full-Version https://s.magsrv.com;">
+<meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.pemsrv.com; Sec-CH-UA-Mobile https://s.pemsrv.com; Sec-CH-UA-Arch https://s.pemsrv.com; Sec-CH-UA-Model https://s.pemsrv.com; Sec-CH-UA-Platform https://s.pemsrv.com; Sec-CH-UA-Platform-Version https://s.pemsrv.com; Sec-CH-UA-Bitness https://s.pemsrv.com; Sec-CH-UA-Full-Version-List https://s.pemsrv.com; Sec-CH-UA-Full-Version https://s.pemsrv.com;">
+
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/header.css">
 <link rel="stylesheet" href="/sidebar.css">
@@ -24,72 +28,89 @@
 </head>
 <body>
 
-<!-- SINGLE POPUNDER SCRIPT -->
-<script type="application/javascript">
-(function(){var adConfig={"ads_host":"a.pemsrv.com","syndication_host":"s.pemsrv.com","idzone":6045624,"popup_fallback":false,"popup_force":true,"chrome_enabled":true,"new_tab":true,"frequency_period":30,"frequency_count":1,"trigger_method":3,"trigger_class":"","trigger_delay":0,"capping_enabled":true,"tcf_enabled":true,"agego_cross_site_enabled":true,"only_inline":false};var s=document.createElement("script");s.type="application/javascript";s.async=true;s.src="//a.pemsrv.com/popunder1000.js";s.id="popmagicldr";for(var k in adConfig)if(adConfig.hasOwnProperty(k)&&k!=="ads_host"&&k!=="syndication_host")s.setAttribute("data-msg-"+k,adConfig[k]);var b=document.getElementsByTagName("body")[0];b.firstChild?b.insertBefore(s,b.firstChild):b.appendChild(s);})();
-</script>
-
-<!-- AGE GATE -->
+<!-- ==========================================
+     AGE GATE (100% UNCHANGED)
+     ========================================== -->
 <div class="age-gate-overlay" id="ageGate">
   <div class="age-gate-container">
     <img src="/cumb.png" alt="CumBear" class="brand-logo">
     <h1 class="gate-title">Age Verification Required</h1>
     <div class="disclaimer-box">
-      <p class="disclaimer-text"><strong>WARNING:</strong> This website contains strictly age-restricted material. By proceeding, you legally affirm that you are at least 18 years of age.</p>
+      <p class="disclaimer-text"><strong>WARNING:</strong> This website contains strictly age-restricted material intended for adults only. By proceeding, you legally affirm that you are at least 18 years of age.</p>
+      <p class="disclaimer-text">You voluntarily consent to view such material. If you are not of legal age, you must exit immediately.</p>
     </div>
     <div class="button-wrapper">
       <button class="btn-exit" onclick="window.location.href='https://google.com'">Exit Website</button>
       <button class="btn-enter" onclick="verifyAge()">I am 18+ Years Old</button>
     </div>
+    <p class="security-note">🔒 Secure verification required</p>
   </div>
 </div>
 
-<!-- MAIN APP -->
+<!-- ==========================================
+     MAIN APP
+     ========================================== -->
 <div id="mainApp" class="hidden">
+  
+  <!-- HEADER: Search (Left), Logo (Center), Hamburger (Right) -->
   <header class="site-header" id="siteHeader">
-    <button class="header-btn" id="menuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-    <div class="header-logo-container" id="homeLogoBtn"><img src="/cumb.png" alt="CumBear"></div>
-    <button class="header-btn" id="searchBtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button class="header-btn" id="searchBtn" aria-label="Search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <div class="header-logo-container" id="homeLogoBtn">
+      <img src="/cumb.png" alt="CumBear">
+    </div>
+    <button class="header-btn" id="menuBtn" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </header>
 
+  <!-- SIDEBAR & OVERLAY -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="site-sidebar" id="siteSidebar">
     <div class="sidebar-header">
-      <img src="/cumb.png" class="sidebar-logo">
+      <img src="/cumb.png" class="sidebar-logo" alt="CumBear">
       <button class="close-btn" id="closeSidebar">✕</button>
     </div>
-    <div class="sidebar-content">
-      <button class="app-install-btn" id="appInstallBtn">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <div class="app-install-text"><div class="app-install-title">CumBear App</div><div class="app-install-subtitle">Install on your device</div></div>
-      </button>
-      <div class="sidebar-section-title">Navigate</div>
-      <div class="nav-links">
-        <a class="nav-link active" data-target="homeView">Home</a>
-        <a class="nav-link" data-target="shortsView">Shorts</a>
-        <a class="nav-link" data-target="categoriesView">Categories</a>
-      </div>
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-section-title">Legal</div>
-      <div class="nav-links">
-        <a class="nav-link" href="https://support.cumbear.in" target="_blank">Support & Privacy</a>
-      </div>
+    <div class="sidebar-content" id="sidebarContent">
+      <!-- Populated by sidebar.js -->
     </div>
   </aside>
 
   <main>
-    <section id="homeView" class="view-section active">
-      <div class="horizontal-cats" id="horizontalCats"><button class="h-cat-chip active" data-cat="all">All</button></div>
-      <div class="top-banner-container">
-        <div class="ad-mobile"><script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script><ins class="eas6a97888e2" data-zoneid="6045616"></ins><script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script></div>
-        <div class="ad-desktop"><script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script><ins class="eas6a97888e2" data-zoneid="6045618"></ins><script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script></div>
+    <!-- HORIZONTAL CATEGORIES BAR -->
+    <div class="horizontal-cats" id="horizontalCats">
+      <button class="h-cat-chip active" data-cat="all">All</button>
+    </div>
+    
+    <!-- RESPONSIVE BANNER AD (ExoClick) -->
+    <div class="top-banner-container">
+      <div class="ad-mobile">
+        <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+        <ins class="eas6a97888e2" data-zoneid="6045616"></ins>
+        <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
       </div>
+      <div class="ad-desktop">
+        <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+        <ins class="eas6a97888e2" data-zoneid="6045618"></ins>
+        <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+      </div>
+    </div>
+
+    <!-- VIEW TOGGLE TABS -->
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="homeView">Home</button>
+      <button class="view-tab" data-view="shortsView">Shorts</button>
+    </div>
+
+    <!-- HOME VIEW -->
+    <section id="homeView" class="view-section active">
       <div class="filter-bar">
-        <div class="filter-title">Latest Premium</div>
+        <div class="filter-title">CumBear</div>
         <div class="filter-dropdown">
-          <button class="filter-btn" id="filterBtn"><span>Popular</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <button class="filter-btn" id="filterBtn"><span>Popularity</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div class="filter-menu" id="filterMenu">
-            <div class="filter-option active" data-sort="gem">Popular</div>
+            <div class="filter-option active" data-sort="gem">Popularity</div>
             <div class="filter-option" data-sort="newest">Newest</div>
             <div class="filter-option" data-sort="views">Most Watched</div>
             <div class="filter-option" data-sort="duration">Longest</div>
@@ -98,62 +119,104 @@
       </div>
       <div class="video-grid" id="videoGrid"></div>
       <div class="pagination" id="paginationContainer"></div>
+      
+      <!-- Bottom Categories -->
+      <div class="categories-hub" id="bottomCategoriesHub">
+        <h2 class="categories-hub-title">Browse Categories</h2>
+        <div class="categories-grid" id="bottomCategoriesGrid"></div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="site-footer" id="siteFooter">
+        <div class="footer-links">
+          <a href="https://support.cumbear.in" target="_blank">Webmaster</a>
+          <a href="https://support.cumbear.in" target="_blank">Advertise</a>
+          <a href="https://support.cumbear.in" target="_blank">Partnership</a>
+          <a href="https://support.cumbear.in" target="_blank">Program</a>
+          <a href="https://support.cumbear.in" target="_blank">Help & Support</a>
+          <a href="https://support.cumbear.in" target="_blank">Report</a>
+          <a href="https://support.cumbear.in" target="_blank">Privacy Policy</a>
+          <a href="https://support.cumbear.in" target="_blank">DMCA</a>
+          <a href="https://support.cumbear.in" target="_blank">Copyright</a>
+        </div>
+        <div class="copyright">
+          <a href="https://www.cumbear.in">cumbear.in</a> - all rights reserved © 2026
+        </div>
+      </footer>
     </section>
 
+    <!-- SHORTS VIEW -->
     <section id="shortsView" class="view-section hidden">
       <div class="shorts-container" id="shortsContainer"></div>
     </section>
 
-    <section id="categoriesView" class="view-section hidden">
-      <form class="search-header" id="searchForm">
-        <div class="search-input-wrapper">
-          <svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="search-input" id="searchInput" placeholder="Search premium videos..." autocomplete="off">
-        </div>
-        <button type="submit" class="search-submit-btn">Search</button>
-      </form>
-      <div class="search-results-header hidden" id="searchResultsHeader">
-        <button class="back-btn" id="backToCategoriesBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
-        <span id="currentSearchTerm" style="font-weight:700;">Results</span>
-      </div>
-      <div class="categories-hub" id="categoriesHub">
-        <h2 class="categories-hub-title">Browse Categories</h2>
-        <div class="categories-grid" id="categoriesGrid"></div>
-      </div>
-    </section>
-
+    <!-- PLAYER VIEW -->
     <section id="playerView" class="view-section hidden">
-      <div class="player-container"><video id="mainVideo" controls playsinline preload="metadata"></video></div>
+      <div id="vastOverlay" class="vast-overlay hidden">
+        <video id="vastVideo" playsinline></video>
+        <div class="vast-skip-btn hidden" id="vastSkipBtn">Skip Ad in <span id="vastCountdown">7</span>s</div>
+      </div>
+      <div class="player-container">
+        <video id="mainVideo" controls playsinline preload="metadata"></video>
+      </div>
       <div class="player-info">
         <h1 class="player-title" id="playerTitleDisplay">Loading Video...</h1>
         <div class="player-actions">
           <button class="action-btn" id="playerLikeBtn">❤️ Like</button>
           <button class="action-btn" id="playerShareBtn">🔗 Share</button>
+          <button class="action-btn" id="playerMoreBtn">⋮ More</button>
         </div>
       </div>
-      <h3 class="suggestions-title">Suggested Premium Videos</h3>
-      <div class="video-grid" id="suggestionsGrid" style="grid-template-columns:repeat(2,1fr)"></div>
+      <h3 class="suggestions-title">Suggested Videos</h3>
+      <div class="video-grid" id="suggestionsGrid"></div>
+    </section>
+
+    <!-- SEARCH / CATEGORIES VIEW -->
+    <section id="categoriesView" class="view-section hidden">
+      <form class="search-header" id="searchForm">
+        <div class="search-input-wrapper">
+          <svg class="search-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="searchInput" placeholder="Search videos..." autocomplete="off">
+        </div>
+        <button type="submit" class="search-submit-btn">Search</button>
+      </form>
+      
+      <div class="search-results-header hidden" id="searchResultsHeader">
+        <button class="back-btn" id="backToCategoriesBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <span id="currentSearchTerm" style="font-weight:700; color:var(--text-primary);">Results</span>
+      </div>
+
+      <div class="categories-hub" id="mainCategoriesHub">
+        <h2 class="categories-hub-title">Browse Categories</h2>
+        <div class="categories-grid" id="mainCategoriesGrid"></div>
+      </div>
     </section>
   </main>
 
-  <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-item active" data-view="homeView"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">Home</span></button>
-    <button class="nav-item" data-view="shortsView"><svg class="nav-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span class="nav-label">Shorts</span></button>
-    <button class="nav-item" data-view="categoriesView"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nav-label">Categories</span></button>
-  </nav>
-</div>
+  <!-- STICKY BOTTOM AD -->
+  <div id="stickyAdContainer" class="sticky-ad-wrapper">
+    <button class="sticky-close-btn" id="stickyCloseBtn">✕</button>
+    <div class="ad-mobile">
+      <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+      <ins class="eas6a97888e17" data-zoneid="6045626"></ins>
+      <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+    </div>
+    <div class="ad-desktop">
+      <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+      <ins class="eas6a97888e17" data-zoneid="6045628"></ins>
+      <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+    </div>
+  </div>
 
-<!-- CLEAN AD CONTAINERS -->
-<div id="instant-msg-ad" class="instant-msg-ad">
-  <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-  <ins class="eas6a97888e6" data-zoneid="6045630"></ins>
-  <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
-</div>
+  <!-- INSTANT MESSAGE AD -->
+  <div id="instantMsgAd" class="instant-msg-ad">
+    <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+    <ins class="eas6a97888e6" data-zoneid="6045630"></ins>
+    <script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script>
+  </div>
 
-<div id="sticky-ad-container" class="sticky-ad-container">
-  <button id="sticky-close-btn" class="sticky-close-btn">✕</button>
-  <div class="ad-mobile"><script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script><ins class="eas6a97888e17" data-zoneid="6045626"></ins><script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script></div>
-  <div class="ad-desktop"><script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script><ins class="eas6a97888e17" data-zoneid="6045628"></ins><script>(AdProvider=window.AdProvider||[]).push({"serve":{}});</script></div>
 </div>
 
 <!-- CORE SCRIPTS -->

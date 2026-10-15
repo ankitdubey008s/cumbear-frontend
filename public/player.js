@@ -9,36 +9,45 @@ window.playVastPreRoll = async function(vastUrl, skipDelay) {
       
       if (mediaFile && mediaFile.textContent.trim()) {
         const adVideoUrl = mediaFile.textContent.trim();
-        const overlay = document.createElement('div');
-        overlay.className = 'vast-overlay';
-        overlay.innerHTML = `
-          <video id="vastVideoPlayer" autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000;"></video>
-          <button id="vastSkipBtnPlayer" class="vast-skip-btn">Skip in ${skipDelay}s</button>
-        `;
-        document.body.appendChild(overlay);
+        const overlay = document.getElementById('vastOverlay');
+        const v = document.getElementById('vastVideo');
+        const skipBtn = document.getElementById('vastSkipBtn');
+        const countdown = document.getElementById('vastCountdown');
         
-        const v = document.getElementById('vastVideoPlayer');
+        overlay.classList.remove('hidden');
         v.src = adVideoUrl;
         v.muted = false;
+        v.play().catch(() => {});
         
         let timeLeft = skipDelay;
-        const skipBtn = document.getElementById('vastSkipBtnPlayer');
+        countdown.textContent = timeLeft;
+        skipBtn.classList.add('hidden');
         
         const timer = setInterval(() => {
           timeLeft--;
+          countdown.textContent = timeLeft;
           if (timeLeft <= 0) {
+            skipBtn.classList.remove('hidden');
             skipBtn.textContent = "Skip Ad";
-            skipBtn.style.background = "rgba(124, 29, 64, 0.9)";
-            skipBtn.onclick = () => { clearInterval(timer); overlay.remove(); resolve(); };
-          } else {
-            skipBtn.textContent = `Skip in ${timeLeft}s`;
+            skipBtn.onclick = () => {
+              clearInterval(timer);
+              overlay.classList.add('hidden');
+              v.pause();
+              v.src = "";
+              resolve();
+            };
           }
         }, 1000);
         
-        v.onended = () => { clearInterval(timer); overlay.remove(); resolve(); };
-        v.onerror = () => { clearInterval(timer); overlay.remove(); resolve(); };
-      } else { resolve(); }
-    } catch (e) { console.error("VAST error:", e); resolve(); }
+        v.onended = () => { clearInterval(timer); overlay.classList.add('hidden'); resolve(); };
+        v.onerror = () => { clearInterval(timer); overlay.classList.add('hidden'); resolve(); };
+      } else {
+        resolve(); // No ad found
+      }
+    } catch (e) {
+      console.error("VAST error:", e);
+      resolve(); // Proceed on error
+    }
   });
 };
 
@@ -48,19 +57,26 @@ window.loadPlayerVideoById = async function(videoId) {
     const data = await res.json();
     if (data.success && data.data) {
       const video = data.data;
-      const videoEl = document.getElementById('mainVideo'); // FIXED ID
+      const videoEl = document.getElementById('mainVideo');
       
+      // 1. Play 7-sec ExoClick VAST Pre-Roll
       await window.playVastPreRoll('https://s.magsrv.com/v1/vast.php?idz=6045632', 7);
       
+      // 2. Play Main Video
       videoEl.src = video.playableUrl;
       videoEl.poster = video.thumbnailUrl;
       videoEl.muted = false;
       videoEl.play().catch(() => {});
       
-      document.getElementById('playerTitleDisplay').textContent = video.title; // FIXED ID
+      // Update UI
+      document.getElementById('playerTitleDisplayDisplay').textContent = video.title;
+      
+      // 3. Load Suggestions
       loadSuggestions(video.category, video._id);
     }
-  } catch (e) { console.error("Player load error:", e); }
+  } catch (e) {
+    console.error("Player load error:", e);
+  }
 };
 
 async function loadSuggestions(category, excludeId) {
@@ -68,10 +84,10 @@ async function loadSuggestions(category, excludeId) {
   if (!grid) return;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">Loading...</div>';
   try {
-    const res = await fetch(`https://cumbear-backend.vercel.app/api/videos?category=${encodeURIComponent(category)}&limit=12&sort=views`);
+    const res = await fetch(`https://cumbear-backend.vercel.app/api/videos?category=${encodeURIComponent(category)}&limit=50&sort=views`);
     const data = await res.json();
     if (data.success && data.data) {
-      const videos = data.data.filter(v => v._id !== excludeId);
+      const videos = data.data.filter(v => v._id !== excludeId).slice(0, 20);
       grid.innerHTML = '';
       videos.forEach(video => {
         const card = document.createElement('div');
@@ -90,5 +106,13 @@ async function loadSuggestions(category, excludeId) {
         grid.appendChild(card);
       });
     }
-  } catch (e) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:red;">Error loading suggestions.</div>'; }
+  } catch (e) { 
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:red;">Error loading suggestions.</div>'; 
+  }
 }
+
+window.openPlayer = function(videoId) {
+  history.pushState({ view: 'playerView' }, '', `/?v=${videoId}`);
+  if (window.switchView) window.switchView('playerView', false);
+  window.loadPlayerVideoById(videoId);
+};
