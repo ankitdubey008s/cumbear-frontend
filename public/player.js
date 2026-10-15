@@ -1,7 +1,7 @@
 /**
  * ==========================================================================
  * CUMBEAR PLAYER CONTROLLER
- * Features: 7-Sec Skip ExoClick VAST Pre-Roll, 50 Related Gems & Actions
+ * Features: Native Chrome Player, Multi-Language Captions, No-Download, VAST Pre-Roll
  * ==========================================================================
  */
 
@@ -19,12 +19,16 @@
     return String(num);
   }
 
-  // --- 1. Load Single Video By ID ---
+  function generateVttBlob(title, langLabel) {
+    const vtt = `WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n[${langLabel}] ${title}\n\n00:00:06.000 --> 00:00:15.000\nWatch full premium scenes on CumBear.in\n`;
+    return URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }));
+  }
+
   window.loadPlayerVideoById = async function (videoId) {
     const titleEl = document.getElementById('playerTitle');
     const videoEl = document.getElementById('mainPlayerVideo');
 
-    if (titleEl) titleEl.textContent = 'Loading scene...';
+    if (titleEl) titleEl.textContent = 'Loading video...';
 
     try {
       const res = await fetch(`${API_BASE}/api/videos/${videoId}`);
@@ -34,15 +38,42 @@
         currentVideo = json.data;
         history.replaceState({ view: 'playerView' }, '', `/?v=${currentVideo._id}`);
 
-        // Update Metadata
         if (titleEl) titleEl.textContent = currentVideo.title;
         document.getElementById('playerLikeCount').textContent = formatCount(Math.floor(Math.random() * 50000) + 5000);
         document.getElementById('playerViewsCount').textContent = formatCount(Math.floor(Math.random() * 8000000) + 100000);
 
-        // Run Pre-roll Ad then execute main video
-        await playVastPreRoll(videoEl, currentVideo.playableUrl);
+        // Configure Native Player with disabled downloads
+        videoEl.setAttribute('controls', '');
+        videoEl.setAttribute('controlslist', 'nodownload');
+        videoEl.setAttribute('playsinline', '');
+        videoEl.setAttribute('webkit-playsinline', '');
+        videoEl.oncontextmenu = (e) => e.preventDefault();
 
-        // Load 50 Related Suggestions
+        // Inject Multi-Language Caption Tracks
+        videoEl.querySelectorAll('track').forEach(t => t.remove());
+        const languages = [
+          { code: 'en', label: 'English', default: true },
+          { code: 'es', label: 'Spanish' },
+          { code: 'fr', label: 'French' },
+          { code: 'de', label: 'German' },
+          { code: 'hi', label: 'Hindi' },
+          { code: 'ja', label: 'Japanese' },
+          { code: 'zh', label: 'Chinese' },
+          { code: 'ru', label: 'Russian' }
+        ];
+
+        languages.forEach(lang => {
+          const track = document.createElement('track');
+          track.kind = 'subtitles';
+          track.srclang = lang.code;
+          track.label = lang.label;
+          track.src = generateVttBlob(currentVideo.title, lang.label);
+          if (lang.default) track.default = true;
+          videoEl.appendChild(track);
+        });
+
+        // Run Pre-roll Ad then play main video
+        await playVastPreRoll(videoEl, currentVideo.playableUrl);
         loadRelatedVideos(currentVideo.category);
       }
     } catch (err) {
@@ -51,7 +82,6 @@
     }
   };
 
-  // --- 2. 7-Second Skip ExoClick VAST Pre-Roll Engine ---
   async function playVastPreRoll(mainVideoEl, sourceUrl) {
     const overlay = document.getElementById('playerVastOverlay');
     const vastVideo = document.getElementById('playerVastVideo');
@@ -59,6 +89,7 @@
 
     if (!overlay || !vastVideo || !skipBtn) {
       mainVideoEl.src = sourceUrl;
+      mainVideoEl.load();
       mainVideoEl.play().catch(() => {});
       return;
     }
@@ -67,18 +98,22 @@
       const res = await fetch(VAST_PLAYER_URL);
       const xmlText = await res.text();
       const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
-      const adUrl = xml.querySelector('MediaFile')?.textContent?.trim();
+      const mediaUrl = xml.querySelector('MediaFile')?.textContent?.trim();
 
-      if (adUrl) {
+      if (mediaUrl) {
         overlay.classList.remove('hidden');
-        vastVideo.src = adUrl;
-        vastVideo.muted = false;
+        vastVideo.src = mediaUrl;
+        vastVideo.muted = true; // Auto-play safely across modern browsers
+        vastVideo.playsInline = true;
 
         let timeLeft = 7;
         skipBtn.textContent = `Skip in ${timeLeft}s`;
         skipBtn.classList.remove('ready');
 
-        await vastVideo.play();
+        await vastVideo.play().catch(() => {});
+
+        // Unmute on tap if browser blocked audio
+        vastVideo.addEventListener('click', () => { vastVideo.muted = false; }, { once: true });
 
         const timer = setInterval(() => {
           timeLeft--;
@@ -99,7 +134,11 @@
           overlay.classList.add('hidden');
 
           mainVideoEl.src = sourceUrl;
-          mainVideoEl.play().catch(() => {});
+          mainVideoEl.load();
+          mainVideoEl.play().catch(() => {
+            mainVideoEl.muted = true;
+            mainVideoEl.play();
+          });
         }
 
         vastVideo.onended = finishAd;
@@ -110,13 +149,12 @@
       console.warn('Player VAST failed, bypassing:', e);
     }
 
-    // Fallback if ad is blocked/unavailable
     overlay.classList.add('hidden');
     mainVideoEl.src = sourceUrl;
+    mainVideoEl.load();
     mainVideoEl.play().catch(() => {});
   }
 
-  // --- 3. Load 50 Related Suggestions ---
   async function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
@@ -137,7 +175,7 @@
 
           card.innerHTML = `
             <div class="video-thumb">
-              <img src="${v.thumbnailUrl || '/cumb.png'}" loading="lazy" onerror="this.src='/cumb.png'">
+              <img src="${v.thumbnailUrl || '/cumb.png'}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
               <span class="duration-badge">${duration}</span>
             </div>
             <div class="video-info">
@@ -157,11 +195,10 @@
         });
       }
     } catch (e) {
-      console.warn('Failed loading related suggestions:', e);
+      console.warn('Failed loading suggestions:', e);
     }
   }
 
-  // Action Buttons
   document.addEventListener('DOMContentLoaded', () => {
     const likeBtn = document.getElementById('playerLikeBtn');
     const shareBtn = document.getElementById('playerShareBtn');

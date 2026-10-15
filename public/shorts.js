@@ -1,7 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER (TikTok / Reels Style Engine)
- * Features: 3-Minute Limit, 3-Sec VAST Auto-Skip, CrakRevenue Interstitial
+ * CUMBEAR SHORTS CONTROLLER (Stream Playback & VAST Pre-Roll Fix)
  * ==========================================================================
  */
 
@@ -23,7 +22,6 @@
     return String(num);
   }
 
-  // --- 1. Load Shorts Stream ---
   window.loadShorts = async function (targetId = null) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
@@ -37,7 +35,6 @@
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         shortsData = json.data;
 
-        // If targetId is provided, rearrange target video to first position
         if (targetId) {
           const targetIndex = shortsData.findIndex(v => v._id === targetId);
           if (targetIndex > -1) {
@@ -55,13 +52,11 @@
     }
   };
 
-  // --- 2. Render Feed with Scroll-Snap & Ad Cards ---
   function renderShortsFeed() {
     const container = document.getElementById('shortsContainer');
     container.innerHTML = '';
 
     shortsData.forEach((video, index) => {
-      // Every 10th short: Inject CrakRevenue Interstitial Short Card
       if (index > 0 && index % 10 === 0) {
         const adCard = document.createElement('a');
         adCard.className = 'crak-short-interstitial';
@@ -69,7 +64,7 @@
         adCard.target = '_blank';
         adCard.rel = 'noopener noreferrer';
         adCard.innerHTML = `
-          <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop" loading="lazy">
+          <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop" loading="lazy" decoding="async">
           <div class="crak-short-badge">Sponsored Short</div>
           <div class="crak-short-cta-box">Tap to Meet Verified Babes Online</div>
         `;
@@ -86,14 +81,13 @@
       const safeTitle = (video.title || 'Untitled Short').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       card.innerHTML = `
-        <video class="short-video-element" playsinline webkit-playsinline loop preload="metadata" data-src="${video.playableUrl}"></video>
+        <video class="short-video-element" playsinline webkit-playsinline loop preload="metadata" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
         <div class="short-scrim"></div>
 
         <div class="short-progress-track">
           <div class="short-progress-fill"></div>
         </div>
 
-        <!-- Right Side Action Stack -->
         <div class="short-action-stack">
           <button class="short-btn-unit like-btn" aria-label="Like">
             <div class="short-btn-icon">
@@ -124,7 +118,6 @@
           </button>
         </div>
 
-        <!-- Bottom Info -->
         <div class="short-info-zone">
           <div class="short-creator">
             <span class="short-creator-badge"></span>
@@ -137,10 +130,9 @@
           </button>
         </div>
 
-        <!-- 3-Minute Hard Limit Overlay -->
         <div class="preview-ended-overlay hidden">
           <div class="preview-ended-title">3-Minute Preview Ended</div>
-          <div class="preview-ended-subtitle">Enjoy the full uncut video on CumBear Player</div>
+          <div class="preview-ended-subtitle">Watch the full video on CumBear Player</div>
           <button class="watch-full-btn" onclick="window.openPlayer('${video._id}')">Watch Full Scene</button>
         </div>
       `;
@@ -152,7 +144,6 @@
     setupShortsObserver();
   }
 
-  // --- 3. Events: Like, Share, More Sheet, 180s Cutoff ---
   function attachShortCardEvents(card, video) {
     const likeBtn = card.querySelector('.like-btn');
     const shareBtn = card.querySelector('.share-btn');
@@ -161,14 +152,12 @@
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
 
-    // Tap to Toggle Play/Pause
     card.addEventListener('click', (e) => {
       if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn')) return;
       if (videoEl.paused) videoEl.play();
       else videoEl.pause();
     });
 
-    // Like Toggle
     if (likeBtn) {
       likeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -176,7 +165,6 @@
       });
     }
 
-    // Share API
     if (shareBtn) {
       shareBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -190,7 +178,6 @@
       });
     }
 
-    // More Button -> Opens Modal Sheet
     if (moreBtn) {
       moreBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -200,22 +187,18 @@
       });
     }
 
-    // 180s (3-Minute) Timeline Counter & Hard Cutoff
     videoEl.ontimeupdate = () => {
       const current = videoEl.currentTime;
       if (progressFill) {
-        const pct = Math.min(100, (current / 180) * 100);
-        progressFill.style.width = `${pct}%`;
+        progressFill.style.width = `${Math.min(100, (current / 180) * 100)}%`;
       }
-
-      if (current >= 180) { // 3 minutes completed
+      if (current >= 180) {
         videoEl.pause();
         if (endedOverlay) endedOverlay.classList.remove('hidden');
       }
     };
   }
 
-  // --- 4. Intersection Observer for Playback & 3-sec VAST Ad ---
   function setupShortsObserver() {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -223,10 +206,9 @@
         const shortIndex = parseInt(entry.target.dataset.index, 10);
         const shortId = entry.target.dataset.id;
 
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
-
           playActiveShort(videoEl, shortIndex);
         } else {
           if (videoEl) {
@@ -235,7 +217,7 @@
           }
         }
       });
-    }, { threshold: 0.75 });
+    }, { threshold: 0.7 });
 
     document.querySelectorAll('.short-card-item').forEach(el => observer.observe(el));
   }
@@ -243,7 +225,6 @@
   async function playActiveShort(videoEl, index) {
     if (!videoEl) return;
 
-    // First Short Plays 3-Second Auto-Skip ExoClick VAST Ad
     if (index === 0 && !isVastPreRollPlayed) {
       isVastPreRollPlayed = true;
       try {
@@ -254,13 +235,13 @@
 
         if (mediaUrl) {
           videoEl.src = mediaUrl;
-          videoEl.muted = false;
-          await videoEl.play();
+          videoEl.muted = true;
+          videoEl.load();
+          await videoEl.play().catch(() => {});
 
-          // Auto-skip after 3 seconds
           setTimeout(() => {
             videoEl.src = videoEl.dataset.src;
-            videoEl.muted = false;
+            videoEl.load();
             videoEl.play().catch(() => {});
           }, 3000);
           return;
@@ -270,7 +251,10 @@
       }
     }
 
-    videoEl.src = videoEl.dataset.src;
+    if (videoEl.src !== videoEl.dataset.src) {
+      videoEl.src = videoEl.dataset.src;
+      videoEl.load();
+    }
     videoEl.muted = false;
     videoEl.play().catch(() => {
       videoEl.muted = true;
@@ -278,41 +262,8 @@
     });
   }
 
-  // --- 5. Modal Sheet Actions (Watermark Download & Close) ---
-  document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('shortsMoreModal');
-    const closeBtn = document.getElementById('closeMoreModal');
-    const downloadBtn = document.getElementById('downloadShortBtn');
-
-    if (closeBtn && modal) {
-      closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
-      });
-    }
-
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', () => {
-        if (!currentActiveShort) return;
-        if (modal) modal.classList.add('hidden');
-
-        // Initiate simulated direct file stream with 8dp watermark
-        const link = document.createElement('a');
-        link.href = currentActiveShort.playableUrl;
-        link.download = `CumBear_Short_${currentActiveShort._id}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        alert('Downloading short with official 8dp CumBear watermark...');
-      });
-    }
-  });
-
   window.stopShorts = function () {
-    if (activeVideoElement) {
-      activeVideoElement.pause();
-    }
+    if (activeVideoElement) activeVideoElement.pause();
     document.querySelectorAll('.short-video-element').forEach(v => {
       v.pause();
       v.currentTime = 0;

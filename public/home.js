@@ -1,6 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR HOME VIEW CONTROLLER (Hold-to-Preview Engine & In-Feed Ads)
+ * CUMBEAR HOME VIEW CONTROLLER (Optimized Feed & Native Long-Press Engine)
  * ==========================================================================
  */
 
@@ -14,7 +14,6 @@
   let currentCategory = 'all';
   let currentSort = 'gem';
 
-  // Format random/raw views cleanly (e.g. 1.2M, 45.3k)
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
@@ -29,7 +28,6 @@
     return Math.floor(Math.random() * (100 - 50 + 1)) + 50;
   }
 
-  // --- 1. Load Categories Bar & Bottom Image Showcase ---
   async function loadCategories() {
     const catsBar = document.getElementById('horizontalCats');
     const bottomGrid = document.getElementById('imageCategoriesGrid');
@@ -55,10 +53,9 @@
         });
       }
     } catch (err) {
-      console.warn('Failed to load dynamic categories:', err);
+      console.warn('Category fetch error:', err);
     }
 
-    // Render 20 Image Categories
     if (bottomGrid) {
       bottomGrid.innerHTML = '';
       const fallbackNames = [
@@ -73,7 +70,7 @@
         const card = document.createElement('div');
         card.className = 'image-cat-card';
         card.innerHTML = `
-          <img src="/categories/${i}.jpg" alt="${catName}" loading="lazy" onerror="this.src='/cumb.png'">
+          <img src="/categories/${i}.jpg" alt="${catName}" loading="lazy" decoding="async" onerror="this.src='/cumb.png'">
           <div class="image-cat-overlay">
             <span class="image-cat-title">${catName}</span>
           </div>
@@ -89,12 +86,11 @@
     }
   }
 
-  // --- 2. Load Videos with Gem Algorithm ---
   async function loadVideos() {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
 
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);font-weight:700;">Loading premium videos...</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);font-weight:700;">Loading videos...</div>';
 
     try {
       let url = `${API_BASE}/api/videos?page=${currentPage}&limit=50&sort=${currentSort}&_=${Date.now()}`;
@@ -109,20 +105,18 @@
         renderVideoGrid(json.data);
         renderPagination(json.pagination ? json.pagination.totalPages : 10);
       } else {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No videos found in this category.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No videos found.</div>';
       }
     } catch (err) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:#ef4444;">Error loading videos: ${err.message}</div>`;
     }
   }
 
-  // --- 3. Render Grid with In-Feed Native Ads ---
   function renderVideoGrid(videos) {
     const grid = document.getElementById('videoGrid');
     grid.innerHTML = '';
 
     videos.forEach((video, index) => {
-      // In-Feed Native Ad after every 5th video card (CrakRevenue SmartLink)
       if (index > 0 && index % 5 === 0) {
         const adCard = document.createElement('a');
         adCard.className = 'crak-native-card';
@@ -131,12 +125,12 @@
         adCard.rel = 'noopener noreferrer';
         adCard.innerHTML = `
           <div class="crak-thumb-box">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=280&fit=crop" loading="lazy">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=280&fit=crop" loading="lazy" decoding="async">
             <span class="sponsored-pill">Sponsored</span>
           </div>
           <div class="video-info">
-            <div class="crak-title">Meet Horny Local Singles Near You Tonight</div>
-            <div class="crak-meta">Verified Hookups • Free Access</div>
+            <div class="crak-title">Meet Local Singles Near You Tonight</div>
+            <div class="crak-meta">Verified • Free Access</div>
           </div>
         `;
         grid.appendChild(adCard);
@@ -152,8 +146,8 @@
 
       card.innerHTML = `
         <div class="video-thumb">
-          <img src="${video.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" onerror="this.src='/cumb.png'">
-          <video muted playsinline webkit-playsinline preload="metadata"></video>
+          <img src="${video.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
+          <div class="preview-video-holder"></div>
           <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
           <div class="preview-loading"><div class="preview-spinner"></div></div>
           <span class="duration-badge">${duration}</span>
@@ -170,43 +164,45 @@
         </div>
       `;
 
-      // Attach hold-to-preview and click-to-play listeners
       attachHoldToPreview(card, video);
       grid.appendChild(card);
     });
   }
 
-  // --- 4. Hold-To-Preview Engine (500ms PointerHold -> 2.0x Preview -> 60s max) ---
   function attachHoldToPreview(card, video) {
     const thumb = card.querySelector('.video-thumb');
     const title = card.querySelector('.video-title');
-    const videoEl = card.querySelector('video');
+    const holder = card.querySelector('.preview-video-holder');
     const timeline = card.querySelector('.preview-timeline');
     const timelineFill = card.querySelector('.preview-timeline-fill');
     const loading = card.querySelector('.preview-loading');
 
     let pressTimer = null;
-    let previewDurationTimer = null;
     let isPreviewing = false;
     let startX = 0;
     let startY = 0;
+    let videoEl = null;
+
+    // Hard block context menu & dragging on mobile Chrome
+    thumb.addEventListener('contextmenu', (e) => e.preventDefault());
+    thumb.querySelectorAll('img').forEach(img => {
+      img.addEventListener('dragstart', (e) => e.preventDefault());
+    });
 
     function stopPreview() {
       if (pressTimer) {
         clearTimeout(pressTimer);
         pressTimer = null;
       }
-      if (previewDurationTimer) {
-        clearTimeout(previewDurationTimer);
-        previewDurationTimer = null;
-      }
-
       if (isPreviewing) {
         isPreviewing = false;
-        videoEl.pause();
-        videoEl.removeAttribute('src');
-        videoEl.load();
-
+        if (videoEl) {
+          videoEl.pause();
+          videoEl.src = '';
+          videoEl.load();
+          videoEl.remove();
+          videoEl = null;
+        }
         thumb.classList.remove('previewing');
         title.classList.remove('previewing-text');
         if (timeline) timeline.classList.remove('active');
@@ -216,10 +212,9 @@
     }
 
     function startPreview() {
-      // Stop all active previews across the document
       document.querySelectorAll('.video-thumb.previewing').forEach(el => {
         const v = el.querySelector('video');
-        if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+        if (v) { v.pause(); v.src = ''; v.load(); v.remove(); }
         el.classList.remove('previewing');
       });
 
@@ -229,9 +224,14 @@
       if (timeline) timeline.classList.add('active');
       if (loading) loading.classList.add('active');
 
-      videoEl.src = video.playableUrl;
+      videoEl = document.createElement('video');
+      videoEl.setAttribute('muted', '');
       videoEl.muted = true;
-      videoEl.playbackRate = 2.0; // Play at 2x speed for rapid preview
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
+      videoEl.preload = 'metadata';
+      videoEl.src = video.playableUrl;
+      videoEl.playbackRate = 2.0;
 
       videoEl.oncanplay = () => {
         if (loading) loading.classList.remove('active');
@@ -239,33 +239,25 @@
       };
 
       videoEl.ontimeupdate = () => {
-        if (videoEl.currentTime > 60) { // Max 1 minute preview
+        if (videoEl.currentTime > 60) {
           stopPreview();
           return;
         }
         if (timelineFill) {
-          const progress = (videoEl.currentTime / 60) * 100;
-          timelineFill.style.width = `${progress}%`;
+          timelineFill.style.width = `${(videoEl.currentTime / 60) * 100}%`;
         }
       };
 
       videoEl.onerror = () => stopPreview();
-
-      // Fallback auto-cutoff at 60 seconds
-      previewDurationTimer = setTimeout(() => {
-        stopPreview();
-      }, 60000);
+      holder.appendChild(videoEl);
     }
 
-    // Distinguish between pointer scroll, click, and long hold
     thumb.addEventListener('pointerdown', (e) => {
       startX = e.clientX;
       startY = e.clientY;
-      stopPreview();
-
       pressTimer = setTimeout(() => {
         startPreview();
-      }, 500); // 500ms hold triggers instant preview
+      }, 450);
     });
 
     thumb.addEventListener('pointermove', (e) => {
@@ -285,7 +277,6 @@
       if (isPreviewing) {
         stopPreview();
       } else {
-        // Simple tap -> Open video in Player View
         openPlayer(video._id);
       }
     });
@@ -308,7 +299,6 @@
     }
   }
 
-  // --- 5. Pagination Buttons (1 to 10) ---
   function renderPagination(totalPages) {
     const wrapper = document.getElementById('paginationWrapper');
     if (!wrapper) return;
@@ -329,7 +319,6 @@
     }
   }
 
-  // Filter Dropdown Handler
   const filterBtn = document.getElementById('filterDropdownBtn');
   const filterMenu = document.getElementById('filterMenu');
   const currentSortLabel = document.getElementById('currentSortLabel');
@@ -357,7 +346,6 @@
     });
   }
 
-  // Global APIs
   window.resetHomeState = function () {
     currentCategory = 'all';
     currentPage = 1;
@@ -371,7 +359,6 @@
     loadVideos();
   };
 
-  // Run on initialization
   document.addEventListener('DOMContentLoaded', () => {
     loadCategories();
     loadVideos();
