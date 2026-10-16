@@ -1,8 +1,7 @@
 /* ==========================================================================
-   SHORTS VIEW - FULL IMMERSION (HIDDEN HEADER & CATEGORIES)
+   SHORTS VIEW - FULL IMMERSION & CRAKREVENUE 5-SECOND LOCKED INTERSTITIALS
    ========================================================================== */
 
-/* Automatically hide Header & Category bar when Shorts view is active */
 body.shorts-mode #siteHeader,
 body.shorts-mode #globalHorizontalCats,
 body.shorts-mode .global-ad-banner-wrapper {
@@ -18,7 +17,7 @@ body.shorts-mode main {
   padding: 0;
   margin: 0;
   background: #000000;
-  height: 100dvh; /* Takes full mobile screen */
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   position: fixed;
@@ -37,6 +36,11 @@ body.shorts-mode main {
 }
 .shorts-container::-webkit-scrollbar { display: none; }
 
+/* When locked, freeze scrolling on the container */
+.shorts-container.scroll-locked {
+  overflow-y: hidden !important;
+}
+
 .short-card-item {
   height: 100dvh;
   width: 100vw;
@@ -53,7 +57,7 @@ body.shorts-mode main {
   -webkit-touch-callout: none;
 }
 
-/* 16:9 Widescreen container for actual videos */
+/* 16:9 Widescreen Content Videos */
 .short-video-stage {
   position: relative;
   width: 100vw;
@@ -68,44 +72,8 @@ body.shorts-mode main {
 .short-video-element {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Preserves crisp 16:9 widescreen ratio */
+  object-fit: contain;
   background: #000;
-}
-
-/* In-Stream Ad 9:16 Vertical Stage */
-.ad-instream-stage {
-  position: absolute;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  z-index: 40;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ad-instream-video {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 9/16; /* Strict 9:16 vertical ratio for ad */
-  object-fit: cover;
-}
-
-.ad-instream-badge {
-  position: absolute;
-  top: 60px;
-  right: 16px;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  z-index: 50;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .short-poster-img {
@@ -123,7 +91,7 @@ body.shorts-mode main {
   pointer-events: none;
 }
 
-/* --- Top Navigation Controls --- */
+/* Top Navigation Bar */
 .shorts-top-bar {
   position: absolute;
   top: max(16px, env(safe-area-inset-top));
@@ -181,93 +149,130 @@ body.shorts-mode main {
 .shorts-sound-btn:active { transform: scale(0.93); }
 .shorts-sound-btn svg { width: 16px; height: 16px; fill: #ffffff; }
 
-/* Central HUD & Double-Tap Heart */
-.center-play-hud {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.7);
-  width: 64px;
-  height: 64px;
-  background: rgba(0, 0, 0, 0.65);
-  border-radius: 50%;
+/* ==========================================================================
+   CRAKREVENUE 5-SECOND LOCKED AD CARD (EVERY 3 SHORTS)
+   ========================================================================== */
+.crak-short-ad-card {
+  height: 100dvh;
+  width: 100vw;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  background: #07070b;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 25;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
 }
-.center-play-hud.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-.center-play-hud svg { width: 32px; height: 32px; fill: #ffffff; }
 
-.double-tap-heart {
+.crak-ad-media-box {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 90px;
-  height: 90px;
-  z-index: 30;
-  pointer-events: none;
-}
-.double-tap-heart svg {
+  inset: 0;
   width: 100%;
   height: 100%;
-  fill: #ff2d55;
-  filter: drop-shadow(0 0 16px rgba(255, 45, 85, 0.8));
-}
-.double-tap-heart.animate {
-  animation: heartPop 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  cursor: pointer;
 }
 
-@keyframes heartPop {
-  0% { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
-  35% { transform: translate(-50%, -50%) scale(1.3) rotate(0deg); opacity: 1; }
-  70% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-50%, -75%) scale(0.9) rotate(5deg); opacity: 0; }
+.crak-ad-media-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.95);
 }
 
-.speed-indicator-pill {
+.crak-ad-gradient-scrim {
   position: absolute;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 30%, transparent 65%, rgba(0,0,0,0.85) 100%);
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.speed-indicator-pill.active { opacity: 1; transform: translateX(-50%) scale(1.05); }
-.speed-indicator-pill.locked {
-  background: var(--accent-burgundy);
-  border-color: var(--accent-burgundy-light);
-  box-shadow: 0 0 16px rgba(124, 29, 64, 0.6);
 }
 
-.side-hold-zone {
+/* 5-Second Timer / Skip Button HUD */
+.crak-ad-skip-pill {
   position: absolute;
-  top: 0;
-  bottom: 80px;
-  width: 25%;
-  z-index: 10;
+  top: max(20px, env(safe-area-inset-top));
+  right: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  z-index: 70;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  pointer-events: none;
+  transition: all 0.25s ease;
 }
-.side-hold-zone.left { left: 0; }
-.side-hold-zone.right { right: 0; }
 
+.crak-ad-skip-pill.unlocked {
+  background: var(--accent-burgundy) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  animation: pulseButton 1s infinite alternate;
+}
+
+@keyframes pulseButton {
+  from { transform: scale(1); box-shadow: 0 0 10px rgba(124, 29, 64, 0.5); }
+  to { transform: scale(1.05); box-shadow: 0 0 20px rgba(155, 45, 82, 0.9); }
+}
+
+.crak-ad-info-box {
+  position: absolute;
+  bottom: 30px;
+  left: 18px;
+  right: 18px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.crak-ad-sponsor-badge {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.crak-ad-headline {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+}
+
+.crak-ad-cta-btn {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  color: #ffffff;
+  padding: 14px 20px;
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.98rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 6px 25px rgba(124, 29, 64, 0.7);
+  transition: transform 0.15s ease;
+}
+.crak-ad-cta-btn:active { transform: scale(0.97); }
+
+/* Standard Short Action Stack & Progress */
 .short-scrim {
   position: absolute;
   inset: 0;
@@ -412,7 +417,7 @@ body.shorts-mode main {
 .preview-ended-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
 .preview-ended-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; }
 
-/* Modal sheet cut-off (✕) */
+/* Modal sheet */
 .more-modal-overlay {
   position: fixed;
   inset: 0;

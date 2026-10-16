@@ -1,6 +1,8 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER (In-Stream Vertical VAST Ad Engine Fix)
+ * CUMBEAR SHORTS CONTROLLER
+ * Features: Seamless 16:9 Video Stream with Vertical CrakRevenue 5-Second
+ * Unskippable Interstitials Every 3 Shorts
  * ==========================================================================
  */
 
@@ -8,14 +10,14 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  const VAST_SHORTS_URL = 'https://s.magsrv.com/v1/vast.php?idzone=6056608';
-  const CRAK_SHORTS_INTERSTITIAL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
+  // CrakRevenue Pre-roll / SmartLink URL
+  const CRAK_PREROLL_URL = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
 
   let shortsData = [];
-  let isVastPreRollPlayed = false;
   let activeVideoElement = null;
   let currentActiveShort = null;
   let isGlobalMuted = true;
+  let activeAdTimer = null;
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -28,8 +30,6 @@
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
-    isVastPreRollPlayed = false;
-
     container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;font-weight:700;">Loading CumBear Shorts...</div>';
 
     try {
@@ -59,21 +59,14 @@
     const container = document.getElementById('shortsContainer');
     container.innerHTML = '';
 
-    shortsData.forEach((video, index) => {
-      if (index > 0 && index % 10 === 0) {
-        const adCard = document.createElement('a');
-        adCard.className = 'crak-short-interstitial';
-        adCard.href = CRAK_SHORTS_INTERSTITIAL;
-        adCard.target = '_blank';
-        adCard.rel = 'noopener noreferrer';
-        adCard.innerHTML = `
-          <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop" loading="lazy" decoding="async">
-          <div class="crak-short-badge">Sponsored Short</div>
-          <div class="crak-short-cta-box">Tap to Meet Verified Babes Online</div>
-        `;
-        container.appendChild(adCard);
-      }
+    const adThumbnails = [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=720&h=1280&fit=crop',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=720&h=1280&fit=crop'
+    ];
 
+    shortsData.forEach((video, index) => {
+      // 1. Render Video Card
       const card = document.createElement('div');
       card.className = 'short-card-item';
       card.dataset.index = index;
@@ -96,13 +89,6 @@
           </button>
         </div>
 
-        <!-- 9:16 Vertical In-Stream Overlay Stage -->
-        <div class="ad-instream-stage hidden">
-          <video class="ad-instream-video" muted playsinline webkit-playsinline preload="auto"></video>
-          <div class="ad-instream-badge">Ad: <span class="ad-timer-count">3</span>s</div>
-        </div>
-
-        <!-- 16:9 Stage for Content Video -->
         <div class="short-video-stage">
           <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
           <video class="short-video-element" playsinline webkit-playsinline loop preload="auto" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
@@ -180,6 +166,35 @@
 
       attachShortCardEvents(card, video);
       container.appendChild(card);
+
+      // 2. Insert 5-Second Locked Vertical Ad AFTER EVERY 3 SHORTS
+      if ((index + 1) % 3 === 0) {
+        const adImage = adThumbnails[(index / 3) % adThumbnails.length];
+        const adCard = document.createElement('div');
+        adCard.className = 'crak-short-ad-card';
+        adCard.dataset.isAd = 'true';
+
+        adCard.innerHTML = `
+          <div class="crak-ad-media-box" onclick="window.open('${CRAK_PREROLL_URL}', '_blank', 'noopener,noreferrer')">
+            <img src="${adImage}" loading="lazy" alt="Sponsor Media">
+            <div class="crak-ad-gradient-scrim"></div>
+          </div>
+
+          <button class="crak-ad-skip-pill" data-seconds="5">
+            Ad: 5s
+          </button>
+
+          <div class="crak-ad-info-box">
+            <span class="crak-ad-sponsor-badge">Sponsored Short</span>
+            <h3 class="crak-ad-headline">Tap to Meet Real Babes Live Tonight</h3>
+            <a href="${CRAK_PREROLL_URL}" target="_blank" rel="noopener noreferrer" class="crak-ad-cta-btn">
+              Watch Live Uncut Stream ➔
+            </a>
+          </div>
+        `;
+
+        container.appendChild(adCard);
+      }
     });
 
     setupShortsObserver();
@@ -196,18 +211,6 @@
     const poster = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
-    const speedPill = card.querySelector('.speed-indicator-pill');
-    const heart = card.querySelector('.double-tap-heart');
-    const hud = card.querySelector('.center-play-hud');
-    const hudPlay = card.querySelector('.hud-play');
-    const hudPause = card.querySelector('.hud-pause');
-    const sideZones = card.querySelectorAll('.side-hold-zone');
-
-    let lastTap = 0;
-    let holdTimer = null;
-    let isSpeedLocked = false;
-    let isHoldingSpeed = false;
-    let holdStartY = 0;
 
     if (backBtn) {
       backBtn.addEventListener('click', (e) => {
@@ -241,92 +244,6 @@
 
     videoEl.addEventListener('playing', () => {
       poster.classList.add('loaded');
-    });
-
-    function showHud(isPaused) {
-      if (isPaused) {
-        hudPlay.classList.remove('hidden');
-        hudPause.classList.add('hidden');
-      } else {
-        hudPlay.classList.add('hidden');
-        hudPause.classList.remove('hidden');
-      }
-      hud.classList.add('show');
-      setTimeout(() => { hud.classList.remove('show'); }, 500);
-    }
-
-    function triggerLike() {
-      likeBtn.classList.add('liked');
-      heart.classList.remove('animate');
-      void heart.offsetWidth;
-      heart.classList.add('animate');
-    }
-
-    card.addEventListener('pointerup', (e) => {
-      if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar')) return;
-      if (isHoldingSpeed) return;
-
-      const now = Date.now();
-      if (now - lastTap < 300) {
-        triggerLike();
-      } else {
-        setTimeout(() => {
-          if (Date.now() - lastTap >= 280) {
-            if (videoEl.paused) {
-              videoEl.play();
-              showHud(false);
-            } else {
-              videoEl.pause();
-              showHud(true);
-            }
-          }
-        }, 280);
-      }
-      lastTap = now;
-    });
-
-    sideZones.forEach(zone => {
-      zone.addEventListener('pointerdown', (e) => {
-        holdStartY = e.clientY;
-        holdTimer = setTimeout(() => {
-          isHoldingSpeed = true;
-          videoEl.playbackRate = 2.0;
-          speedPill.classList.add('active');
-          speedPill.innerHTML = '<span>⚡ 2X SPEED (Pull down to lock)</span>';
-        }, 300);
-      });
-
-      zone.addEventListener('pointermove', (e) => {
-        if (!isHoldingSpeed) return;
-        const deltaY = e.clientY - holdStartY;
-        if (deltaY > 50 && !isSpeedLocked) {
-          isSpeedLocked = true;
-          speedPill.classList.add('locked');
-          speedPill.innerHTML = '<span>🔒 2X SPEED LOCKED</span>';
-        }
-      });
-
-      const releaseSpeed = () => {
-        clearTimeout(holdTimer);
-        if (isHoldingSpeed && !isSpeedLocked) {
-          isHoldingSpeed = false;
-          videoEl.playbackRate = 1.0;
-          speedPill.classList.remove('active');
-        }
-      };
-
-      zone.addEventListener('pointerup', releaseSpeed);
-      zone.addEventListener('pointercancel', releaseSpeed);
-      zone.addEventListener('pointerleave', releaseSpeed);
-    });
-
-    card.addEventListener('click', () => {
-      if (isSpeedLocked) {
-        isSpeedLocked = false;
-        isHoldingSpeed = false;
-        videoEl.playbackRate = 1.0;
-        speedPill.classList.remove('active', 'locked');
-      }
     });
 
     if (likeBtn) {
@@ -394,16 +311,38 @@
   }
 
   function setupShortsObserver() {
+    const container = document.getElementById('shortsContainer');
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
+        // A. If Current Item is an Ad Card
+        if (entry.target.dataset.isAd === 'true') {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
+            handleAdCardLock(entry.target, container);
+          } else {
+            // Cancel timer if user managed to swipe away
+            if (activeAdTimer) clearInterval(activeAdTimer);
+          }
+          return;
+        }
+
+        // B. If Current Item is a Regular Short Video
         const videoEl = entry.target.querySelector('video.short-video-element');
-        const shortIndex = parseInt(entry.target.dataset.index, 10);
         const shortId = entry.target.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
-          playActiveShort(entry.target, videoEl, shortIndex);
+
+          if (videoEl.src !== videoEl.dataset.src) {
+            videoEl.src = videoEl.dataset.src;
+            videoEl.load();
+          }
+          videoEl.muted = isGlobalMuted;
+          videoEl.play().catch(() => {
+            videoEl.muted = true;
+            videoEl.play();
+          });
         } else {
           if (videoEl) {
             videoEl.pause();
@@ -414,187 +353,68 @@
       });
     }, { threshold: 0.7 });
 
-    document.querySelectorAll('.short-card-item').forEach(el => observer.observe(el));
+    document.querySelectorAll('.short-card-item, .crak-short-ad-card').forEach(el => observer.observe(el));
   }
 
-  // Robust VAST Media Extractor with Multiple Fallbacks
-  async function resolveVastMediaUrl(vastUrl) {
-    // 1. Direct fetch attempt
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max wait
+  // --- 5-Second Unskippable Countdown & Lock Controller ---
+  function handleAdCardLock(adElement, container) {
+    // Pause any background video
+    if (activeVideoElement) activeVideoElement.pause();
 
-      const res = await fetch(vastUrl, { signal: controller.signal, credentials: 'omit' });
-      clearTimeout(timeoutId);
+    const skipBtn = adElement.querySelector('.crak-ad-skip-pill');
+    if (!skipBtn) return;
 
-      const xmlText = await res.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    // 1. Lock scrolling on the shorts feed
+    container.classList.add('scroll-locked');
+    skipBtn.classList.remove('unlocked');
 
-      const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
-      for (let i = 0; i < mediaFiles.length; i++) {
-        const src = (mediaFiles[i].textContent || '').trim();
-        if (src.startsWith('http')) {
-          return src;
-        }
-      }
+    let seconds = 5;
+    skipBtn.textContent = `Ad: ${seconds}s`;
 
-      // Check CDATA content
-      const cdataMatches = xmlText.match(/https?:\/\/[^"'\s<>]+\.mp4[^"'\s<>]*/i);
-      if (cdataMatches && cdataMatches[0]) {
-        return cdataMatches[0].replace(/&amp;/g, '&');
-      }
-    } catch (e) {
-      console.warn('VAST fetch attempt failed, using direct stream resolution:', e.message);
-    }
+    if (activeAdTimer) clearInterval(activeAdTimer);
 
-    // 2. Fallback to direct ExoClick CDN media source
-    return 'https://s.magsrv.com/v1/vast.php?idzone=6056608';
-  }
+    activeAdTimer = setInterval(() => {
+      seconds--;
+      if (seconds > 0) {
+        skipBtn.textContent = `Ad: ${seconds}s`;
+      } else {
+        clearInterval(activeAdTimer);
+        activeAdTimer = null;
 
-  async function playActiveShort(cardElement, videoEl, index) {
-    if (!videoEl) return;
+        // 2. Unlock scroll & activate skip button
+        container.classList.remove('scroll-locked');
+        skipBtn.classList.add('unlocked');
+        skipBtn.textContent = 'Skip Ad ✕';
 
-    const adStage = cardElement.querySelector('.ad-instream-stage');
-    const adVideo = cardElement.querySelector('.ad-instream-video');
-    const timerText = cardElement.querySelector('.ad-timer-count');
-
-    // Fire in-stream VAST on initial video
-    if (index === 0 && !isVastPreRollPlayed && adStage && adVideo) {
-      isVastPreRollPlayed = true;
-
-      const mediaUrl = await resolveVastMediaUrl(VAST_SHORTS_URL);
-
-      if (mediaUrl) {
-        adStage.classList.remove('hidden');
-        adVideo.setAttribute('muted', '');
-        adVideo.muted = true;
-        adVideo.setAttribute('playsinline', '');
-        adVideo.setAttribute('webkit-playsinline', '');
-        adVideo.src = mediaUrl;
-        adVideo.load();
-
-        // Attempt playback immediately
-        const playPromise = adVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(err => {
-            console.warn('Ad auto-play prevented, proceeding to content:', err);
-            finishAdAndPlayContent();
-          });
-        }
-
-        let secondsLeft = 3;
-        if (timerText) timerText.textContent = secondsLeft;
-
-        const countdownInterval = setInterval(() => {
-          secondsLeft--;
-          if (timerText) timerText.textContent = secondsLeft;
-          if (secondsLeft <= 0) {
-            clearInterval(countdownInterval);
-            finishAdAndPlayContent();
+        skipBtn.onclick = (e) => {
+          e.stopPropagation();
+          // Scroll smoothly to next short card
+          const nextCard = adElement.nextElementSibling;
+          if (nextCard) {
+            nextCard.scrollIntoView({ behavior: 'smooth' });
           }
-        }, 1000);
-
-        function finishAdAndPlayContent() {
-          clearInterval(countdownInterval);
-          adVideo.pause();
-          adVideo.removeAttribute('src');
-          adVideo.load();
-          adStage.classList.add('hidden');
-
-          // Smooth handoff to 16:9 main video
-          if (videoEl.src !== videoEl.dataset.src) {
-            videoEl.src = videoEl.dataset.src;
-            videoEl.load();
-          }
-          videoEl.muted = isGlobalMuted;
-          videoEl.play().catch(() => {
-            videoEl.muted = true;
-            videoEl.play();
-          });
-        }
-
-        adVideo.onended = finishAdAndPlayContent;
-        adVideo.onerror = finishAdAndPlayContent;
-        return;
+        };
       }
-    }
-
-    if (adStage) adStage.classList.add('hidden');
-
-    if (videoEl.src !== videoEl.dataset.src) {
-      videoEl.src = videoEl.dataset.src;
-      videoEl.load();
-    }
-    videoEl.muted = isGlobalMuted;
-    videoEl.play().catch(() => {
-      videoEl.muted = true;
-      videoEl.play();
-    });
+    }, 1000);
   }
 
+  // Dismiss more sheet
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
-    const downloadBtn = document.getElementById('downloadShortBtn');
-
     if (closeBtn && modal) {
-      closeBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        modal.classList.add('hidden');
-      };
-    }
-
-    if (modal) {
-      modal.onclick = (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
-      };
-    }
-
-    if (downloadBtn) {
-      downloadBtn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!currentActiveShort) return;
-        if (modal) modal.classList.add('hidden');
-
-        try {
-          const videoUrl = currentActiveShort.playableUrl;
-          const fileName = `CumBear_${currentActiveShort._id || 'short'}.mp4`;
-          const response = await fetch(videoUrl);
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        } catch (err) {
-          const link = document.createElement('a');
-          link.href = currentActiveShort.playableUrl;
-          link.download = `CumBear_${currentActiveShort._id}.mp4`;
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      };
+      closeBtn.onclick = () => modal.classList.add('hidden');
     }
   });
 
   window.stopShorts = function () {
+    if (activeAdTimer) clearInterval(activeAdTimer);
     if (activeVideoElement) activeVideoElement.pause();
     document.querySelectorAll('.short-video-element').forEach(v => {
       v.pause();
       v.currentTime = 0;
     });
-    document.querySelectorAll('.ad-instream-video').forEach(a => {
-      a.pause();
-      a.removeAttribute('src');
-    });
+    const container = document.getElementById('shortsContainer');
+    if (container) container.classList.remove('scroll-locked');
   };
 })();
