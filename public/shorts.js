@@ -1,11 +1,8 @@
 /**
  * ==========================================================================
  * CUMBEAR SHORTS CONTROLLER
- * Features:
- *  - Strict 1.0x Normal Speed Playback
- *  - Single-Video Network Isolation (Prevents background download lag)
- *  - First Short Click-to-Play + CrakRevenue Redirect
- *  - Native 9:16 ExoClick Vertical In-Stream Card with High-CPM "Visit Site" Button
+ * - First Short Tap -> CrakRevenue SmartLink redirect
+ * - Every 3 Shorts -> Pure ExoClick Vertical In-Stream (9:16) with ExoClick Click attribution
  * ==========================================================================
  */
 
@@ -13,15 +10,20 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  const CRAK_PREROLL_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
+  // CrakRevenue SmartLink ONLY for initial short engagement
+  const CRAK_FIRST_TAP_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
+  
+  // ExoClick Vertical Zone
   const EXOCLICK_VAST_ZONE = '6056608';
   const EXOCLICK_VAST_URL = `https://s.magsrv.com/v1/vast.php?idzone=${EXOCLICK_VAST_ZONE}`;
+  const EXOCLICK_DEFAULT_CLICK = `https://s.magsrv.com/click.php?idzone=${EXOCLICK_VAST_ZONE}`;
 
   let shortsData = [];
   let activeVideoElement = null;
   let currentActiveShort = null;
   let isGlobalMuted = true;
   let isFirstPlayTriggered = false;
+  let currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -174,25 +176,38 @@
       attachShortCardGestures(card, video, index);
       container.appendChild(card);
 
-      // 2. Strict 9:16 Vertical In-Stream Card with High-CPM CTA (Every 3 Shorts)
+      // 2. Strict 9:16 ExoClick Vertical In-Stream Card (Every 3 Shorts)
       if ((index + 1) % 3 === 0) {
         const vastCard = document.createElement('div');
         vastCard.className = 'exoclick-short-vast-card';
         vastCard.dataset.isVastAd = 'true';
 
         vastCard.innerHTML = `
-          <div class="vast-vertical-stage" onclick="window.open('${CRAK_PREROLL_SMARTLINK}', '_blank', 'noopener,noreferrer')">
+          <div class="vast-vertical-stage" id="exoclickAdStage_${index}">
             <video class="vast-vertical-video" muted playsinline webkit-playsinline></video>
           </div>
 
           <div class="ad-bottom-cta-container">
             <span class="ad-sponsor-label">Sponsored Ad</span>
-            <a href="${CRAK_PREROLL_SMARTLINK}" target="_blank" rel="noopener noreferrer" class="ad-visit-site-btn">
+            <button class="ad-visit-site-btn" id="exoclickVisitBtn_${index}">
               <span>Visit Site</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </a>
+            </button>
           </div>
         `;
+
+        // Direct ExoClick Click Handler
+        const stageEl = vastCard.querySelector(`#exoclickAdStage_${index}`);
+        const btnEl = vastCard.querySelector(`#exoclickVisitBtn_${index}`);
+
+        const triggerExoclickClick = (e) => {
+          e.stopPropagation();
+          const targetUrl = currentExoclickClickUrl || EXOCLICK_DEFAULT_CLICK;
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        };
+
+        if (stageEl) stageEl.addEventListener('click', triggerExoclickClick);
+        if (btnEl) btnEl.addEventListener('click', triggerExoclickClick);
 
         container.appendChild(vastCard);
       }
@@ -223,14 +238,15 @@
     videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
-    // First Short Tap-to-Play + CrakRevenue Redirect
+    // First Short Tap -> CrakRevenue SmartLink redirect
     if (index === 0 && firstPlayCover) {
       firstPlayCover.addEventListener('click', (e) => {
         e.stopPropagation();
         isFirstPlayTriggered = true;
         firstPlayCover.classList.add('hidden');
 
-        window.open(CRAK_PREROLL_SMARTLINK, '_blank', 'noopener,noreferrer');
+        // Redirect to CrakRevenue on initial play
+        window.open(CRAK_FIRST_TAP_SMARTLINK, '_blank', 'noopener,noreferrer');
 
         videoEl.src = videoEl.dataset.src;
         videoEl.load();
@@ -437,7 +453,7 @@
     });
   }
 
-  // --- Instagram-style Single Video Network Isolation ---
+  // --- Instagram-style Single Video Isolation ---
   function setupShortsObserver() {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -450,13 +466,13 @@
             if (adV) {
               adV.pause();
               adV.removeAttribute('src');
-              adV.load(); // Kill background connection
+              adV.load();
             }
           }
           return;
         }
 
-        // B. Content Video
+        // B. Content Short Video
         const videoEl = entry.target.querySelector('video.short-video-element');
         const posterEl = entry.target.querySelector('.short-poster-img');
         const shortIndex = parseInt(entry.target.dataset.index, 10);
@@ -482,7 +498,6 @@
             videoEl.play();
           });
         } else {
-          // Complete source cleanup to conserve 100% bandwidth
           if (videoEl) {
             videoEl.pause();
             videoEl.removeAttribute('src');
@@ -498,7 +513,7 @@
     document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
   }
 
-  // Load ExoClick Vertical VAST Ad Video
+  // Parse ExoClick MediaFile and ClickThrough URL
   async function handleExoclickVastCard(adCard) {
     if (activeVideoElement) {
       activeVideoElement.pause();
@@ -513,8 +528,9 @@
       const res = await fetch(EXOCLICK_VAST_URL);
       const text = await res.text();
       const xmlDoc = new DOMParser().parseFromString(text, 'text/xml');
+      
+      // 1. Extract Media Video URL
       const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
-
       let mediaUrl = null;
       for (let i = 0; i < mediaFiles.length; i++) {
         const src = (mediaFiles[i].textContent || '').trim();
@@ -522,6 +538,17 @@
           mediaUrl = src;
           break;
         }
+      }
+
+      // 2. Extract ExoClick ClickThrough URL
+      const clickThroughNode = xmlDoc.querySelector('ClickThrough');
+      if (clickThroughNode) {
+        const clickUrl = (clickThroughNode.textContent || '').trim();
+        if (clickUrl.startsWith('http')) {
+          currentExoclickClickUrl = clickUrl;
+        }
+      } else {
+        currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
       }
 
       if (mediaUrl) {
@@ -532,6 +559,7 @@
       }
     } catch (e) {
       console.warn('ExoClick VAST fetch fallback:', e);
+      currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
     }
   }
 
