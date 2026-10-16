@@ -1,10 +1,9 @@
 /**
  * ==========================================================================
  * CUMBEAR CHROME PLAYER CONTROLLER
- * - Working Chrome WebVTT Subtitle Engine
- * - Zero Menu-Lag / Instant Dismissal
- * - Full-Size Related Thumbnails matching Home
- * - Hold-and-Slide Video Preview on Related Cards
+ * - Native Chrome Video Player (Clean, bug-free, CORS unblocked)
+ * - 16:9 5s Pre-Roll Ad Handover
+ * - Full-Size Related Thumbnails & Hold-to-Preview
  * ==========================================================================
  */
 
@@ -53,11 +52,6 @@
 
     if (titleEl) titleEl.textContent = currentVideoData.title || 'CumBear Video';
 
-    // Build WebVTT track URI to initialize Chrome's native CC engine
-    const vttContent = `WEBVTT\n\n00:00:01.000 --> 00:00:08.000\nCumBear Premium Adult Entertainment\n\n00:00:08.500 --> 00:00:15.000\nEnjoy in full 1080p HD`;
-    const vttBlob = new Blob([vttContent], { type: 'text/vtt' });
-    const vttUrl = URL.createObjectURL(vttBlob);
-
     container.innerHTML = `
       <div class="player-poster-cover" id="playerPosterCover">
         <img class="player-poster-img" src="${currentVideoData.thumbnailUrl || '/cumb.png'}" alt="cover">
@@ -80,10 +74,8 @@
         </button>
       </div>
 
-      <!-- Pure Native Chrome Player: Controls, nodownload, active Subtitle Track -->
-      <video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline crossorigin="anonymous" preload="metadata">
-        <track id="mainVideoTrack" kind="subtitles" label="English" srclang="en" src="${vttUrl}" default>
-      </video>
+      <!-- Pure Native Chrome Player (NO crossorigin attribute so stream loads instantly) -->
+      <video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline preload="auto"></video>
     `;
 
     bindPlayerEngine();
@@ -100,7 +92,7 @@
     // Tap Poster -> Starts 16:9 Pre-Roll VAST
     posterCover.addEventListener('click', () => {
       posterCover.classList.add('hidden');
-      posterCover.style.display = 'none'; // Detach from hit-test completely
+      posterCover.style.display = 'none';
       startPreRollAd();
     });
 
@@ -110,7 +102,7 @@
       let adMediaSrc = null;
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
 
         const res = await fetch(VAST_PLAYER_URL, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -133,7 +125,7 @@
           if (c.startsWith('http')) exoclickClickUrl = c;
         }
       } catch (err) {
-        console.warn('VAST fetch timed out, fallback engaged:', err);
+        console.warn('VAST fetch fallback:', err);
       }
 
       if (!adMediaSrc) {
@@ -185,18 +177,13 @@
       adVideo.removeAttribute('src');
       adVideo.load();
       adOverlay.classList.add('hidden');
-      adOverlay.style.display = 'none'; // Crucial: Remove overlay hit-box so Chrome menus close on first tap
+      adOverlay.style.display = 'none';
 
       mainVideo.src = currentVideoData.playableUrl;
       mainVideo.defaultPlaybackRate = 1.0;
       mainVideo.playbackRate = 1.0;
       mainVideo.muted = false;
       mainVideo.load();
-
-      // Enable text track for Chrome Subtitle toggle
-      if (mainVideo.textTracks && mainVideo.textTracks[0]) {
-        mainVideo.textTracks[0].mode = 'showing';
-      }
 
       mainVideo.play().catch(() => {
         mainVideo.muted = true;
@@ -226,7 +213,7 @@
     }
   }
 
-  // Load Related Videos with Hold-to-Preview & Standard Sizing
+  // Load Related Videos
   async function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
@@ -269,7 +256,6 @@
             </div>
           `;
 
-          // Attach hold-and-slide preview to related videos
           if (typeof window.attachHoldAndSlidePreview === 'function') {
             window.attachHoldAndSlidePreview(card, v, () => {
               window.loadPlayerVideoById(v._id);
