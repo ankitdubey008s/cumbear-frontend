@@ -1,9 +1,11 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER (High-Performance Instagram Reels Architecture)
- * - Single-Video Network Isolation (Kills past buffering to save 100% bandwidth)
- * - First Short Click-to-Play + CrakRevenue SmartLink Redirect
- * - Proportional 9:16 ExoClick VAST Ad every 3 Shorts
+ * CUMBEAR SHORTS CONTROLLER
+ * Features:
+ *  - Strict 1.0x Normal Speed Playback
+ *  - Single-Video Network Isolation (Prevents background download lag)
+ *  - First Short Click-to-Play + CrakRevenue Redirect
+ *  - Native 9:16 ExoClick Vertical In-Stream Card with High-CPM "Visit Site" Button
  * ==========================================================================
  */
 
@@ -19,7 +21,6 @@
   let activeVideoElement = null;
   let currentActiveShort = null;
   let isGlobalMuted = true;
-  let activeAdTimer = null;
   let isFirstPlayTriggered = false;
 
   function formatCount(num) {
@@ -65,7 +66,7 @@
     container.innerHTML = '';
 
     shortsData.forEach((video, index) => {
-      // 1. Content Short Card
+      // 1. Content Short Card (16:9 Widescreen)
       const card = document.createElement('div');
       card.className = 'short-card-item';
       card.dataset.index = index;
@@ -90,7 +91,6 @@
 
         <div class="short-video-stage">
           <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
-          <!-- Do not set src directly in HTML so inactive videos never consume bandwidth -->
           <video class="short-video-element" playsinline webkit-playsinline loop preload="none" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
 
           ${index === 0 ? `
@@ -174,17 +174,24 @@
       attachShortCardGestures(card, video, index);
       container.appendChild(card);
 
-      // 2. Insert Proportional ExoClick Vertical VAST Ad Card Every 3 Shorts
+      // 2. Strict 9:16 Vertical In-Stream Card with High-CPM CTA (Every 3 Shorts)
       if ((index + 1) % 3 === 0) {
         const vastCard = document.createElement('div');
         vastCard.className = 'exoclick-short-vast-card';
         vastCard.dataset.isVastAd = 'true';
 
         vastCard.innerHTML = `
-          <div class="vast-vertical-stage">
+          <div class="vast-vertical-stage" onclick="window.open('${CRAK_PREROLL_SMARTLINK}', '_blank', 'noopener,noreferrer')">
             <video class="vast-vertical-video" muted playsinline webkit-playsinline></video>
           </div>
-          <button class="vast-ad-skip-pill">Ad: 5s</button>
+
+          <div class="ad-bottom-cta-container">
+            <span class="ad-sponsor-label">Sponsored Ad</span>
+            <a href="${CRAK_PREROLL_SMARTLINK}" target="_blank" rel="noopener noreferrer" class="ad-visit-site-btn">
+              <span>Visit Site</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
         `;
 
         container.appendChild(vastCard);
@@ -216,6 +223,7 @@
     videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
+    // First Short Tap-to-Play + CrakRevenue Redirect
     if (index === 0 && firstPlayCover) {
       firstPlayCover.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -224,7 +232,6 @@
 
         window.open(CRAK_PREROLL_SMARTLINK, '_blank', 'noopener,noreferrer');
 
-        // Only start stream now
         videoEl.src = videoEl.dataset.src;
         videoEl.load();
         videoEl.playbackRate = 1.0;
@@ -430,31 +437,26 @@
     });
   }
 
-  // ==========================================================================
-  // INSTAGRAM REELS OBSERVER: HARD NETWORK ABORT ON SCROLL
-  // ==========================================================================
+  // --- Instagram-style Single Video Network Isolation ---
   function setupShortsObserver() {
-    const container = document.getElementById('shortsContainer');
-
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        // A. ExoClick 9:16 Vertical VAST Ad Card
+        // A. ExoClick 9:16 Vertical In-Stream Card
         if (entry.target.dataset.isVastAd === 'true') {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            handleExoclickVastCard(entry.target, container);
+            handleExoclickVastCard(entry.target);
           } else {
-            if (activeAdTimer) clearInterval(activeAdTimer);
             const adV = entry.target.querySelector('video.vast-vertical-video');
             if (adV) {
               adV.pause();
               adV.removeAttribute('src');
-              adV.load(); // Kills active ad download thread
+              adV.load(); // Kill background connection
             }
           }
           return;
         }
 
-        // B. Content Short Video
+        // B. Content Video
         const videoEl = entry.target.querySelector('video.short-video-element');
         const posterEl = entry.target.querySelector('.short-poster-img');
         const shortIndex = parseInt(entry.target.dataset.index, 10);
@@ -464,12 +466,10 @@
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
 
-          // If first short and user hasn't clicked initial play, keep paused
           if (shortIndex === 0 && !isFirstPlayTriggered) {
             return;
           }
 
-          // ATTACH ACTIVE STREAM ONLY NOW
           if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
             videoEl.load();
@@ -482,13 +482,11 @@
             videoEl.play();
           });
         } else {
-          // ================================================================
-          // CRITICAL NETWORK RELEASE: Complete source strip to free bandwidth
-          // ================================================================
+          // Complete source cleanup to conserve 100% bandwidth
           if (videoEl) {
             videoEl.pause();
-            videoEl.removeAttribute('src'); // Instantly cancels pending HTTP byte-range request
-            videoEl.load(); // Forces media engine to drop memory buffer
+            videoEl.removeAttribute('src');
+            videoEl.load();
             videoEl.currentTime = 0;
             videoEl.playbackRate = 1.0;
             if (posterEl) posterEl.classList.remove('loaded');
@@ -500,8 +498,8 @@
     document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
   }
 
-  // --- Proportional ExoClick Vertical VAST Ad Loader ---
-  async function handleExoclickVastCard(adCard, container) {
+  // Load ExoClick Vertical VAST Ad Video
+  async function handleExoclickVastCard(adCard) {
     if (activeVideoElement) {
       activeVideoElement.pause();
       activeVideoElement.removeAttribute('src');
@@ -509,11 +507,7 @@
     }
 
     const adVideo = adCard.querySelector('.vast-vertical-video');
-    const skipBtn = adCard.querySelector('.vast-ad-skip-pill');
-    if (!adVideo || !skipBtn) return;
-
-    container.classList.add('scroll-locked');
-    skipBtn.classList.remove('unlocked');
+    if (!adVideo) return;
 
     try {
       const res = await fetch(EXOCLICK_VAST_URL);
@@ -539,33 +533,6 @@
     } catch (e) {
       console.warn('ExoClick VAST fetch fallback:', e);
     }
-
-    let seconds = 5;
-    skipBtn.textContent = `Ad: ${seconds}s`;
-
-    if (activeAdTimer) clearInterval(activeAdTimer);
-
-    activeAdTimer = setInterval(() => {
-      seconds--;
-      if (seconds > 0) {
-        skipBtn.textContent = `Ad: ${seconds}s`;
-      } else {
-        clearInterval(activeAdTimer);
-        activeAdTimer = null;
-
-        container.classList.remove('scroll-locked');
-        skipBtn.classList.add('unlocked');
-        skipBtn.textContent = 'Skip Ad ✕';
-
-        skipBtn.onclick = (e) => {
-          e.stopPropagation();
-          const nextCard = adCard.nextElementSibling;
-          if (nextCard) {
-            nextCard.scrollIntoView({ behavior: 'smooth' });
-          }
-        };
-      }
-    }, 1000);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -577,7 +544,6 @@
   });
 
   window.stopShorts = function () {
-    if (activeAdTimer) clearInterval(activeAdTimer);
     if (activeVideoElement) {
       activeVideoElement.pause();
       activeVideoElement.removeAttribute('src');
@@ -593,7 +559,5 @@
       v.removeAttribute('src');
       v.load();
     });
-    const container = document.getElementById('shortsContainer');
-    if (container) container.classList.remove('scroll-locked');
   };
 })();

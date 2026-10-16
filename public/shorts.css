@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SHORTS VIEW - FULL IMMERSION & HIGH-CPM 9:16 VERTICAL AD ENGINE
+   SHORTS VIEW - FULL IMMERSION & HIGH-CPM 9:16 VERTICAL AD LAYOUT
    ========================================================================== */
 
 body.shorts-mode #siteHeader,
@@ -36,10 +36,6 @@ body.shorts-mode main {
 }
 .shorts-container::-webkit-scrollbar { display: none; }
 
-.shorts-container.scroll-locked {
-  overflow-y: hidden !important;
-}
-
 .short-card-item {
   height: 100dvh;
   width: 100vw;
@@ -56,7 +52,7 @@ body.shorts-mode main {
   -webkit-touch-callout: none;
 }
 
-/* 16:9 Widescreen Content Videos */
+/* 16:9 Widescreen Content Video Stage */
 .short-video-stage {
   position: relative;
   width: 100vw;
@@ -75,7 +71,7 @@ body.shorts-mode main {
   background: #000000;
 }
 
-/* Initial First Short Play Cover */
+/* First Short Initial Play Button Cover */
 .first-short-play-cover {
   position: absolute;
   inset: 0;
@@ -185,255 +181,7 @@ body.shorts-mode main {
 .shorts-sound-btn svg { width: 16px; height: 16px; fill: #ffffff; }
 
 /* ==========================================================================
-   EXOCLICK 9:16 FULL VERTICAL AD CARD (TRUE 9:16 LAYOUT & BOTTOM BAR)
-   ========================================================================== */
-.exoclick-short-vast-card {
-  height: 100dvh;
-  width: 100vw;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  position: relative;
-  background: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-/* Strict 9:16 full-screen vertical stage */
-.vast-vertical-stage {
-  position: absolute;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000000;
-  cursor: pointer;
-}
-
-.vast-vertical-stage video {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 9/16;
-  object-fit: cover; /* Edge-to-edge 9:16 vertical coverage */
-  background: #000000;
-}
-
-/* Gradient overlay to enhance readability of bottom button */
-.vast-ad-gradient-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 35%, transparent 75%, rgba(0,0,0,0.5) 100%);
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* Skip Button (Locked during 5s of active playback) */
-.vast-ad-skip-pill {
-  position: absolute;
-  top: maxHere is the complete fix addressing all four points for the after-3-shorts ad:
-
-1. **True 9:16 Full-Height Vertical Stage:** The ad container is forced to `height: 100dvh; width: 100vw; aspect-ratio: 9/16; object-fit: cover` so the vertical video completely fills phone screens in 9:16 rather than letterboxing into a 16:9 box.
-2. **Timer Starts Only on `playing` (No Premature Countdown):** The timer doesn't tick down while the ad is buffering. The 5-second countdown listener strictly attaches to `adVideo.addEventListener('playing')`. Once playback physically starts, the 5-second unskippable delay runs.
-3. **Full-Width Bottom "Visit Site" Bar Button:** A prominent action bar is pinned to the bottom (`Visit Sponsor Site ➔`), making click-through easy.
-4. **Click-to-Redirect on Video Tap:** Tapping anywhere on the 9:16 ad video while it plays immediately triggers a click-through redirect in a new tab to capture high CPM/CPC.
-
----
-
-### Step 1: Update `shorts.css`
-
-Run this in Termux to build the true 9:16 vertical stage and the bottom "Visit Site" bar:
-
-```bash
-cat > ~/cumbear/frontend/public/shorts.css << 'EOF'
-/* ==========================================================================
-   SHORTS VIEW - FULL IMMERSION & 9:16 VERTICAL IN-STREAM AD CARD
-   ========================================================================== */
-
-body.shorts-mode #siteHeader,
-body.shorts-mode #globalHorizontalCats,
-body.shorts-mode .global-ad-banner-wrapper {
-  display: none !important;
-}
-
-body.shorts-mode main {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-#shortsView {
-  padding: 0;
-  margin: 0;
-  background: #000000;
-  height: 100dvh;
-  width: 100vw;
-  overflow: hidden;
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-}
-
-.shorts-container {
-  height: 100%;
-  width: 100%;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  background: #000000;
-}
-.shorts-container::-webkit-scrollbar { display: none; }
-
-.shorts-container.scroll-locked {
-  overflow-y: hidden !important;
-}
-
-.short-card-item {
-  height: 100dvh;
-  width: 100vw;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  position: relative;
-  background: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* 16:9 Widescreen Content Video Stage */
-.short-video-stage {
-  position: relative;
-  width: 100vw;
-  aspect-ratio: 16/9;
-  max-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000000;
-}
-
-.short-video-element {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000000;
-}
-
-/* First Short Initial Play Button Cover */
-.first-short-play-cover {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 55;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-.first-short-play-cover.hidden { display: none !important; }
-
-.first-play-btn-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--accent-burgundy);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 30px rgba(124, 29, 64, 0.85);
-  transition: transform 0.2s ease;
-}
-.first-play-btn-circle:active { transform: scale(0.92); }
-.first-play-btn-circle svg {
-  width: 36px;
-  height: 36px;
-  fill: #ffffff;
-  margin-left: 4px;
-}
-
-.short-poster-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  z-index: 2;
-  transition: opacity 0.25s ease;
-  image-rendering: -webkit-optimize-contrast;
-}
-.short-poster-img.loaded {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Top Navigation Bar */
-.shorts-top-bar {
-  position: absolute;
-  top: max(16px, env(safe-area-inset-top));
-  left: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 60;
-}
-
-.shorts-nav-btn {
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: transform 0.15s ease;
-}
-.shorts-nav-btn:active {
-  transform: scale(0.9);
-  background: var(--accent-burgundy);
-}
-.shorts-nav-btn svg {
-  width: 22px;
-  height: 22px;
-  stroke: #ffffff;
-  stroke-width: 2.5;
-  fill: none;
-}
-
-.shorts-sound-btn {
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 22px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 800;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: transform 0.15s ease;
-}
-.shorts-sound-btn:active { transform: scale(0.93); }
-.shorts-sound-btn svg { width: 16px; height: 16px; fill: #ffffff; }
-
-/* ==========================================================================
-   TRUE 9:16 VERTICAL IN-STREAM AD CARD (AFTER EVERY 3 SHORTS)
+   STRICT 9:16 VERTICAL AD CARD + HIGH-CPM "VISIT SITE" BOTTOM BUTTON
    ========================================================================== */
 .exoclick-short-vast-card {
   height: 100dvh;
@@ -449,86 +197,160 @@ body.shorts-mode main {
 }
 
 .vast-vertical-stage {
-  position: absolute;
-  inset: 0;
+  position: relative;
   width: 100vw;
   height: 100dvh;
+  aspect-ratio: 9/16;
+  max-width: calc(100dvh * 9 / 16);
   display: flex;
   align-items: center;
   justify-content: center;
   background: #000000;
-  cursor: pointer;
 }
 
 .vast-vertical-stage video {
   width: 100%;
   height: 100%;
   aspect-ratio: 9/16;
-  object-fit: cover; /* Strict 9:16 full-screen vertical appearance */
+  object-fit: cover;
   background: #000000;
 }
 
-/* 5-Second Unskippable Countdown Pill */
-.vast-ad-skip-pill {
+/* High-CPM Bottom Bar & Visit Site CTA */
+.ad-bottom-cta-container {
   position: absolute;
-  top: max(20px, env(safe-area-inset-top));
-  right: 16px;
-  background: rgba(0, 0, 0, 0.85);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  color: #ffffff;
-  padding: 8px 18px;
-  border-radius: 24px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  z-index: 75;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  pointer-events: none;
-  transition: all 0.25s ease;
-}
-
-.vast-ad-skip-pill.unlocked {
-  background: var(--accent-burgundy) !important;
-  border-color: #ffffff !important;
-  color: #ffffff !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  animation: pulseSkip 1s infinite alternate;
-}
-
-@keyframes pulseSkip {
-  from { transform: scale(1); }
-  to { transform: scale(1.05); }
-}
-
-/* Full Bar-Size "Visit Site" Button at Bottom */
-.vast-bottom-bar-cta {
-  position: absolute;
-  bottom: max(24px, env(safe-area-inset-bottom));
+  bottom: max(20px, env(safe-area-inset-bottom));
   left: 16px;
   right: 16px;
-  z-index: 75;
-  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ad-sponsor-label {
+  align-self: flex-start;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.ad-visit-site-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-burgundy) 0%, #b82356 100%);
   color: #ffffff;
   padding: 14px 20px;
   border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-weight: 800;
-  font-size: 1rem;
-  text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 30px rgba(124, 29, 64, 0.7);
+  gap: 8px;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(124, 29, 64, 0.7);
   transition: transform 0.15s ease;
 }
-.vast-bottom-bar-cta:active {
+.ad-visit-site-btn:active {
   transform: scale(0.97);
 }
 
-/* Actions & Info */
+/* Central HUD & Double-Tap Heart */
+.center-play-hud {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.center-play-hud.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.center-play-hud svg { width: 32px; height: 32px; fill: #ffffff; }
+
+.double-tap-heart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 90px;
+  height: 90px;
+  z-index: 30;
+  pointer-events: none;
+}
+.double-tap-heart svg {
+  width: 100%;
+  height: 100%;
+  fill: #ff2d55;
+  filter: drop-shadow(0 0 16px rgba(255, 45, 85, 0.8));
+}
+.double-tap-heart.animate {
+  animation: heartPop 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartPop {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
+  35% { transform: translate(-50%, -50%) scale(1.3) rotate(0deg); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-50%, -75%) scale(0.9) rotate(5deg); opacity: 0; }
+}
+
+.speed-indicator-pill {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.speed-indicator-pill.active { opacity: 1; transform: translateX(-50%) scale(1.05); }
+.speed-indicator-pill.locked {
+  background: var(--accent-burgundy);
+  border-color: var(--accent-burgundy-light);
+  box-shadow: 0 0 16px rgba(124, 29, 64, 0.6);
+}
+
+.side-hold-zone {
+  position: absolute;
+  top: 0;
+  bottom: 80px;
+  width: 25%;
+  z-index: 10;
+}
+.side-hold-zone.left { left: 0; }
+.side-hold-zone.right { right: 0; }
+
 .short-scrim {
   position: absolute;
   inset: 0;
@@ -672,93 +494,6 @@ body.shorts-mode main {
 }
 .preview-ended-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
 .preview-ended-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; }
-
-/* Central HUD & Double-Tap Heart */
-.center-play-hud {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.7);
-  width: 64px;
-  height: 64px;
-  background: rgba(0, 0, 0, 0.65);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 25;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.center-play-hud.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-.center-play-hud svg { width: 32px; height: 32px; fill: #ffffff; }
-
-.double-tap-heart {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 90px;
-  height: 90px;
-  z-index: 30;
-  pointer-events: none;
-}
-.double-tap-heart svg {
-  width: 100%;
-  height: 100%;
-  fill: #ff2d55;
-  filter: drop-shadow(0 0 16px rgba(255, 45, 85, 0.8));
-}
-.double-tap-heart.animate {
-  animation: heartPop 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes heartPop {
-  0% { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
-  35% { transform: translate(-50%, -50%) scale(1.3) rotate(0deg); opacity: 1; }
-  70% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-50%, -75%) scale(0.9) rotate(5deg); opacity: 0; }
-}
-
-.speed-indicator-pill {
-  position: absolute;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.speed-indicator-pill.active { opacity: 1; transform: translateX(-50%) scale(1.05); }
-.speed-indicator-pill.locked {
-  background: var(--accent-burgundy);
-  border-color: var(--accent-burgundy-light);
-  box-shadow: 0 0 16px rgba(124, 29, 64, 0.6);
-}
-
-.side-hold-zone {
-  position: absolute;
-  top: 0;
-  bottom: 80px;
-  width: 25%;
-  z-index: 10;
-}
-.side-hold-zone.left { left: 0; }
-.side-hold-zone.right { right: 0; }
 
 .more-modal-overlay {
   position: fixed;
