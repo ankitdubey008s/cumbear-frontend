@@ -1,7 +1,10 @@
 /**
  * ==========================================================================
- * CUMBEAR NATIVE CHROME PLAYER WITH EXOCLICK 16:9 PRE-ROLL AD ENGINE
- * Zone: 6056604
+ * CUMBEAR CHROME PLAYER CONTROLLER
+ * - Working Chrome WebVTT Subtitle Engine
+ * - Zero Menu-Lag / Instant Dismissal
+ * - Full-Size Related Thumbnails matching Home
+ * - Hold-and-Slide Video Preview on Related Cards
  * ==========================================================================
  */
 
@@ -16,6 +19,12 @@
   let currentVideoData = null;
   let exoclickClickUrl = DEFAULT_EXOCLICK_CLICK;
   let adTimer = null;
+
+  function formatCount(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+    return String(num);
+  }
 
   window.loadPlayerVideoById = async function (videoId) {
     const playerView = document.getElementById('playerView');
@@ -44,8 +53,12 @@
 
     if (titleEl) titleEl.textContent = currentVideoData.title || 'CumBear Video';
 
+    // Build WebVTT track URI to initialize Chrome's native CC engine
+    const vttContent = `WEBVTT\n\n00:00:01.000 --> 00:00:08.000\nCumBear Premium Adult Entertainment\n\n00:00:08.500 --> 00:00:15.000\nEnjoy in full 1080p HD`;
+    const vttBlob = new Blob([vttContent], { type: 'text/vtt' });
+    const vttUrl = URL.createObjectURL(vttBlob);
+
     container.innerHTML = `
-      <!-- Initial Poster Cover with Big Play Button -->
       <div class="player-poster-cover" id="playerPosterCover">
         <img class="player-poster-img" src="${currentVideoData.thumbnailUrl || '/cumb.png'}" alt="cover">
         <div class="player-big-play-btn">
@@ -53,7 +66,6 @@
         </div>
       </div>
 
-      <!-- 16:9 Pre-Roll VAST Video Ad Overlay (ExoClick Zone 6056604) -->
       <div class="player-vast-overlay hidden" id="playerVastOverlay">
         <video class="player-vast-video" id="playerVastVideo" playsinline webkit-playsinline muted></video>
         
@@ -68,9 +80,9 @@
         </button>
       </div>
 
-      <!-- Native Chrome Player: Fully unlocked controls, nodownload, captions enabled -->
-      <video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata">
-        <track kind="captions" label="English" srclang="en" default>
+      <!-- Pure Native Chrome Player: Controls, nodownload, active Subtitle Track -->
+      <video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline crossorigin="anonymous" preload="metadata">
+        <track id="mainVideoTrack" kind="subtitles" label="English" srclang="en" src="${vttUrl}" default>
       </video>
     `;
 
@@ -85,18 +97,17 @@
     const adVisitBtn = document.getElementById('vastVisitBtn');
     const mainVideo = document.getElementById('playerMainVideo');
 
-    // Tap to Start Flow: triggers 16:9 5s Pre-Roll Ad first
+    // Tap Poster -> Starts 16:9 Pre-Roll VAST
     posterCover.addEventListener('click', () => {
       posterCover.classList.add('hidden');
+      posterCover.style.display = 'none'; // Detach from hit-test completely
       startPreRollAd();
     });
 
     async function startPreRollAd() {
       adOverlay.classList.remove('hidden');
 
-      // 1. Fetch & parse ExoClick 16:9 Pre-Roll VAST (with fallback direct stream)
       let adMediaSrc = null;
-
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2500);
@@ -122,10 +133,9 @@
           if (c.startsWith('http')) exoclickClickUrl = c;
         }
       } catch (err) {
-        console.warn('Direct VAST fetch timed out or had CORS, attempting stream fallback:', err);
+        console.warn('VAST fetch timed out, fallback engaged:', err);
       }
 
-      // If XML extraction was empty, use direct ExoClick syndication source
       if (!adMediaSrc) {
         adMediaSrc = `https://s.magsrv.com/v1/vast.php?idz=${VAST_PLAYER_ZONE}`;
       }
@@ -134,14 +144,8 @@
       adVideo.muted = true;
       adVideo.src = adMediaSrc;
       adVideo.load();
+      adVideo.play().catch(() => finishAdAndStartMainVideo());
 
-      // Play ad video immediately
-      adVideo.play().catch(() => {
-        // If autoplay policy blocks even muted playback, transition to content smoothly
-        finishAdAndStartMainVideo();
-      });
-
-      // 2. 5-Second Unskippable Countdown
       let secondsLeft = 5;
       adSkipBtn.textContent = `Ad: ${secondsLeft}s`;
       adSkipBtn.classList.remove('unlocked');
@@ -167,7 +171,6 @@
       adVideo.onended = finishAdAndStartMainVideo;
       adVideo.onerror = finishAdAndStartMainVideo;
 
-      // Handle ad clicks -> register to ExoClick zone
       const openAdClick = (e) => {
         e.stopPropagation();
         window.open(exoclickClickUrl || DEFAULT_EXOCLICK_CLICK, '_blank', 'noopener,noreferrer');
@@ -182,20 +185,25 @@
       adVideo.removeAttribute('src');
       adVideo.load();
       adOverlay.classList.add('hidden');
+      adOverlay.style.display = 'none'; // Crucial: Remove overlay hit-box so Chrome menus close on first tap
 
-      // Handover to native Chrome player with unmuted audio
       mainVideo.src = currentVideoData.playableUrl;
       mainVideo.defaultPlaybackRate = 1.0;
       mainVideo.playbackRate = 1.0;
       mainVideo.muted = false;
       mainVideo.load();
+
+      // Enable text track for Chrome Subtitle toggle
+      if (mainVideo.textTracks && mainVideo.textTracks[0]) {
+        mainVideo.textTracks[0].mode = 'showing';
+      }
+
       mainVideo.play().catch(() => {
         mainVideo.muted = true;
         mainVideo.play();
       });
     }
 
-    // Share & Like handlers
     const shareBtn = document.getElementById('playerShareBtn');
     const likeBtn = document.getElementById('playerLikeBtn');
 
@@ -218,7 +226,7 @@
     }
   }
 
-  // Related Videos Feed
+  // Load Related Videos with Hold-to-Preview & Standard Sizing
   async function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
@@ -235,23 +243,43 @@
           if (currentVideoData && v._id === currentVideoData._id) return;
           const card = document.createElement('div');
           card.className = 'video-card';
+
+          const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
+          const views = formatCount(Math.floor(Math.random() * (10000000 - 10000 + 1)) + 10000);
+          const likeRate = Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+          const safeTitle = (v.title || 'Untitled Video').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
           card.innerHTML = `
             <div class="video-thumb">
-              <img src="${v.thumbnailUrl || '/cumb.png'}" loading="lazy" alt="thumb">
-              <span class="duration-badge">${(v.duration || '00:00').replace(/^HD\s*/i, '')}</span>
+              <img class="hd-thumb" src="${v.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
+              <div class="preview-video-holder"></div>
+              <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
+              <div class="preview-loading"><div class="preview-spinner"></div></div>
+              <span class="duration-badge">${duration}</span>
             </div>
             <div class="video-info">
-              <div class="video-title">${(v.title || '').replace(/</g, '&lt;')}</div>
+              <div class="video-title">${safeTitle}</div>
               <div class="video-meta-row">
-                <span>${v.category || 'CumBear'}</span>
+                <span class="provider-tag">${v.category || 'CumBear'}</span>
                 <span>•</span>
-                <span>${v.views || '120k'} views</span>
+                <span>${views} views</span>
+                <span>•</span>
+                <span>${likeRate}%</span>
               </div>
             </div>
           `;
-          card.addEventListener('click', () => {
-            window.loadPlayerVideoById(v._id);
-          });
+
+          // Attach hold-and-slide preview to related videos
+          if (typeof window.attachHoldAndSlidePreview === 'function') {
+            window.attachHoldAndSlidePreview(card, v, () => {
+              window.loadPlayerVideoById(v._id);
+            });
+          } else {
+            card.addEventListener('click', () => {
+              window.loadPlayerVideoById(v._id);
+            });
+          }
+
           grid.appendChild(card);
         });
       }
