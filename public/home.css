@@ -127,3 +127,71 @@
 .filter-menu.show { display: block; }
 .filter-option { padding: 10px 14px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
 .filter-option:active, .filter-option.active { background: var(--accent-burgundy); color: #ffffff; }
+
+/* ==========================================================================
+   FAPHOUSE IN-FEED NATIVE CARDS
+   ========================================================================== */
+.faphouse-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.faphouse-sponsored-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  z-index: 5;
+}
+
+.faphouse-tag {
+  color: #fbbf24 !important;
+  font-weight: 800;
+}
+
+.faphouse-action-text {
+  color: var(--accent-burgundy-light, #b82356);
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   FAPHOUSE IN-FEED NATIVE CARDS
+   ========================================================================== */
+.faphouse-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.faphouse-sponsored-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  z-index: 5;
+}
+
+.faphouse-tag {
+  color: #fbbf24 !important;
+  font-weight: 800;
+}
+
+.faphouse-action-text {
+  color: var(--accent-burgundy-light, #b82356);
+  font-weight: 800;
+}

@@ -226,9 +226,13 @@
 
       if (json.success && Array.isArray(json.data)) {
         grid.innerHTML = '';
-        json.data.forEach(v => {
-          if (currentVideoData && v._id === currentVideoData._id) return;
-          const card = document.createElement('div');
+        const filtered = json.data.filter(v => !currentVideoData || v._id !== currentVideoData._id);
+        const mixedList = typeof window.mixAffiliateVideos === "function" ? window.mixAffiliateVideos(filtered) : filtered;
+        mixedList.forEach(v => {
+          if (typeof window.renderMixedVideoCard === "function") {
+            grid.appendChild(window.renderMixedVideoCard(v));
+          } else {
+            const card = document.createElement("div");
           card.className = 'video-card';
 
           const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
@@ -267,6 +271,7 @@
           }
 
           grid.appendChild(card);
+          }
         });
       }
     } catch (e) {
