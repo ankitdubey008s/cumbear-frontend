@@ -1,8 +1,14 @@
 /**
  * ==========================================================================
  * CUMBEAR SHORTS CONTROLLER
- * Features: Seamless 16:9 Video Stream with Vertical CrakRevenue 5-Second
- * Unskippable Interstitials Every 3 Shorts
+ * Features:
+ *  - Default 1.0x normal speed (never stuck at 2x)
+ *  - Tap to Pause/Play with central HUD
+ *  - Double-Tap to Like with heart burst animation
+ *  - Edge Hold (Left/Right) for 2x Speed
+ *  - Pull Down while holding to Lock 2x Speed
+ *  - Full 16:9 Widescreen display
+ *  - CrakRevenue 5s Unskippable Vertical Interstitial Card every 3 Shorts
  * ==========================================================================
  */
 
@@ -10,8 +16,7 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  // CrakRevenue Pre-roll / SmartLink URL
-  const CRAK_PREROLL_URL = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
+  const CRAK_PREROLL_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
 
   let shortsData = [];
   let activeVideoElement = null;
@@ -59,14 +64,14 @@
     const container = document.getElementById('shortsContainer');
     container.innerHTML = '';
 
-    const adThumbnails = [
+    const adVisuals = [
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=720&h=1280&fit=crop',
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop',
       'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=720&h=1280&fit=crop'
     ];
 
     shortsData.forEach((video, index) => {
-      // 1. Render Video Card
+      // 1. Regular 16:9 Short Card
       const card = document.createElement('div');
       card.className = 'short-card-item';
       card.dataset.index = index;
@@ -103,10 +108,12 @@
           </div>
         </div>
 
+        <!-- 2X Speed HUD Indicator -->
         <div class="speed-indicator-pill">
           <span>⚡ 2X SPEED</span>
         </div>
 
+        <!-- Left/Right touch zones for edge holding -->
         <div class="side-hold-zone left"></div>
         <div class="side-hold-zone right"></div>
         <div class="short-scrim"></div>
@@ -164,22 +171,23 @@
         </div>
       `;
 
-      attachShortCardEvents(card, video);
+      attachShortGesturesAndEvents(card, video);
       container.appendChild(card);
 
-      // 2. Insert 5-Second Locked Vertical Ad AFTER EVERY 3 SHORTS
+      // 2. Insert 5-Second Unskippable Ad Card AFTER EVERY 3 SHORTS
       if ((index + 1) % 3 === 0) {
-        const adImage = adThumbnails[(index / 3) % adThumbnails.length];
+        const adImage = adVisuals[Math.floor(index / 3) % adVisuals.length];
         const adCard = document.createElement('div');
         adCard.className = 'crak-short-ad-card';
         adCard.dataset.isAd = 'true';
 
         adCard.innerHTML = `
-          <div class="crak-ad-media-box" onclick="window.open('${CRAK_PREROLL_URL}', '_blank', 'noopener,noreferrer')">
+          <div class="crak-ad-media-box" onclick="window.open('${CRAK_PREROLL_SMARTLINK}', '_blank', 'noopener,noreferrer')">
             <img src="${adImage}" loading="lazy" alt="Sponsor Media">
             <div class="crak-ad-gradient-scrim"></div>
           </div>
 
+          <!-- 5-Second Countdown / Skip Button -->
           <button class="crak-ad-skip-pill" data-seconds="5">
             Ad: 5s
           </button>
@@ -187,7 +195,7 @@
           <div class="crak-ad-info-box">
             <span class="crak-ad-sponsor-badge">Sponsored Short</span>
             <h3 class="crak-ad-headline">Tap to Meet Real Babes Live Tonight</h3>
-            <a href="${CRAK_PREROLL_URL}" target="_blank" rel="noopener noreferrer" class="crak-ad-cta-btn">
+            <a href="${CRAK_PREROLL_SMARTLINK}" target="_blank" rel="noopener noreferrer" class="crak-ad-cta-btn">
               Watch Live Uncut Stream ➔
             </a>
           </div>
@@ -200,7 +208,8 @@
     setupShortsObserver();
   }
 
-  function attachShortCardEvents(card, video) {
+  // --- Attach Double-Tap, Play/Pause, Edge-Hold 2x & Lock Gestures ---
+  function attachShortGesturesAndEvents(card, video) {
     const backBtn = card.querySelector('.back-btn-trigger');
     const soundBtn = card.querySelector('.sound-btn-trigger');
     const watchFullBtns = card.querySelectorAll('.watch-full-btn');
@@ -211,7 +220,24 @@
     const poster = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
+    const speedPill = card.querySelector('.speed-indicator-pill');
+    const heart = card.querySelector('.double-tap-heart');
+    const hud = card.querySelector('.center-play-hud');
+    const hudPlay = card.querySelector('.hud-play');
+    const hudPause = card.querySelector('.hud-pause');
+    const sideZones = card.querySelectorAll('.side-hold-zone');
 
+    let lastTapTime = 0;
+    let singleTapTimeout = null;
+    let holdTimer = null;
+    let isSpeedLocked = false;
+    let isHoldingSpeed = false;
+    let holdStartY = 0;
+
+    // Reset playback rate cleanly to normal 1.0x
+    videoEl.playbackRate = 1.0;
+
+    // Exit Shorts
     if (backBtn) {
       backBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -221,6 +247,7 @@
       });
     }
 
+    // Toggle Sound
     if (soundBtn) {
       soundBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -229,6 +256,7 @@
       });
     }
 
+    // Watch Full Video
     watchFullBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -244,6 +272,100 @@
 
     videoEl.addEventListener('playing', () => {
       poster.classList.add('loaded');
+    });
+
+    function showCenterHud(isPaused) {
+      if (isPaused) {
+        hudPlay.classList.remove('hidden');
+        hudPause.classList.add('hidden');
+      } else {
+        hudPlay.classList.add('hidden');
+        hudPause.classList.remove('hidden');
+      }
+      hud.classList.add('show');
+      setTimeout(() => { hud.classList.remove('show'); }, 400);
+    }
+
+    function triggerHeartAnimation() {
+      likeBtn.classList.add('liked');
+      heart.classList.remove('animate');
+      void heart.offsetWidth; // Force CSS repaint
+      heart.classList.add('animate');
+    }
+
+    // Tap to Pause/Play and Double-Tap to Like
+    card.addEventListener('pointerup', (e) => {
+      if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar')) return;
+      if (isHoldingSpeed) return;
+
+      const currentTime = Date.now();
+      const tapInterval = currentTime - lastTapTime;
+
+      if (tapInterval < 300 && tapInterval > 0) {
+        // Double Tap detected -> Like animation
+        clearTimeout(singleTapTimeout);
+        triggerHeartAnimation();
+        lastTapTime = 0;
+      } else {
+        // Single Tap -> Wait 280ms before toggling pause/play
+        lastTapTime = currentTime;
+        singleTapTimeout = setTimeout(() => {
+          if (videoEl.paused) {
+            videoEl.play();
+            showCenterHud(false);
+          } else {
+            videoEl.pause();
+            showCenterHud(true);
+          }
+        }, 280);
+      }
+    });
+
+    // Hold at Edge (Left/Right) for 2x Speed & Pull Down to Lock
+    sideZones.forEach(zone => {
+      zone.addEventListener('pointerdown', (e) => {
+        holdStartY = e.clientY;
+        holdTimer = setTimeout(() => {
+          isHoldingSpeed = true;
+          videoEl.playbackRate = 2.0;
+          speedPill.classList.add('active');
+          speedPill.innerHTML = '<span>⚡ 2X SPEED (Pull down to lock)</span>';
+        }, 300);
+      });
+
+      zone.addEventListener('pointermove', (e) => {
+        if (!isHoldingSpeed) return;
+        const deltaY = e.clientY - holdStartY;
+        // If pulled down more than 50px while holding -> lock at 2x
+        if (deltaY > 50 && !isSpeedLocked) {
+          isSpeedLocked = true;
+          speedPill.classList.add('locked');
+          speedPill.innerHTML = '<span>🔒 2X SPEED LOCKED</span>';
+        }
+      });
+
+      const releaseSpeed = () => {
+        clearTimeout(holdTimer);
+        if (isHoldingSpeed && !isSpeedLocked) {
+          isHoldingSpeed = false;
+          videoEl.playbackRate = 1.0;
+          speedPill.classList.remove('active');
+        }
+      };
+
+      zone.addEventListener('pointerup', releaseSpeed);
+      zone.addEventListener('pointercancel', releaseSpeed);
+      zone.addEventListener('pointerleave', releaseSpeed);
+    });
+
+    // Tap screen when 2x speed is locked to release it back to 1.0x
+    card.addEventListener('click', () => {
+      if (isSpeedLocked) {
+        isSpeedLocked = false;
+        isHoldingSpeed = false;
+        videoEl.playbackRate = 1.0;
+        speedPill.classList.remove('active', 'locked');
+      }
     });
 
     if (likeBtn) {
@@ -320,7 +442,6 @@
           if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
             handleAdCardLock(entry.target, container);
           } else {
-            // Cancel timer if user managed to swipe away
             if (activeAdTimer) clearInterval(activeAdTimer);
           }
           return;
@@ -333,6 +454,9 @@
         if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
+
+          // Reset playback speed strictly to normal 1.0x on entry
+          videoEl.playbackRate = 1.0;
 
           if (videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
@@ -347,7 +471,7 @@
           if (videoEl) {
             videoEl.pause();
             videoEl.currentTime = 0;
-            videoEl.playbackRate = 1.0;
+            videoEl.playbackRate = 1.0; // Reset rate when scrolled away
           }
         }
       });
@@ -358,13 +482,12 @@
 
   // --- 5-Second Unskippable Countdown & Lock Controller ---
   function handleAdCardLock(adElement, container) {
-    // Pause any background video
     if (activeVideoElement) activeVideoElement.pause();
 
     const skipBtn = adElement.querySelector('.crak-ad-skip-pill');
     if (!skipBtn) return;
 
-    // 1. Lock scrolling on the shorts feed
+    // Lock scrolling on shorts feed
     container.classList.add('scroll-locked');
     skipBtn.classList.remove('unlocked');
 
@@ -381,14 +504,13 @@
         clearInterval(activeAdTimer);
         activeAdTimer = null;
 
-        // 2. Unlock scroll & activate skip button
+        // Unlock scroll & activate skip button
         container.classList.remove('scroll-locked');
         skipBtn.classList.add('unlocked');
         skipBtn.textContent = 'Skip Ad ✕';
 
         skipBtn.onclick = (e) => {
           e.stopPropagation();
-          // Scroll smoothly to next short card
           const nextCard = adElement.nextElementSibling;
           if (nextCard) {
             nextCard.scrollIntoView({ behavior: 'smooth' });
@@ -398,21 +520,65 @@
     }, 1000);
   }
 
-  // Dismiss more sheet
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
+    const downloadBtn = document.getElementById('downloadShortBtn');
+
     if (closeBtn && modal) {
       closeBtn.onclick = () => modal.classList.add('hidden');
+    }
+
+    if (modal) {
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.classList.add('hidden');
+      };
+    }
+
+    if (downloadBtn) {
+      downloadBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentActiveShort) return;
+        if (modal) modal.classList.add('hidden');
+
+        try {
+          const videoUrl = currentActiveShort.playableUrl;
+          const fileName = `CumBear_${currentActiveShort._id || 'short'}.mp4`;
+          const response = await fetch(videoUrl);
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+          const link = document.createElement('a');
+          link.href = currentActiveShort.playableUrl;
+          link.download = `CumBear_${currentActiveShort._id}.mp4`;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      };
     }
   });
 
   window.stopShorts = function () {
     if (activeAdTimer) clearInterval(activeAdTimer);
-    if (activeVideoElement) activeVideoElement.pause();
+    if (activeVideoElement) {
+      activeVideoElement.pause();
+      activeVideoElement.playbackRate = 1.0;
+    }
     document.querySelectorAll('.short-video-element').forEach(v => {
       v.pause();
       v.currentTime = 0;
+      v.playbackRate = 1.0;
     });
     const container = document.getElementById('shortsContainer');
     if (container) container.classList.remove('scroll-locked');
