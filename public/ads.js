@@ -2,9 +2,9 @@
  * ==========================================================================
  * CUMBEAR AD UTILITY CONTROLLER
  * Features:
- *  - Zone 6056606 Floating Video Slider Popup on all content views
+ *  - Continuous Uncapped Background Popunders (ExoClick + CrakRevenue)
+ *  - Zone 6056606 Floating Video Slider Popup
  *  - Route-targeted Banner Visibility (Home & Search Only)
- *  - Timed Popunders
  * ==========================================================================
  */
 
@@ -17,8 +17,17 @@
   let sliderTimer = null;
   let isSliderClosedByUser = false;
 
+  // Clear capping cookies to allow continuous popunders
+  function clearCapCookies() {
+    document.cookie = "zone-cap-6056600=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "zone-cap-6056598=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "__suvt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  }
+
   // Manage Banner and Slider Display Per View
   window.updateAdVisibility = function (activeViewId) {
+    clearCapCookies();
+
     // 1. Top Banner Visibility
     if (bannerWrapper) {
       if (activeViewId === 'homeView' || activeViewId === 'categoriesView') {
@@ -43,7 +52,6 @@
     }
   };
 
-  // Video Slider Management
   function showVideoSlider() {
     if (!videoSliderEl) return;
     const isShorts = document.body.classList.contains('shorts-mode') || 
@@ -61,12 +69,11 @@
     videoSliderEl.style.display = 'none';
     isSliderClosedByUser = true;
 
-    // Re-show after 40 seconds to maximize impressions
     if (sliderTimer) clearTimeout(sliderTimer);
     sliderTimer = setTimeout(() => {
       isSliderClosedByUser = false;
       showVideoSlider();
-    }, 40000);
+    }, 35000);
   }
 
   if (videoSliderClose) {
@@ -76,7 +83,7 @@
     });
   }
 
-  // Hook into router to update slider across page switches
+  // Hook into router
   const originalSwitchView = window.switchView;
   if (typeof originalSwitchView === 'function') {
     window.switchView = function (viewId, pushHistory = true) {
@@ -85,45 +92,47 @@
     };
   }
 
-  // Initial trigger: Show popup after 3 seconds on page load or upon first scroll
-  let triggeredInitial = false;
-  function triggerInitialSlider() {
-    if (!triggeredInitial) {
-      triggeredInitial = true;
-      showVideoSlider();
+  // Continuous High-Yield Click Listener
+  const CRAK_POPS_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
+  let clickCount = 0;
+
+  document.addEventListener('click', (e) => {
+    // Avoid interfering with video controls, inputs, or interactive short gestures
+    const ignoreSelectors = [
+      'input', 'textarea', '.control-icon-btn', '.player-scrubber-box', 
+      '.side-hold-zone', '.shorts-nav-btn', '.shorts-sound-btn', 
+      '#videoSliderCloseBtn', '.crak-ad-skip-pill', '.vast-ad-skip-pill'
+    ];
+
+    for (let i = 0; i < ignoreSelectors.length; i++) {
+      if (e.target.closest(ignoreSelectors[i])) return;
     }
-  }
+
+    clickCount++;
+    clearCapCookies();
+
+    // Trigger secondary popunder on natural navigation clicks
+    if (clickCount % 3 === 0) {
+      try {
+        const popWin = window.open(CRAK_POPS_URL, '_blank', 'noopener,noreferrer');
+        if (popWin) {
+          popWin.blur();
+          window.focus();
+        }
+      } catch (err) {}
+    }
+  }, { capture: true, passive: true });
 
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 100) {
-      triggerInitialSlider();
+    if (window.scrollY > 80) {
+      showVideoSlider();
     }
-  }, { passive: true });
+  }, { passive: true, once: true });
 
-  setTimeout(triggerInitialSlider, 3500);
-
-  // Background Popunder Trigger on natural body interactions
-  const CRAK_POPS_URL = 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
-  let canPop = false;
-
-  function scheduleNextPop() {
-    const randomDelay = Math.floor(Math.random() * (70000 - 35000 + 1)) + 35000;
-    setTimeout(() => { canPop = true; }, randomDelay);
-  }
-
-  document.body.addEventListener('click', (e) => {
-    if (!canPop) return;
-    const ignoreTags = ['INPUT', 'TEXTAREA', 'BUTTON', 'A', 'VIDEO'];
-    if (ignoreTags.includes(e.target.tagName) || e.target.closest('a') || e.target.closest('button') || e.target.closest('video')) return;
-
-    window.open(CRAK_POPS_URL, '_blank', 'noopener,noreferrer');
-    canPop = false;
-    scheduleNextPop();
-  });
-
-  scheduleNextPop();
+  setTimeout(showVideoSlider, 3000);
 
   document.addEventListener('DOMContentLoaded', () => {
+    clearCapCookies();
     window.updateAdVisibility('homeView');
   });
 })();
