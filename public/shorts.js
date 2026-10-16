@@ -2,13 +2,10 @@
  * ==========================================================================
  * CUMBEAR SHORTS CONTROLLER
  * Features:
- *  - Default 1.0x normal speed (never stuck at 2x)
- *  - Tap to Pause/Play with central HUD
- *  - Double-Tap to Like with heart burst animation
- *  - Edge Hold (Left/Right) for 2x Speed
- *  - Pull Down while holding to Lock 2x Speed
- *  - Full 16:9 Widescreen display
- *  - CrakRevenue 5s Unskippable Vertical Interstitial Card every 3 Shorts
+ *  - Strict 1.0x Normal Speed by default
+ *  - First Short stopped with Play button -> First Click redirects to CrakRevenue Smartlink
+ *  - ExoClick Vertical VAST Ad (9:16) after every 3 Shorts with 5s skip lock
+ *  - Complete gesture suite (Tap, Double-tap Like, Edge Hold & Lock 2x)
  * ==========================================================================
  */
 
@@ -17,12 +14,15 @@
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
   const CRAK_PREROLL_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
+  const EXOCLICK_VAST_ZONE = '6056608';
+  const EXOCLICK_VAST_URL = `https://s.magsrv.com/v1/vast.php?idzone=${EXOCLICK_VAST_ZONE}`;
 
   let shortsData = [];
   let activeVideoElement = null;
   let currentActiveShort = null;
   let isGlobalMuted = true;
   let activeAdTimer = null;
+  let isFirstPlayTriggered = false;
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -35,6 +35,8 @@
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
+    isFirstPlayTriggered = false; // Require tap on first load
+
     container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;font-weight:700;">Loading CumBear Shorts...</div>';
 
     try {
@@ -64,14 +66,8 @@
     const container = document.getElementById('shortsContainer');
     container.innerHTML = '';
 
-    const adVisuals = [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=720&h=1280&fit=crop',
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=720&h=1280&fit=crop',
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=720&h=1280&fit=crop'
-    ];
-
     shortsData.forEach((video, index) => {
-      // 1. Regular 16:9 Short Card
+      // 1. Content Short Card (16:9 Aspect Ratio)
       const card = document.createElement('div');
       card.className = 'short-card-item';
       card.dataset.index = index;
@@ -98,6 +94,14 @@
           <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
           <video class="short-video-element" playsinline webkit-playsinline loop preload="auto" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
 
+          <!-- First Short Initial Play Button Cover -->
+          ${index === 0 ? `
+          <div class="first-short-play-cover" id="firstShortPlayCover">
+            <div class="first-play-btn-circle">
+              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+          </div>` : ''}
+
           <div class="center-play-hud">
             <svg class="hud-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <svg class="hud-pause hidden" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
@@ -108,12 +112,10 @@
           </div>
         </div>
 
-        <!-- 2X Speed HUD Indicator -->
         <div class="speed-indicator-pill">
           <span>⚡ 2X SPEED</span>
         </div>
 
-        <!-- Left/Right touch zones for edge holding -->
         <div class="side-hold-zone left"></div>
         <div class="side-hold-zone right"></div>
         <div class="short-scrim"></div>
@@ -171,45 +173,30 @@
         </div>
       `;
 
-      attachShortGesturesAndEvents(card, video);
+      attachShortCardGestures(card, video, index);
       container.appendChild(card);
 
-      // 2. Insert 5-Second Unskippable Ad Card AFTER EVERY 3 SHORTS
+      // 2. Insert ExoClick Vertical VAST Ad (9:16) AFTER EVERY 3 SHORTS
       if ((index + 1) % 3 === 0) {
-        const adImage = adVisuals[Math.floor(index / 3) % adVisuals.length];
-        const adCard = document.createElement('div');
-        adCard.className = 'crak-short-ad-card';
-        adCard.dataset.isAd = 'true';
+        const vastCard = document.createElement('div');
+        vastCard.className = 'exoclick-short-vast-card';
+        vastCard.dataset.isVastAd = 'true';
 
-        adCard.innerHTML = `
-          <div class="crak-ad-media-box" onclick="window.open('${CRAK_PREROLL_SMARTLINK}', '_blank', 'noopener,noreferrer')">
-            <img src="${adImage}" loading="lazy" alt="Sponsor Media">
-            <div class="crak-ad-gradient-scrim"></div>
+        vastCard.innerHTML = `
+          <div class="vast-vertical-stage">
+            <video class="vast-vertical-video" muted playsinline webkit-playsinline></video>
           </div>
-
-          <!-- 5-Second Countdown / Skip Button -->
-          <button class="crak-ad-skip-pill" data-seconds="5">
-            Ad: 5s
-          </button>
-
-          <div class="crak-ad-info-box">
-            <span class="crak-ad-sponsor-badge">Sponsored Short</span>
-            <h3 class="crak-ad-headline">Tap to Meet Real Babes Live Tonight</h3>
-            <a href="${CRAK_PREROLL_SMARTLINK}" target="_blank" rel="noopener noreferrer" class="crak-ad-cta-btn">
-              Watch Live Uncut Stream ➔
-            </a>
-          </div>
+          <button class="vast-ad-skip-pill">Ad: 5s</button>
         `;
 
-        container.appendChild(adCard);
+        container.appendChild(vastCard);
       }
     });
 
     setupShortsObserver();
   }
 
-  // --- Attach Double-Tap, Play/Pause, Edge-Hold 2x & Lock Gestures ---
-  function attachShortGesturesAndEvents(card, video) {
+  function attachShortCardGestures(card, video, index) {
     const backBtn = card.querySelector('.back-btn-trigger');
     const soundBtn = card.querySelector('.sound-btn-trigger');
     const watchFullBtns = card.querySelectorAll('.watch-full-btn');
@@ -226,18 +213,36 @@
     const hudPlay = card.querySelector('.hud-play');
     const hudPause = card.querySelector('.hud-pause');
     const sideZones = card.querySelectorAll('.side-hold-zone');
+    const firstPlayCover = card.querySelector('#firstShortPlayCover');
 
-    let lastTapTime = 0;
-    let singleTapTimeout = null;
-    let holdTimer = null;
-    let isSpeedLocked = false;
-    let isHoldingSpeed = false;
-    let holdStartY = 0;
-
-    // Reset playback rate cleanly to normal 1.0x
+    // Strict 1.0x Normal Speed Initialization
+    videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
-    // Exit Shorts
+    // First Short Tap-to-Play + CrakRevenue Redirect
+    if (index === 0 && firstPlayCover) {
+      firstPlayCover.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isFirstPlayTriggered = true;
+        firstPlayCover.classList.add('hidden');
+
+        // 1. Open CrakRevenue Smartlink in background/new tab
+        window.open(CRAK_PREROLL_SMARTLINK, '_blank', 'noopener,noreferrer');
+
+        // 2. Start normal playback
+        if (videoEl.src !== videoEl.dataset.src) {
+          videoEl.src = videoEl.dataset.src;
+          videoEl.load();
+        }
+        videoEl.playbackRate = 1.0;
+        videoEl.muted = isGlobalMuted;
+        videoEl.play().catch(() => {
+          videoEl.muted = true;
+          videoEl.play();
+        });
+      });
+    }
+
     if (backBtn) {
       backBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -247,7 +252,6 @@
       });
     }
 
-    // Toggle Sound
     if (soundBtn) {
       soundBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -256,7 +260,6 @@
       });
     }
 
-    // Watch Full Video
     watchFullBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -272,6 +275,7 @@
 
     videoEl.addEventListener('playing', () => {
       poster.classList.add('loaded');
+      videoEl.playbackRate = 1.0; // Enforce 1.0x speed on start
     });
 
     function showCenterHud(isPaused) {
@@ -289,26 +293,31 @@
     function triggerHeartAnimation() {
       likeBtn.classList.add('liked');
       heart.classList.remove('animate');
-      void heart.offsetWidth; // Force CSS repaint
+      void heart.offsetWidth;
       heart.classList.add('animate');
     }
 
+    let lastTap = 0;
+    let singleTapTimeout = null;
+    let holdTimer = null;
+    let isSpeedLocked = false;
+    let isHoldingSpeed = false;
+    let holdStartY = 0;
+
     // Tap to Pause/Play and Double-Tap to Like
     card.addEventListener('pointerup', (e) => {
-      if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar')) return;
+      if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar') || e.target.closest('#firstShortPlayCover')) return;
       if (isHoldingSpeed) return;
 
-      const currentTime = Date.now();
-      const tapInterval = currentTime - lastTapTime;
+      const now = Date.now();
+      const diff = now - lastTap;
 
-      if (tapInterval < 300 && tapInterval > 0) {
-        // Double Tap detected -> Like animation
+      if (diff < 300 && diff > 0) {
         clearTimeout(singleTapTimeout);
         triggerHeartAnimation();
-        lastTapTime = 0;
+        lastTap = 0;
       } else {
-        // Single Tap -> Wait 280ms before toggling pause/play
-        lastTapTime = currentTime;
+        lastTap = now;
         singleTapTimeout = setTimeout(() => {
           if (videoEl.paused) {
             videoEl.play();
@@ -321,7 +330,7 @@
       }
     });
 
-    // Hold at Edge (Left/Right) for 2x Speed & Pull Down to Lock
+    // Edge Hold for 2x & Pull Down to Lock
     sideZones.forEach(zone => {
       zone.addEventListener('pointerdown', (e) => {
         holdStartY = e.clientY;
@@ -336,7 +345,6 @@
       zone.addEventListener('pointermove', (e) => {
         if (!isHoldingSpeed) return;
         const deltaY = e.clientY - holdStartY;
-        // If pulled down more than 50px while holding -> lock at 2x
         if (deltaY > 50 && !isSpeedLocked) {
           isSpeedLocked = true;
           speedPill.classList.add('locked');
@@ -358,7 +366,7 @@
       zone.addEventListener('pointerleave', releaseSpeed);
     });
 
-    // Tap screen when 2x speed is locked to release it back to 1.0x
+    // Tap to release 2x lock
     card.addEventListener('click', () => {
       if (isSpeedLocked) {
         isSpeedLocked = false;
@@ -437,31 +445,38 @@
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        // A. If Current Item is an Ad Card
-        if (entry.target.dataset.isAd === 'true') {
+        // A. ExoClick 9:16 Vertical VAST Ad Card Handler
+        if (entry.target.dataset.isVastAd === 'true') {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
-            handleAdCardLock(entry.target, container);
+            handleExoclickVastCard(entry.target, container);
           } else {
             if (activeAdTimer) clearInterval(activeAdTimer);
           }
           return;
         }
 
-        // B. If Current Item is a Regular Short Video
+        // B. Content Short Video Handler
         const videoEl = entry.target.querySelector('video.short-video-element');
+        const shortIndex = parseInt(entry.target.dataset.index, 10);
         const shortId = entry.target.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
 
-          // Reset playback speed strictly to normal 1.0x on entry
+          // Always enforce 1.0x normal speed
           videoEl.playbackRate = 1.0;
+
+          // If it is the first short and user hasn't tapped yet, keep paused
+          if (shortIndex === 0 && !isFirstPlayTriggered) {
+            return;
+          }
 
           if (videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
             videoEl.load();
           }
+          videoEl.playbackRate = 1.0;
           videoEl.muted = isGlobalMuted;
           videoEl.play().catch(() => {
             videoEl.muted = true;
@@ -471,25 +486,51 @@
           if (videoEl) {
             videoEl.pause();
             videoEl.currentTime = 0;
-            videoEl.playbackRate = 1.0; // Reset rate when scrolled away
+            videoEl.playbackRate = 1.0;
           }
         }
       });
     }, { threshold: 0.7 });
 
-    document.querySelectorAll('.short-card-item, .crak-short-ad-card').forEach(el => observer.observe(el));
+    document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
   }
 
-  // --- 5-Second Unskippable Countdown & Lock Controller ---
-  function handleAdCardLock(adElement, container) {
+  // --- Dynamic ExoClick Vertical VAST Ad Loader ---
+  async function handleExoclickVastCard(adCard, container) {
     if (activeVideoElement) activeVideoElement.pause();
 
-    const skipBtn = adElement.querySelector('.crak-ad-skip-pill');
-    if (!skipBtn) return;
+    const adVideo = adCard.querySelector('.vast-vertical-video');
+    const skipBtn = adCard.querySelector('.vast-ad-skip-pill');
+    if (!adVideo || !skipBtn) return;
 
-    // Lock scrolling on shorts feed
     container.classList.add('scroll-locked');
     skipBtn.classList.remove('unlocked');
+
+    // Parse VAST MediaFile or stream directly via ExoClick VAST endpoint
+    try {
+      const res = await fetch(EXOCLICK_VAST_URL);
+      const text = await res.text();
+      const xmlDoc = new DOMParser().parseFromString(text, 'text/xml');
+      const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
+
+      let mediaUrl = null;
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const src = (mediaFiles[i].textContent || '').trim();
+        if (src.startsWith('http')) {
+          mediaUrl = src;
+          break;
+        }
+      }
+
+      if (mediaUrl) {
+        adVideo.src = mediaUrl;
+        adVideo.muted = true;
+        adVideo.load();
+        adVideo.play().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('ExoClick VAST fetch fallback:', e);
+    }
 
     let seconds = 5;
     skipBtn.textContent = `Ad: ${seconds}s`;
@@ -504,14 +545,13 @@
         clearInterval(activeAdTimer);
         activeAdTimer = null;
 
-        // Unlock scroll & activate skip button
         container.classList.remove('scroll-locked');
         skipBtn.classList.add('unlocked');
         skipBtn.textContent = 'Skip Ad ✕';
 
         skipBtn.onclick = (e) => {
           e.stopPropagation();
-          const nextCard = adElement.nextElementSibling;
+          const nextCard = adCard.nextElementSibling;
           if (nextCard) {
             nextCard.scrollIntoView({ behavior: 'smooth' });
           }
@@ -520,52 +560,12 @@
     }, 1000);
   }
 
+  // Dismiss more sheet
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
-    const downloadBtn = document.getElementById('downloadShortBtn');
-
     if (closeBtn && modal) {
       closeBtn.onclick = () => modal.classList.add('hidden');
-    }
-
-    if (modal) {
-      modal.onclick = (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
-      };
-    }
-
-    if (downloadBtn) {
-      downloadBtn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!currentActiveShort) return;
-        if (modal) modal.classList.add('hidden');
-
-        try {
-          const videoUrl = currentActiveShort.playableUrl;
-          const fileName = `CumBear_${currentActiveShort._id || 'short'}.mp4`;
-          const response = await fetch(videoUrl);
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        } catch (err) {
-          const link = document.createElement('a');
-          link.href = currentActiveShort.playableUrl;
-          link.download = `CumBear_${currentActiveShort._id}.mp4`;
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      };
     }
   });
 
@@ -579,6 +579,10 @@
       v.pause();
       v.currentTime = 0;
       v.playbackRate = 1.0;
+    });
+    document.querySelectorAll('.vast-vertical-video').forEach(v => {
+      v.pause();
+      v.src = '';
     });
     const container = document.getElementById('shortsContainer');
     if (container) container.classList.remove('scroll-locked');
