@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SHORTS VIEW - FULL IMMERSION, 16:9 WIDESCREEN & EXOCLICK VAST INTERSTITIALS
+   SHORTS VIEW - FULL IMMERSION & HIGH-PERFORMANCE VIDEO ISOLATION
    ========================================================================== */
 
 body.shorts-mode #siteHeader,
@@ -56,7 +56,7 @@ body.shorts-mode main {
   -webkit-touch-callout: none;
 }
 
-/* 16:9 Widescreen boundary */
+/* 16:9 Widescreen Content Video Stage */
 .short-video-stage {
   position: relative;
   width: 100vw;
@@ -75,11 +75,11 @@ body.shorts-mode main {
   background: #000000;
 }
 
-/* Initial First-Tap Play Overlay */
+/* First Short Initial Play Button Cover */
 .first-short-play-cover {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   z-index: 55;
   display: flex;
   align-items: center;
@@ -98,7 +98,7 @@ body.shorts-mode main {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 30px rgba(124, 29, 64, 0.8);
+  box-shadow: 0 0 30px rgba(124, 29, 64, 0.85);
   transition: transform 0.2s ease;
 }
 .first-play-btn-circle:active {
@@ -185,7 +185,7 @@ body.shorts-mode main {
 .shorts-sound-btn svg { width: 16px; height: 16px; fill: #ffffff; }
 
 /* ==========================================================================
-   EXOCLICK 9:16 VERTICAL IN-STREAM VAST CARD (EVERY 3 SHORTS)
+   EXOCLICK 9:16 VERTICAL AD CARD - PROPORTIONAL NORMAL SHORT SIZE
    ========================================================================== */
 .exoclick-short-vast-card {
   height: 100dvh;
@@ -202,20 +202,23 @@ body.shorts-mode main {
 
 .vast-vertical-stage {
   position: relative;
-  width: 100vw;
-  height: 100dvh;
+  width: 100%;
+  max-width: 420px;
+  height: 85dvh;
+  aspect-ratio: 9/16;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #050508;
+  background: #000000;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .vast-vertical-stage video {
   width: 100%;
   height: 100%;
-  aspect-ratio: 9/16;
-  object-fit: cover;
-  background: #000;
+  object-fit: contain; /* Prevents blowing up / over-enlarging */
+  background: #000000;
 }
 
 .vast-ad-skip-pill {

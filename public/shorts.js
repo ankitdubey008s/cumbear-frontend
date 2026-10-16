@@ -1,11 +1,9 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER
- * Features:
- *  - Strict 1.0x Normal Speed by default
- *  - First Short stopped with Play button -> First Click redirects to CrakRevenue Smartlink
- *  - ExoClick Vertical VAST Ad (9:16) after every 3 Shorts with 5s skip lock
- *  - Complete gesture suite (Tap, Double-tap Like, Edge Hold & Lock 2x)
+ * CUMBEAR SHORTS CONTROLLER (High-Performance Instagram Reels Architecture)
+ * - Single-Video Network Isolation (Kills past buffering to save 100% bandwidth)
+ * - First Short Click-to-Play + CrakRevenue SmartLink Redirect
+ * - Proportional 9:16 ExoClick VAST Ad every 3 Shorts
  * ==========================================================================
  */
 
@@ -35,7 +33,7 @@
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
-    isFirstPlayTriggered = false; // Require tap on first load
+    isFirstPlayTriggered = false;
 
     container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;font-weight:700;">Loading CumBear Shorts...</div>';
 
@@ -67,7 +65,7 @@
     container.innerHTML = '';
 
     shortsData.forEach((video, index) => {
-      // 1. Content Short Card (16:9 Aspect Ratio)
+      // 1. Content Short Card
       const card = document.createElement('div');
       card.className = 'short-card-item';
       card.dataset.index = index;
@@ -92,9 +90,9 @@
 
         <div class="short-video-stage">
           <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
-          <video class="short-video-element" playsinline webkit-playsinline loop preload="auto" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
+          <!-- Do not set src directly in HTML so inactive videos never consume bandwidth -->
+          <video class="short-video-element" playsinline webkit-playsinline loop preload="none" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
 
-          <!-- First Short Initial Play Button Cover -->
           ${index === 0 ? `
           <div class="first-short-play-cover" id="firstShortPlayCover">
             <div class="first-play-btn-circle">
@@ -176,7 +174,7 @@
       attachShortCardGestures(card, video, index);
       container.appendChild(card);
 
-      // 2. Insert ExoClick Vertical VAST Ad (9:16) AFTER EVERY 3 SHORTS
+      // 2. Insert Proportional ExoClick Vertical VAST Ad Card Every 3 Shorts
       if ((index + 1) % 3 === 0) {
         const vastCard = document.createElement('div');
         vastCard.className = 'exoclick-short-vast-card';
@@ -215,25 +213,20 @@
     const sideZones = card.querySelectorAll('.side-hold-zone');
     const firstPlayCover = card.querySelector('#firstShortPlayCover');
 
-    // Strict 1.0x Normal Speed Initialization
     videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
-    // First Short Tap-to-Play + CrakRevenue Redirect
     if (index === 0 && firstPlayCover) {
       firstPlayCover.addEventListener('click', (e) => {
         e.stopPropagation();
         isFirstPlayTriggered = true;
         firstPlayCover.classList.add('hidden');
 
-        // 1. Open CrakRevenue Smartlink in background/new tab
         window.open(CRAK_PREROLL_SMARTLINK, '_blank', 'noopener,noreferrer');
 
-        // 2. Start normal playback
-        if (videoEl.src !== videoEl.dataset.src) {
-          videoEl.src = videoEl.dataset.src;
-          videoEl.load();
-        }
+        // Only start stream now
+        videoEl.src = videoEl.dataset.src;
+        videoEl.load();
         videoEl.playbackRate = 1.0;
         videoEl.muted = isGlobalMuted;
         videoEl.play().catch(() => {
@@ -275,7 +268,7 @@
 
     videoEl.addEventListener('playing', () => {
       poster.classList.add('loaded');
-      videoEl.playbackRate = 1.0; // Enforce 1.0x speed on start
+      videoEl.playbackRate = 1.0;
     });
 
     function showCenterHud(isPaused) {
@@ -304,7 +297,6 @@
     let isHoldingSpeed = false;
     let holdStartY = 0;
 
-    // Tap to Pause/Play and Double-Tap to Like
     card.addEventListener('pointerup', (e) => {
       if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar') || e.target.closest('#firstShortPlayCover')) return;
       if (isHoldingSpeed) return;
@@ -330,7 +322,6 @@
       }
     });
 
-    // Edge Hold for 2x & Pull Down to Lock
     sideZones.forEach(zone => {
       zone.addEventListener('pointerdown', (e) => {
         holdStartY = e.clientY;
@@ -366,7 +357,6 @@
       zone.addEventListener('pointerleave', releaseSpeed);
     });
 
-    // Tap to release 2x lock
     card.addEventListener('click', () => {
       if (isSpeedLocked) {
         isSpeedLocked = false;
@@ -440,42 +430,51 @@
     });
   }
 
+  // ==========================================================================
+  // INSTAGRAM REELS OBSERVER: HARD NETWORK ABORT ON SCROLL
+  // ==========================================================================
   function setupShortsObserver() {
     const container = document.getElementById('shortsContainer');
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        // A. ExoClick 9:16 Vertical VAST Ad Card Handler
+        // A. ExoClick 9:16 Vertical VAST Ad Card
         if (entry.target.dataset.isVastAd === 'true') {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
             handleExoclickVastCard(entry.target, container);
           } else {
             if (activeAdTimer) clearInterval(activeAdTimer);
+            const adV = entry.target.querySelector('video.vast-vertical-video');
+            if (adV) {
+              adV.pause();
+              adV.removeAttribute('src');
+              adV.load(); // Kills active ad download thread
+            }
           }
           return;
         }
 
-        // B. Content Short Video Handler
+        // B. Content Short Video
         const videoEl = entry.target.querySelector('video.short-video-element');
+        const posterEl = entry.target.querySelector('.short-poster-img');
         const shortIndex = parseInt(entry.target.dataset.index, 10);
         const shortId = entry.target.dataset.id;
 
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
 
-          // Always enforce 1.0x normal speed
-          videoEl.playbackRate = 1.0;
-
-          // If it is the first short and user hasn't tapped yet, keep paused
+          // If first short and user hasn't clicked initial play, keep paused
           if (shortIndex === 0 && !isFirstPlayTriggered) {
             return;
           }
 
-          if (videoEl.src !== videoEl.dataset.src) {
+          // ATTACH ACTIVE STREAM ONLY NOW
+          if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
             videoEl.load();
           }
+
           videoEl.playbackRate = 1.0;
           videoEl.muted = isGlobalMuted;
           videoEl.play().catch(() => {
@@ -483,21 +482,31 @@
             videoEl.play();
           });
         } else {
+          // ================================================================
+          // CRITICAL NETWORK RELEASE: Complete source strip to free bandwidth
+          // ================================================================
           if (videoEl) {
             videoEl.pause();
+            videoEl.removeAttribute('src'); // Instantly cancels pending HTTP byte-range request
+            videoEl.load(); // Forces media engine to drop memory buffer
             videoEl.currentTime = 0;
             videoEl.playbackRate = 1.0;
+            if (posterEl) posterEl.classList.remove('loaded');
           }
         }
       });
-    }, { threshold: 0.7 });
+    }, { threshold: 0.6 });
 
     document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
   }
 
-  // --- Dynamic ExoClick Vertical VAST Ad Loader ---
+  // --- Proportional ExoClick Vertical VAST Ad Loader ---
   async function handleExoclickVastCard(adCard, container) {
-    if (activeVideoElement) activeVideoElement.pause();
+    if (activeVideoElement) {
+      activeVideoElement.pause();
+      activeVideoElement.removeAttribute('src');
+      activeVideoElement.load();
+    }
 
     const adVideo = adCard.querySelector('.vast-vertical-video');
     const skipBtn = adCard.querySelector('.vast-ad-skip-pill');
@@ -506,7 +515,6 @@
     container.classList.add('scroll-locked');
     skipBtn.classList.remove('unlocked');
 
-    // Parse VAST MediaFile or stream directly via ExoClick VAST endpoint
     try {
       const res = await fetch(EXOCLICK_VAST_URL);
       const text = await res.text();
@@ -560,7 +568,6 @@
     }, 1000);
   }
 
-  // Dismiss more sheet
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
@@ -573,16 +580,18 @@
     if (activeAdTimer) clearInterval(activeAdTimer);
     if (activeVideoElement) {
       activeVideoElement.pause();
-      activeVideoElement.playbackRate = 1.0;
+      activeVideoElement.removeAttribute('src');
+      activeVideoElement.load();
     }
     document.querySelectorAll('.short-video-element').forEach(v => {
       v.pause();
-      v.currentTime = 0;
-      v.playbackRate = 1.0;
+      v.removeAttribute('src');
+      v.load();
     });
     document.querySelectorAll('.vast-vertical-video').forEach(v => {
       v.pause();
-      v.src = '';
+      v.removeAttribute('src');
+      v.load();
     });
     const container = document.getElementById('shortsContainer');
     if (container) container.classList.remove('scroll-locked');
