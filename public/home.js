@@ -1,7 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR HOME VIEW CONTROLLER
- * Features: 1s Hold -> Locks & Plays Preview at 1.0x Normal Speed (60s max)
+ * CUMBEAR HOME CONTROLLER (Guaranteed Category Chips & 50-Video Feed)
  * ==========================================================================
  */
 
@@ -14,6 +13,13 @@
   let currentPage = 1;
   let currentCategory = 'all';
   let currentSort = 'gem';
+
+  const defaultCategories = [
+    'all', 'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
+    'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
+    'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
+    'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
+  ];
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -29,45 +35,55 @@
     return Math.floor(Math.random() * (100 - 50 + 1)) + 50;
   }
 
-  async function loadCategories() {
-    const catsBar = document.getElementById('horizontalCats');
-    const bottomGrid = document.getElementById('imageCategoriesGrid');
+  // Render Category Chips
+  function renderCategoryChips(list) {
+    const catsBar = document.getElementById('globalHorizontalCats');
+    if (!catsBar) return;
 
+    catsBar.innerHTML = '';
+    list.forEach(item => {
+      const catName = typeof item === 'object' ? item._id : item;
+      if (!catName || catName.trim() === '') return;
+
+      const btn = document.createElement('button');
+      btn.className = `h-cat-chip ${catName.toLowerCase() === currentCategory.toLowerCase() ? 'active' : ''}`;
+      btn.textContent = catName.toLowerCase() === 'all' ? 'All' : catName;
+
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.h-cat-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = catName.toLowerCase();
+        currentPage = 1;
+        loadVideos();
+      });
+
+      catsBar.appendChild(btn);
+    });
+  }
+
+  async function loadCategories() {
+    // 1. Immediately render default categories to avoid layout jump
+    renderCategoryChips(defaultCategories);
+
+    // 2. Fetch from backend to sync any new dynamic categories
     try {
       const res = await fetch(`${API_BASE}/api/categories?t=${Date.now()}`);
       const data = await res.json();
-
-      if (data.success && Array.isArray(data.data) && catsBar) {
-        catsBar.innerHTML = '';
-        data.data.forEach(cat => {
-          const btn = document.createElement('button');
-          btn.className = `h-cat-chip ${cat._id === currentCategory ? 'active' : ''}`;
-          btn.textContent = cat._id === 'all' ? 'All' : cat._id;
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.h-cat-chip').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentCategory = cat._id;
-            currentPage = 1;
-            loadVideos();
-          });
-          catsBar.appendChild(btn);
-        });
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        renderCategoryChips(data.data);
       }
     } catch (err) {
-      console.warn('Category fetch error:', err);
+      console.warn('Using default category set:', err);
     }
 
+    // 3. Render 20 Image Categories at Bottom
+    const bottomGrid = document.getElementById('imageCategoriesGrid');
     if (bottomGrid) {
       bottomGrid.innerHTML = '';
-      const fallbackNames = [
-        'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
-        'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
-        'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
-        'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
-      ];
+      const showcaseNames = defaultCategories.filter(c => c !== 'all');
 
       for (let i = 1; i <= 20; i++) {
-        const catName = fallbackNames[i - 1] || `Category ${i}`;
+        const catName = showcaseNames[i - 1] || `Category ${i}`;
         const card = document.createElement('div');
         card.className = 'image-cat-card';
         card.innerHTML = `
@@ -79,8 +95,9 @@
         card.addEventListener('click', () => {
           currentCategory = catName.toLowerCase();
           currentPage = 1;
-          if (window.switchView) window.switchView('homeView', true);
+          renderCategoryChips(defaultCategories);
           loadVideos();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
         bottomGrid.appendChild(card);
       }
@@ -170,7 +187,6 @@
     });
   }
 
-  // --- Hold 1s -> Auto-plays preview at 1.0x (Normal speed) for 60 seconds ---
   function attachHoldAndSlidePreview(card, video) {
     const thumb = card.querySelector('.video-thumb');
     const title = card.querySelector('.video-title');
@@ -187,9 +203,7 @@
     let videoEl = null;
 
     thumb.addEventListener('contextmenu', (e) => e.preventDefault());
-    thumb.querySelectorAll('img').forEach(img => {
-      img.addEventListener('dragstart', (e) => e.preventDefault());
-    });
+    thumb.querySelectorAll('img').forEach(img => img.addEventListener('dragstart', (e) => e.preventDefault()));
 
     function stopPreview() {
       if (pressTimer) {
@@ -233,7 +247,7 @@
       videoEl.setAttribute('webkit-playsinline', '');
       videoEl.preload = 'auto';
       videoEl.src = video.playableUrl;
-      videoEl.playbackRate = 1.0; // Playback at normal 1.0x speed
+      videoEl.playbackRate = 1.0;
 
       videoEl.oncanplay = () => {
         if (loading) loading.classList.remove('active');
@@ -373,6 +387,7 @@
     currentCategory = 'all';
     currentPage = 1;
     currentSort = 'gem';
+    renderCategoryChips(defaultCategories);
     loadVideos();
   };
 

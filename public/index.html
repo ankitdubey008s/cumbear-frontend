@@ -17,10 +17,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-  <!-- ExoClick Core Ad Provider -->
+  <!-- ExoClick Ad Provider -->
   <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
 
-  <!-- POPUNDER SCRIPT (Dynamic Mobile 6056600 / Web 6056598) -->
+  <!-- POPUNDER SCRIPT (Mobile 6056600 / Web 6056598) -->
   <script type="application/javascript">
   (function() {
       function randStr(e,t){for(var n="",r=t||"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",o=0;o<e;o++)n+=r.charAt(Math.floor(Math.random()*r.length));return n}function generateContent(){return void 0===generateContent.val&&(generateContent.val="document.dispatchEvent("+randStr(4*Math.random()+3)+");"),generateContent.val}try{Object.defineProperty(document.currentScript,"innerHTML",{get:generateContent}),Object.defineProperty(document.currentScript,"textContent",{get:generateContent})}catch(e){};
@@ -109,6 +109,23 @@
       </button>
     </header>
 
+    <!-- GLOBAL INTACT CATEGORY BAR (Persistent across Home, Search, Player) -->
+    <div class="horizontal-cats" id="globalHorizontalCats">
+      <button class="h-cat-chip active" data-cat="all">All</button>
+    </div>
+
+    <!-- GLOBAL INTACT RESPONSIVE TOP BANNER (Mobile: 300x50, Desktop: 728x90) -->
+    <div class="global-ad-banner-wrapper" id="globalTopBannerWrapper">
+      <div class="ad-banner-mobile">
+        <ins class="eas6a97888e2" data-zoneid="6057032"></ins>
+        <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+      </div>
+      <div class="ad-banner-desktop">
+        <ins class="eas6a97888e2" data-zoneid="6056586"></ins>
+        <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+      </div>
+    </div>
+
     <!-- OFF-CANVAS SIDEBAR -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <aside class="site-sidebar" id="siteSidebar">
@@ -117,7 +134,6 @@
         <button class="close-btn" id="closeSidebar" aria-label="Close Sidebar">✕</button>
       </div>
       <div class="sidebar-content">
-        <!-- Direct Chrome Install CTA -->
         <button class="app-install-btn" id="appInstallBtn">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <div class="app-install-text">
@@ -225,22 +241,6 @@
 
       <!-- VIEW 1: HOME VIEW -->
       <section id="homeView" class="view-section active">
-        <div class="horizontal-cats" id="horizontalCats">
-          <button class="h-cat-chip active" data-cat="all">All</button>
-        </div>
-
-        <!-- NEW BANNER PLACEMENT: Desktop 728x90 (6056586) & Mobile 300x50 (6056594) -->
-        <div class="ad-top-banner-wrapper">
-          <div class="ad-top-mobile">
-            <ins class="eas6a97888e10" data-zoneid="6056594"></ins>
-            <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
-          </div>
-          <div class="ad-top-desktop">
-            <ins class="eas6a97888e2" data-zoneid="6056586"></ins>
-            <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
-          </div>
-        </div>
-
         <div class="view-tabs">
           <button class="view-tab active" data-view="homeView">
             <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
@@ -268,7 +268,7 @@
           </div>
         </div>
 
-        <!-- 50 Videos Grid (With CrakRevenue Native Ads after every 5 videos) -->
+        <!-- 50 Videos Grid (In-Feed Native Ads every 5 videos) -->
         <div class="video-grid" id="videoGrid"></div>
 
         <div class="bottom-categories-section">

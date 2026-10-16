@@ -172,7 +172,7 @@ body {
 @media (min-width: 1024px) { :root { --grid-cols: 4; } }
 
 main {
-  padding-top: var(--header-height);
+  padding-top: 10px !important;
   padding-bottom: calc(var(--footer-height) + 120px);
   min-height: 100vh;
 }

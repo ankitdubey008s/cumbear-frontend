@@ -1,36 +1,70 @@
 /* ==========================================================================
-   ADS MONETIZATION STYLES (ExoClick & CrakRevenue Integration)
+   ADS MONETIZATION STYLES - CLEAN NATIVE 300x250 & TARGETED VISIBILITY
    ========================================================================== */
 
-/* Top Banners: 300x50 on Mobile, 728x90 on Desktop */
-.ad-top-banner-wrapper {
+/* The outer wrapper: centered with clean top/bottom margins */
+.global-ad-banner-wrapper {
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 10px 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 10px auto !important;
+  padding: 0 !important;
   background: transparent !important;
+  position: relative;
+  z-index: 10;
+  clear: both;
 }
 
-.ad-top-mobile {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 300px;
-  min-height: 50px;
+/* Mobile Banner: exact native 300x250, crisp and centered with no scaling */
+.ad-banner-mobile {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 300px !important;
+  height: 250px !important;
+  min-height: 250px !important;
+  max-width: 100%;
+  margin: 0 auto !important;
+  background: transparent !important;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.ad-top-desktop {
-  display: none;
+.ad-banner-mobile ins,
+.ad-banner-mobile iframe {
+  display: block !important;
+  margin: 0 auto !important;
+  transform: none !important; /* Removed scale: renders native & sharp */
+  border-radius: 8px;
+}
+
+/* Desktop Leaderboard: 728x90 (Zone 6056586) */
+.ad-banner-desktop {
+  display: none !important;
   justify-content: center;
   align-items: center;
   width: 728px;
   min-height: 90px;
+  margin: 0 auto;
 }
 
 @media (min-width: 768px) {
-  .ad-top-mobile { display: none; }
-  .ad-top-desktop { display: flex; }
+  .ad-banner-mobile {
+    display: none !important;
+  }
+  .ad-banner-desktop {
+    display: flex !important;
+  }
+}
+
+/* HIDE BANNER COMPLETELY ON SHORTS AND PLAYER PAGES */
+#shortsView.active ~ .global-ad-banner-wrapper,
+#playerView.active ~ .global-ad-banner-wrapper,
+body.shorts-mode .global-ad-banner-wrapper,
+body.player-mode .global-ad-banner-wrapper,
+.hide-global-banner {
+  display: none !important;
 }
 
 /* Floating Video Slider Popup (Zone 6056606) */
@@ -44,7 +78,7 @@
   border-radius: 12px;
   padding: 6px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
-  display: none; /* Controlled by ads.js */
+  display: none;
   max-width: 320px;
   overflow: visible;
 }
@@ -66,10 +100,9 @@
   align-items: center;
   justify-content: center;
   z-index: 996;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
 
-/* CrakRevenue In-Feed Native Card (Every 5th Video) */
+/* CrakRevenue In-Feed Native Card */
 .crak-native-card {
   background: transparent;
   text-decoration: none;
@@ -137,7 +170,7 @@
   color: var(--accent-burgundy-light);
 }
 
-/* CrakRevenue Full-Screen Shorts Card Interstitial (Every 10th Short) */
+/* CrakRevenue Full-Screen Shorts Card Interstitial */
 .crak-short-interstitial {
   height: calc(100dvh - var(--header-height));
   width: 100%;

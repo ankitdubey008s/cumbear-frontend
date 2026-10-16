@@ -10,7 +10,7 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  const VAST_PLAYER_URL = 'https://s.magsrv.com/v1/vast.php?idz=6056604';
+  const VAST_PLAYER_URL = "https://s.magsrv.com/v1/vast.php?idz=6056604";
 
   let currentVideo = null;
 

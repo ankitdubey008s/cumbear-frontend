@@ -1,8 +1,6 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER
- * Features: Top Back Arrow, Mute/Unmute Pill, Watch Full Scene, Working More Cut
- * and 8dp Watermarked Video Downloader
+ * CUMBEAR SHORTS CONTROLLER (In-Stream Vertical VAST Ad Engine Fix)
  * ==========================================================================
  */
 
@@ -17,7 +15,7 @@
   let isVastPreRollPlayed = false;
   let activeVideoElement = null;
   let currentActiveShort = null;
-  let isGlobalMuted = true; // All shorts start silent initially
+  let isGlobalMuted = true;
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -25,10 +23,12 @@
     return String(num);
   }
 
-  // --- 1. Load Shorts Stream ---
   window.loadShorts = async function (targetId = null) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
+
+    document.body.classList.add('shorts-mode');
+    isVastPreRollPlayed = false;
 
     container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;font-weight:700;">Loading CumBear Shorts...</div>';
 
@@ -55,7 +55,6 @@
     }
   };
 
-  // --- 2. Render Shorts with Top Bar Controls ---
   function renderShortsFeed() {
     const container = document.getElementById('shortsContainer');
     container.innerHTML = '';
@@ -85,19 +84,25 @@
       const safeTitle = (video.title || 'Untitled Short').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       card.innerHTML = `
-        <!-- Top Navigation Bar: Back on Left, Sound on Right -->
         <div class="shorts-top-bar">
           <button class="shorts-nav-btn back-btn-trigger" aria-label="Back to Home">
             <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
 
           <button class="shorts-sound-btn sound-btn-trigger" aria-label="Toggle Sound">
-            <svg class="icon-muted" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-            <svg class="icon-unmuted hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <svg class="icon-muted ${isGlobalMuted ? '' : 'hidden'}" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+            <svg class="icon-unmuted ${isGlobalMuted ? 'hidden' : ''}" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             <span class="sound-label">${isGlobalMuted ? 'UNMUTE' : 'MUTE'}</span>
           </button>
         </div>
 
+        <!-- 9:16 Vertical In-Stream Overlay Stage -->
+        <div class="ad-instream-stage hidden">
+          <video class="ad-instream-video" muted playsinline webkit-playsinline preload="auto"></video>
+          <div class="ad-instream-badge">Ad: <span class="ad-timer-count">3</span>s</div>
+        </div>
+
+        <!-- 16:9 Stage for Content Video -->
         <div class="short-video-stage">
           <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
           <video class="short-video-element" playsinline webkit-playsinline loop preload="auto" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
@@ -168,7 +173,7 @@
 
         <div class="preview-ended-overlay hidden">
           <div class="preview-ended-title">3-Minute Preview Ended</div>
-          <div class="preview-ended-subtitle">Watch the full uncut video on CumBear Player</div>
+          <div class="preview-ended-subtitle">Watch the full video on CumBear Player</div>
           <button class="watch-full-btn" data-id="${video._id}">Watch Full Scene</button>
         </div>
       `;
@@ -180,7 +185,6 @@
     setupShortsObserver();
   }
 
-  // --- 3. Card Events: Back, Sound, Full Video, Gestures ---
   function attachShortCardEvents(card, video) {
     const backBtn = card.querySelector('.back-btn-trigger');
     const soundBtn = card.querySelector('.sound-btn-trigger');
@@ -188,7 +192,7 @@
     const likeBtn = card.querySelector('.like-btn');
     const shareBtn = card.querySelector('.share-btn');
     const moreBtn = card.querySelector('.more-btn');
-    const videoEl = card.querySelector('video');
+    const videoEl = card.querySelector('video.short-video-element');
     const poster = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
@@ -205,29 +209,28 @@
     let isHoldingSpeed = false;
     let holdStartY = 0;
 
-    // Top-Left Back Arrow -> Go to Home
     if (backBtn) {
       backBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         window.stopShorts();
+        document.body.classList.remove('shorts-mode');
         if (window.switchView) window.switchView('homeView', true);
       });
     }
 
-    // Top-Right Sound Toggle -> Mute / Unmute
     if (soundBtn) {
       soundBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         isGlobalMuted = !isGlobalMuted;
-        updateSoundButtonsAcrossAllShorts();
+        updateSoundStateAcrossAllShorts();
       });
     }
 
-    // Watch Full Video -> Launch Player View
     watchFullBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         window.stopShorts();
+        document.body.classList.remove('shorts-mode');
         const vidId = btn.dataset.id || video._id;
         if (window.switchView) window.switchView('playerView', true);
         if (typeof window.loadPlayerVideoById === 'function') {
@@ -259,7 +262,6 @@
       heart.classList.add('animate');
     }
 
-    // Tap & Double Tap Logic
     card.addEventListener('pointerup', (e) => {
       if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar')) return;
       if (isHoldingSpeed) return;
@@ -283,7 +285,6 @@
       lastTap = now;
     });
 
-    // Hold at side for 2x & pull down to lock at 2x
     sideZones.forEach(zone => {
       zone.addEventListener('pointerdown', (e) => {
         holdStartY = e.clientY;
@@ -348,7 +349,6 @@
       });
     }
 
-    // More Options Modal Sheet
     if (moreBtn) {
       moreBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -370,9 +370,9 @@
     };
   }
 
-  function updateSoundButtonsAcrossAllShorts() {
+  function updateSoundStateAcrossAllShorts() {
     document.querySelectorAll('.short-card-item').forEach(card => {
-      const v = card.querySelector('video');
+      const v = card.querySelector('video.short-video-element');
       const soundBtn = card.querySelector('.sound-btn-trigger');
       if (!v || !soundBtn) return;
 
@@ -396,14 +396,14 @@
   function setupShortsObserver() {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        const videoEl = entry.target.querySelector('video');
+        const videoEl = entry.target.querySelector('video.short-video-element');
         const shortIndex = parseInt(entry.target.dataset.index, 10);
         const shortId = entry.target.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
           activeVideoElement = videoEl;
           history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
-          playActiveShort(videoEl, shortIndex);
+          playActiveShort(entry.target, videoEl, shortIndex);
         } else {
           if (videoEl) {
             videoEl.pause();
@@ -417,35 +417,110 @@
     document.querySelectorAll('.short-card-item').forEach(el => observer.observe(el));
   }
 
-  async function playActiveShort(videoEl, index) {
+  // Robust VAST Media Extractor with Multiple Fallbacks
+  async function resolveVastMediaUrl(vastUrl) {
+    // 1. Direct fetch attempt
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max wait
+
+      const res = await fetch(vastUrl, { signal: controller.signal, credentials: 'omit' });
+      clearTimeout(timeoutId);
+
+      const xmlText = await res.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+      const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const src = (mediaFiles[i].textContent || '').trim();
+        if (src.startsWith('http')) {
+          return src;
+        }
+      }
+
+      // Check CDATA content
+      const cdataMatches = xmlText.match(/https?:\/\/[^"'\s<>]+\.mp4[^"'\s<>]*/i);
+      if (cdataMatches && cdataMatches[0]) {
+        return cdataMatches[0].replace(/&amp;/g, '&');
+      }
+    } catch (e) {
+      console.warn('VAST fetch attempt failed, using direct stream resolution:', e.message);
+    }
+
+    // 2. Fallback to direct ExoClick CDN media source
+    return 'https://s.magsrv.com/v1/vast.php?idzone=6056608';
+  }
+
+  async function playActiveShort(cardElement, videoEl, index) {
     if (!videoEl) return;
 
-    if (index === 0 && !isVastPreRollPlayed) {
+    const adStage = cardElement.querySelector('.ad-instream-stage');
+    const adVideo = cardElement.querySelector('.ad-instream-video');
+    const timerText = cardElement.querySelector('.ad-timer-count');
+
+    // Fire in-stream VAST on initial video
+    if (index === 0 && !isVastPreRollPlayed && adStage && adVideo) {
       isVastPreRollPlayed = true;
-      try {
-        const res = await fetch(VAST_SHORTS_URL);
-        const xmlText = await res.text();
-        const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
-        const mediaUrl = xml.querySelector('MediaFile')?.textContent?.trim();
 
-        if (mediaUrl) {
-          videoEl.src = mediaUrl;
-          videoEl.muted = isGlobalMuted;
-          videoEl.load();
-          await videoEl.play().catch(() => {});
+      const mediaUrl = await resolveVastMediaUrl(VAST_SHORTS_URL);
 
-          setTimeout(() => {
-            videoEl.src = videoEl.dataset.src;
-            videoEl.muted = isGlobalMuted;
-            videoEl.load();
-            videoEl.play().catch(() => {});
-          }, 3000);
-          return;
+      if (mediaUrl) {
+        adStage.classList.remove('hidden');
+        adVideo.setAttribute('muted', '');
+        adVideo.muted = true;
+        adVideo.setAttribute('playsinline', '');
+        adVideo.setAttribute('webkit-playsinline', '');
+        adVideo.src = mediaUrl;
+        adVideo.load();
+
+        // Attempt playback immediately
+        const playPromise = adVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.warn('Ad auto-play prevented, proceeding to content:', err);
+            finishAdAndPlayContent();
+          });
         }
-      } catch (err) {
-        console.warn('VAST short pre-roll skipped:', err);
+
+        let secondsLeft = 3;
+        if (timerText) timerText.textContent = secondsLeft;
+
+        const countdownInterval = setInterval(() => {
+          secondsLeft--;
+          if (timerText) timerText.textContent = secondsLeft;
+          if (secondsLeft <= 0) {
+            clearInterval(countdownInterval);
+            finishAdAndPlayContent();
+          }
+        }, 1000);
+
+        function finishAdAndPlayContent() {
+          clearInterval(countdownInterval);
+          adVideo.pause();
+          adVideo.removeAttribute('src');
+          adVideo.load();
+          adStage.classList.add('hidden');
+
+          // Smooth handoff to 16:9 main video
+          if (videoEl.src !== videoEl.dataset.src) {
+            videoEl.src = videoEl.dataset.src;
+            videoEl.load();
+          }
+          videoEl.muted = isGlobalMuted;
+          videoEl.play().catch(() => {
+            videoEl.muted = true;
+            videoEl.play();
+          });
+        }
+
+        adVideo.onended = finishAdAndPlayContent;
+        adVideo.onerror = finishAdAndPlayContent;
+        return;
       }
     }
+
+    if (adStage) adStage.classList.add('hidden');
 
     if (videoEl.src !== videoEl.dataset.src) {
       videoEl.src = videoEl.dataset.src;
@@ -458,13 +533,11 @@
     });
   }
 
-  // --- 4. More Options Modal: Working Cut Button & 8dp Watermark Download ---
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
     const downloadBtn = document.getElementById('downloadShortBtn');
 
-    // Working Cut / Close button
     if (closeBtn && modal) {
       closeBtn.onclick = (e) => {
         e.preventDefault();
@@ -473,29 +546,22 @@
       };
     }
 
-    // Tap outside modal content also dismisses it immediately
     if (modal) {
       modal.onclick = (e) => {
-        if (e.target === modal) {
-          modal.classList.add('hidden');
-        }
+        if (e.target === modal) modal.classList.add('hidden');
       };
     }
 
-    // Direct Watermarked Download (Attaches 8dp CumBear watermark onto video bottom right)
     if (downloadBtn) {
       downloadBtn.onclick = async (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         if (!currentActiveShort) return;
         if (modal) modal.classList.add('hidden');
 
         try {
           const videoUrl = currentActiveShort.playableUrl;
           const fileName = `CumBear_${currentActiveShort._id || 'short'}.mp4`;
-
-          // Fetch video stream blob and initiate direct user download
           const response = await fetch(videoUrl);
           const blob = await response.blob();
           const blobUrl = URL.createObjectURL(blob);
@@ -508,7 +574,6 @@
           document.body.removeChild(link);
           URL.revokeObjectURL(blobUrl);
         } catch (err) {
-          // Fallback if CORS prevents blob creation: direct download anchor
           const link = document.createElement('a');
           link.href = currentActiveShort.playableUrl;
           link.download = `CumBear_${currentActiveShort._id}.mp4`;
@@ -526,6 +591,10 @@
     document.querySelectorAll('.short-video-element').forEach(v => {
       v.pause();
       v.currentTime = 0;
+    });
+    document.querySelectorAll('.ad-instream-video').forEach(a => {
+      a.pause();
+      a.removeAttribute('src');
     });
   };
 })();

@@ -1,26 +1,27 @@
 /* ==========================================================================
-   HOME VIEW COMPONENT
+   HOME VIEW & CATEGORY BAR STYLES (OVERLAP FIX)
    ========================================================================== */
 
-/* Sticky Category Chips */
 .horizontal-cats {
-  display: flex;
-  gap: 6px;
+  display: flex !important;
+  gap: 8px;
   overflow-x: auto;
-  padding: 10px 12px;
+  padding: 8px 12px;
   scrollbar-width: none;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(10, 10, 15, 0.98);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   position: sticky;
   top: var(--header-height);
+  margin-top: var(--header-height); /* CRITICAL FIX: Pushes below fixed header */
   z-index: 100;
   border-bottom: 1px solid var(--border-color);
+  min-height: 46px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.horizontal-cats::-webkit-scrollbar {
-  display: none;
-}
+.horizontal-cats::-webkit-scrollbar { display: none; }
 
 .h-cat-chip {
   flex-shrink: 0;
@@ -29,32 +30,29 @@
   border: 1px solid var(--border-color);
   border-radius: 20px;
   color: var(--text-secondary);
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: capitalize;
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--transition-fast);
   outline: none;
+  transition: all var(--transition-fast);
 }
 
-.h-cat-chip:active {
-  transform: scale(0.95);
-}
-
+.h-cat-chip:active { transform: scale(0.95); }
 .h-cat-chip.active {
-  background: var(--accent-burgundy);
-  border-color: var(--accent-burgundy);
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(124, 29, 64, 0.45);
+  background: var(--accent-burgundy) !important;
+  border-color: var(--accent-burgundy) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(124, 29, 64, 0.5);
 }
 
-/* Home / Shorts Pill Buttons */
 .view-tabs {
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 12px 10px 4px;
+  padding: 10px 10px 4px;
+  width: 100%;
 }
 
 .view-tab {
@@ -75,10 +73,7 @@
   outline: none;
 }
 
-.view-tab:active {
-  transform: scale(0.94);
-}
-
+.view-tab:active { transform: scale(0.94); }
 .view-tab.active {
   background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
   border-color: var(--accent-burgundy);
@@ -86,15 +81,8 @@
   box-shadow: 0 3px 14px rgba(124, 29, 64, 0.4);
 }
 
-.view-tab svg {
-  width: 17px;
-  height: 17px;
-  stroke: currentColor;
-  stroke-width: 2.2;
-  fill: none;
-}
+.view-tab svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2.2; fill: none; }
 
-/* Filter Bar */
 .filter-bar {
   display: flex;
   justify-content: space-between;
@@ -103,17 +91,9 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.filter-brand {
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #ffffff;
-}
+.filter-brand { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; color: #ffffff; }
 
-.filter-dropdown {
-  position: relative;
-}
-
+.filter-dropdown { position: relative; }
 .filter-btn {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -128,14 +108,7 @@
   cursor: pointer;
   outline: none;
 }
-
-.filter-btn svg {
-  width: 14px;
-  height: 14px;
-  stroke: currentColor;
-  stroke-width: 2.2;
-  fill: none;
-}
+.filter-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.2; fill: none; }
 
 .filter-menu {
   position: absolute;
@@ -151,20 +124,6 @@
   overflow: hidden;
 }
 
-.filter-menu.show {
-  display: block;
-  animation: fadeInUp 0.2s ease forwards;
-}
-
-.filter-option {
-  padding: 10px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.filter-option:active, .filter-option.active {
-  background: var(--accent-burgundy);
-  color: #ffffff;
-}
+.filter-menu.show { display: block; }
+.filter-option { padding: 10px 14px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+.filter-option:active, .filter-option.active { background: var(--accent-burgundy); color: #ffffff; }

@@ -1,188 +1,115 @@
 /**
  * ==========================================================================
- * CUMBEAR SPA CORE ROUTER & LIFECYCLE (2026 Engine)
+ * CUMBEAR CORE APP CONTROLLER & ROUTER
  * ==========================================================================
  */
 
 (function () {
   'use strict';
 
-  // --- 1. Age Verification Gate Logic ---
-  window.verifyAge = function () {
-    try {
-      localStorage.setItem('cumbear_age_verified', '1');
-    } catch (e) {
-      console.warn('LocalStorage unavailable:', e);
-    }
-    const gate = document.getElementById('ageGate');
-    const app = document.getElementById('mainApp');
-    if (gate) gate.classList.add('hidden');
-    if (app) app.classList.remove('hidden');
-
-    // Trigger router and resolve initial state once verified
-    initRouter();
-    resolveInitialRoute();
-  };
-
-  function checkAgeStatus() {
-    let verified = false;
-    try {
-      verified = localStorage.getItem('cumbear_age_verified') === '1';
-    } catch (e) {
-      verified = false;
-    }
-
-    const gate = document.getElementById('ageGate');
-    const app = document.getElementById('mainApp');
-
-    if (verified) {
-      if (gate) gate.classList.add('hidden');
-      if (app) app.classList.remove('hidden');
-      initRouter();
-      resolveInitialRoute();
-    } else {
-      if (gate) gate.classList.remove('hidden');
-      if (app) app.classList.add('hidden');
-    }
+  function verifyAge() {
+    const ageGate = document.getElementById('ageGate');
+    const mainApp = document.getElementById('mainApp');
+    if (ageGate) ageGate.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+    try { sessionStorage.setItem('cumbear_age_verified', 'true'); } catch (e) {}
   }
 
-  // --- 2. View Switching & Router Engine ---
-  const validViews = ['homeView', 'shortsView', 'categoriesView', 'playerView'];
+  window.verifyAge = verifyAge;
 
-  window.switchView = function (viewId, pushHistory = true) {
-    if (!validViews.includes(viewId)) {
-      viewId = 'homeView';
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      if (sessionStorage.getItem('cumbear_age_verified') === 'true') {
+        const ageGate = document.getElementById('ageGate');
+        const mainApp = document.getElementById('mainApp');
+        if (ageGate) ageGate.classList.add('hidden');
+        if (mainApp) mainApp.classList.remove('hidden');
+      }
+    } catch (e) {}
+
+    // Global listener for ALL buttons that have data-view="shortsView"
+    document.querySelectorAll('[data-view="shortsView"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.switchView('shortsView', true);
+      });
+    });
+
+    // Global listener for ALL buttons that have data-view="homeView"
+    document.querySelectorAll('[data-view="homeView"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.switchView('homeView', true);
+      });
+    });
+  });
+
+  window.switchView = function (targetViewId, pushHistory = true) {
+    const views = ['homeView', 'shortsView', 'categoriesView', 'playerView'];
+
+    views.forEach(v => {
+      const el = document.getElementById(v);
+      if (el) el.classList.add('hidden');
+    });
+
+    const activeEl = document.getElementById(targetViewId);
+    if (activeEl) {
+      activeEl.classList.remove('hidden');
+      activeEl.classList.add('active');
     }
 
-    // Stop and unload shorts playback if navigating away from shorts
-    if (viewId !== 'shortsView' && typeof window.stopShorts === 'function') {
-      window.stopShorts();
-    }
-
-    // Pause player video if navigating away from player
-    if (viewId !== 'playerView') {
-      const playerVid = document.getElementById('mainPlayerVideo');
-      if (playerVid && !playerVid.paused) {
-        playerVid.pause();
+    // Toggle immersion class for Shorts
+    if (targetViewId === 'shortsView') {
+      document.body.classList.add('shorts-mode');
+      if (typeof window.loadShorts === 'function') {
+        window.loadShorts();
+      }
+    } else {
+      document.body.classList.remove('shorts-mode');
+      if (typeof window.stopShorts === 'function') {
+        window.stopShorts();
       }
     }
 
-    // Toggle active classes on sections
-    document.querySelectorAll('.view-section').forEach(sec => {
-      sec.classList.add('hidden');
-      sec.classList.remove('active');
-    });
-
-    const targetSec = document.getElementById(viewId);
-    if (targetSec) {
-      targetSec.classList.remove('hidden');
-      targetSec.classList.add('active');
+    // Update Banner and Ad visibility
+    if (typeof window.updateAdVisibility === 'function') {
+      window.updateAdVisibility(targetViewId);
     }
 
-    // Sync active state on tabs (Home/Shorts pill buttons)
+    // Update bottom/tab button states
     document.querySelectorAll('.view-tab').forEach(tab => {
-      tab.classList.toggle('active', tab.getAttribute('data-view') === viewId);
+      if (tab.getAttribute('data-view') === targetViewId) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
     });
 
-    // Sync active state on sidebar links
-    document.querySelectorAll('.site-sidebar .nav-link').forEach(link => {
-      link.classList.toggle('active', link.getAttribute('data-view') === viewId);
-    });
-
-    // Update Browser History Stack
     if (pushHistory) {
-      let targetPath = '/';
-      if (viewId === 'shortsView') targetPath = '/shorts';
-      else if (viewId === 'categoriesView') targetPath = '/?categories=1';
-      else if (viewId === 'homeView') targetPath = '/';
-
-      history.pushState({ view: viewId }, '', targetPath);
+      history.pushState({ view: targetViewId }, '', targetViewId === 'homeView' ? '/' : `/#${targetViewId}`);
     }
 
-    // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- 3. Initial URL & Deep-Link Resolver ---
-  function resolveInitialRoute() {
-    const path = window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-
-    // Deep link: Shorts URL (e.g. /shorts or /shorts/123)
-    if (path.startsWith('/shorts')) {
-      const parts = path.split('/').filter(Boolean);
-      const shortId = parts[1] || null;
-      window.switchView('shortsView', false);
-      if (typeof window.loadShorts === 'function') {
-        window.loadShorts(shortId);
-      }
-      return;
-    }
-
-    // Deep link: Player Video URL (/?v=VIDEO_ID)
-    if (params.has('v')) {
-      const videoId = params.get('v');
-      window.switchView('playerView', false);
-      if (typeof window.loadPlayerVideoById === 'function') {
-        window.loadPlayerVideoById(videoId);
-      }
-      return;
-    }
-
-    // Deep link: Category filter (/?category=MILF)
-    if (params.has('category')) {
-      const category = params.get('category');
-      window.switchView('homeView', false);
-      if (typeof window.setCategoryFilter === 'function') {
-        window.setCategoryFilter(category);
-      }
-      return;
-    }
-
-    // Deep link: Search term (/?search=blonde)
-    if (params.has('search')) {
-      const searchTerm = params.get('search');
-      window.switchView('categoriesView', false);
-      if (typeof window.performSearch === 'function') {
-        window.performSearch(searchTerm);
-      }
-      return;
-    }
-
-    // Default route
-    window.switchView('homeView', false);
-  }
-
-  // --- 4. History Popstate Listener ---
-  function initRouter() {
-    window.addEventListener('popstate', (e) => {
-      if (e.state && e.state.view) {
-        window.switchView(e.state.view, false);
-      } else {
-        resolveInitialRoute();
-      }
-    });
-
-    // Delegate view-tab clicks (Home / Shorts pills)
-    document.addEventListener('click', (e) => {
-      const tab = e.target.closest('.view-tab');
-      if (tab) {
-        e.preventDefault();
-        const targetView = tab.getAttribute('data-view');
-        if (targetView) {
-          window.switchView(targetView, true);
-          if (targetView === 'shortsView' && typeof window.loadShorts === 'function') {
-            window.loadShorts();
-          }
+  // Header Logo click handler
+  document.addEventListener('DOMContentLoaded', () => {
+    const logoBtn = document.getElementById('homeLogoBtn');
+    if (logoBtn) {
+      logoBtn.addEventListener('click', () => {
+        window.switchView('homeView', true);
+        if (typeof window.resetHomeState === 'function') {
+          window.resetHomeState();
         }
-      }
-    });
-  }
+      });
+    }
+  });
 
-  // Initialize on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkAgeStatus);
-  } else {
-    checkAgeStatus();
-  }
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+      window.switchView(e.state.view, false);
+    } else {
+      window.switchView('homeView', false);
+    }
+  });
 })();
