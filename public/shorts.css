@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SHORTS VIEW - FULL IMMERSION & TRUE 9:16 VERTICAL AD RATIO
+   SHORTS VIEW - STRICT 16:9 CONTENT & STRICT 9:16 VERTICAL AD REELS
    ========================================================================== */
 
 body.shorts-mode #siteHeader,
@@ -35,6 +35,10 @@ body.shorts-mode main {
   background: #000000;
 }
 .shorts-container::-webkit-scrollbar { display: none; }
+
+.shorts-container.scroll-locked {
+  overflow-y: hidden !important;
+}
 
 .short-card-item {
   height: 100dvh;
@@ -181,7 +185,7 @@ body.shorts-mode main {
 .shorts-sound-btn svg { width: 16px; height: 16px; fill: #ffffff; }
 
 /* ==========================================================================
-   TRUE 9:16 VERTICAL EXOCLICK AD CARD (NO CROPPING / NO ZOOM)
+   STRICT 9:16 REELS AD CARD (NATIVE INSTAGRAM REELS PROPORTIONS)
    ========================================================================== */
 .exoclick-short-vast-card {
   height: 100dvh;
@@ -197,26 +201,56 @@ body.shorts-mode main {
   overflow: hidden;
 }
 
-/* Strict 9:16 mobile container: leaves room for bottom CTA without cutting top/bottom */
+/* Forces strict 9:16 aspect ratio on mobile & desktop with zero zoom */
 .vast-vertical-stage {
   position: relative;
-  width: 100%;
-  max-width: 400px;
-  height: calc(100dvh - 90px);
-  max-height: calc(100vw * 16 / 9);
+  height: 100dvh;
+  max-height: 100dvh;
   aspect-ratio: 9/16;
+  width: auto;
+  max-width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #000000;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .vast-vertical-stage video {
   width: 100%;
   height: 100%;
-  object-fit: contain !important; /* Preserves exact ad proportions without zoom */
+  aspect-ratio: 9/16;
+  object-fit: contain !important;
   background: #000000;
+}
+
+/* 5-Second Unskippable Countdown Pill */
+.vast-ad-skip-pill {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  z-index: 90;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+.vast-ad-skip-pill.unlocked {
+  background: var(--accent-burgundy) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 15px rgba(124, 29, 64, 0.8);
 }
 
 /* High-CPM ExoClick Bottom CTA Bar */
@@ -225,7 +259,7 @@ body.shorts-mode main {
   bottom: max(16px, env(safe-area-inset-bottom));
   left: 16px;
   right: 16px;
-  z-index: 80;
+  z-index: 85;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -267,7 +301,7 @@ body.shorts-mode main {
   transform: scale(0.97);
 }
 
-/* Central HUD & Double-Tap Heart */
+/* HUD Controls */
 .center-play-hud {
   position: absolute;
   top: 50%;

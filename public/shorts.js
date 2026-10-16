@@ -1,8 +1,10 @@
 /**
  * ==========================================================================
  * CUMBEAR SHORTS CONTROLLER
+ * - 16:9 Content Shorts on all devices
+ * - Strict 9:16 ExoClick Vertical In-Stream Ad with 5s Unskippable Lock
  * - First Short Tap -> CrakRevenue SmartLink redirect
- * - Every 3 Shorts -> Pure ExoClick Vertical In-Stream (9:16) with ExoClick Click attribution
+ * - Single Video Network Isolation (Terminates previous video buffering)
  * ==========================================================================
  */
 
@@ -10,10 +12,8 @@
   'use strict';
 
   const API_BASE = 'https://cumbear-backend.vercel.app';
-  // CrakRevenue SmartLink ONLY for initial short engagement
   const CRAK_FIRST_TAP_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
   
-  // ExoClick Vertical Zone
   const EXOCLICK_VAST_ZONE = '6056608';
   const EXOCLICK_VAST_URL = `https://s.magsrv.com/v1/vast.php?idzone=${EXOCLICK_VAST_ZONE}`;
   const EXOCLICK_DEFAULT_CLICK = `https://s.magsrv.com/click.php?idzone=${EXOCLICK_VAST_ZONE}`;
@@ -24,6 +24,7 @@
   let isGlobalMuted = true;
   let isFirstPlayTriggered = false;
   let currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
+  let activeAdTimer = null;
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -183,6 +184,9 @@
         vastCard.dataset.isVastAd = 'true';
 
         vastCard.innerHTML = `
+          <!-- 5-Second Unskippable Countdown / Skip Button -->
+          <button class="vast-ad-skip-pill" id="vastSkipPill_${index}">Ad: 5s</button>
+
           <div class="vast-vertical-stage" id="exoclickAdStage_${index}">
             <video class="vast-vertical-video" muted playsinline webkit-playsinline></video>
           </div>
@@ -196,7 +200,6 @@
           </div>
         `;
 
-        // Direct ExoClick Click Handler
         const stageEl = vastCard.querySelector(`#exoclickAdStage_${index}`);
         const btnEl = vastCard.querySelector(`#exoclickVisitBtn_${index}`);
 
@@ -245,7 +248,6 @@
         isFirstPlayTriggered = true;
         firstPlayCover.classList.add('hidden');
 
-        // Redirect to CrakRevenue on initial play
         window.open(CRAK_FIRST_TAP_SMARTLINK, '_blank', 'noopener,noreferrer');
 
         videoEl.src = videoEl.dataset.src;
@@ -455,13 +457,16 @@
 
   // --- Instagram-style Single Video Isolation ---
   function setupShortsObserver() {
+    const container = document.getElementById('shortsContainer');
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         // A. ExoClick 9:16 Vertical In-Stream Card
         if (entry.target.dataset.isVastAd === 'true') {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            handleExoclickVastCard(entry.target);
+            handleExoclickVastCard(entry.target, container);
           } else {
+            if (activeAdTimer) clearInterval(activeAdTimer);
             const adV = entry.target.querySelector('video.vast-vertical-video');
             if (adV) {
               adV.pause();
@@ -498,6 +503,7 @@
             videoEl.play();
           });
         } else {
+          // Drop network downloads immediately
           if (videoEl) {
             videoEl.pause();
             videoEl.removeAttribute('src');
@@ -513,8 +519,8 @@
     document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
   }
 
-  // Parse ExoClick MediaFile and ClickThrough URL
-  async function handleExoclickVastCard(adCard) {
+  // Parse ExoClick MediaFile and manage 5-second unskippable countdown
+  async function handleExoclickVastCard(adCard, container) {
     if (activeVideoElement) {
       activeVideoElement.pause();
       activeVideoElement.removeAttribute('src');
@@ -522,14 +528,18 @@
     }
 
     const adVideo = adCard.querySelector('.vast-vertical-video');
-    if (!adVideo) return;
+    const skipBtn = adCard.querySelector('.vast-ad-skip-pill');
+    if (!adVideo || !skipBtn) return;
+
+    // Lock scrolling for 5 seconds
+    container.classList.add('scroll-locked');
+    skipBtn.classList.remove('unlocked');
 
     try {
       const res = await fetch(EXOCLICK_VAST_URL);
       const text = await res.text();
       const xmlDoc = new DOMParser().parseFromString(text, 'text/xml');
       
-      // 1. Extract Media Video URL
       const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
       let mediaUrl = null;
       for (let i = 0; i < mediaFiles.length; i++) {
@@ -540,7 +550,6 @@
         }
       }
 
-      // 2. Extract ExoClick ClickThrough URL
       const clickThroughNode = xmlDoc.querySelector('ClickThrough');
       if (clickThroughNode) {
         const clickUrl = (clickThroughNode.textContent || '').trim();
@@ -561,6 +570,34 @@
       console.warn('ExoClick VAST fetch fallback:', e);
       currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
     }
+
+    // 5-Second Unskippable Countdown
+    let secondsLeft = 5;
+    skipBtn.textContent = `Ad: ${secondsLeft}s`;
+
+    if (activeAdTimer) clearInterval(activeAdTimer);
+
+    activeAdTimer = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft > 0) {
+        skipBtn.textContent = `Ad: ${secondsLeft}s`;
+      } else {
+        clearInterval(activeAdTimer);
+        activeAdTimer = null;
+
+        container.classList.remove('scroll-locked');
+        skipBtn.classList.add('unlocked');
+        skipBtn.textContent = 'Skip Ad ✕';
+
+        skipBtn.onclick = (e) => {
+          e.stopPropagation();
+          const nextCard = adCard.nextElementSibling;
+          if (nextCard) {
+            nextCard.scrollIntoView({ behavior: 'smooth' });
+          }
+        };
+      }
+    }, 1000);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -572,6 +609,7 @@
   });
 
   window.stopShorts = function () {
+    if (activeAdTimer) clearInterval(activeAdTimer);
     if (activeVideoElement) {
       activeVideoElement.pause();
       activeVideoElement.removeAttribute('src');
@@ -587,5 +625,7 @@
       v.removeAttribute('src');
       v.load();
     });
+    const container = document.getElementById('shortsContainer');
+    if (container) container.classList.remove('scroll-locked');
   };
 })();
