@@ -1,3 +1,33 @@
+# CumBear robots.txt
+# Updated 2026-10-18
+
 User-agent: *
 Allow: /
-Sitemap: https://www.cumbear.in/sitemap.xml
+Allow: /shorts
+Allow: /categories
+Allow: /?category=
+
+# Infinite dynamic routes — do not crawl
+Disallow: /watch/
+Disallow: /shorts/
+Disallow: /*?
+Disallow: /api/
+
+# Crawl politely
+Crawl-delay: 1
+
+# Advertising partners should not crawl
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemap (canonical domain)
+Sitemap: https://cumbear.in/sitemap.xml

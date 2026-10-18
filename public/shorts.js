@@ -1,231 +1,301 @@
 /**
  * ==========================================================================
- * CUMBEAR SHORTS CONTROLLER
- * - 16:9 Content Shorts on all devices
- * - Strict 9:16 ExoClick Vertical In-Stream Ad with 5s Unskippable Lock
- * - First Short Tap -> CrakRevenue SmartLink redirect
- * - Single Video Network Isolation (Terminates previous video buffering)
+ * CUMBEAR — SHORTS CONTROLLER
+ * --------------------------------------------------------------------------
+ * - Vertical 16:9 content feed with tap-to-play
+ * - First tap fires ExoClick popunder (once per 24h, gated by consent)
+ * - 9:16 VAST ad after every 3 shorts (5s skippable, hard 6s lock timeout)
+ * - Scroll-lock never traps user
+ * - Per-short URL: /shorts/:id
+ * - Full network isolation (only visible short has src)
+ *
+ * Public API:
+ *   window.loadShorts(targetId?)
+ *   window.stopShorts()
  * ==========================================================================
  */
-
 (function () {
   'use strict';
 
-  const API_BASE = 'https://cumbear-backend.vercel.app';
-  const CRAK_FIRST_TAP_SMARTLINK = 'https://t.datsk3.com/425367/3788/0?target=prerolls&po=6456&aff_sub5=SF_006OG000004lmDN';
-  
-  const EXOCLICK_VAST_ZONE = '6056608';
-  const EXOCLICK_VAST_URL = `https://s.magsrv.com/v1/vast.php?idzone=${EXOCLICK_VAST_ZONE}`;
-  const EXOCLICK_DEFAULT_CLICK = `https://s.magsrv.com/click.php?idzone=${EXOCLICK_VAST_ZONE}`;
+  if (window.__cumbearShortsLoaded) return;
+  window.__cumbearShortsLoaded = true;
 
-  let shortsData = [];
-  let activeVideoElement = null;
-  let currentActiveShort = null;
-  let isGlobalMuted = true;
-  let isFirstPlayTriggered = false;
-  let currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
-  let activeAdTimer = null;
-
-  function formatCount(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return String(num);
+  const CFG = window.CUMBEAR;
+  if (!CFG) {
+    console.warn('[CumBearShorts] config.js not loaded — aborting');
+    return;
   }
 
-  window.loadShorts = async function (targetId = null) {
+  const ZONES      = CFG.exo.zones;
+  const CONSENT    = CFG.consent;
+  const COOLDOWNS  = CONSENT.cookies;
+  const AD_EVERY   = 3;                          /* insert VAST after every N shorts */
+  const AD_SKIP_MS = 5000;                       /* 5s before skip unlocks */
+  const AD_LOCK_MAX_MS = 6000;                   /* hard unlock timeout */
+  const PREVIEW_MAX = CFG.ux.shortsPreviewMaxSeconds;  /* 180s */
+
+  /* ---------- state ---------- */
+  let shortsData = [];
+  let activeVideoEl = null;
+  let currentActiveId = null;
+  let observer = null;
+  let isGlobalMuted = true;
+  let currentVastRequestId = 0;
+  let adSkipTimer = null;
+  let adLockTimer = null;
+  let exoclickClickUrl = CFG.helpers.clickUrl(ZONES.shortsVast);
+
+  /* ---------- utils ---------- */
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function formatCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  function hashString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function stableViews(id) { return 10000 + (hashString(String(id) + 'v') % 9990000); }
+  function stableLikes(id) { return 1000 + (hashString(String(id) + 'l') % 99000); }
+
+  function consentAllows() {
+    return window.CumBearConsent && window.CumBearConsent.isAdAllowed() === true;
+  }
+
+  function cooldownAllows(cookieName) {
+    try {
+      const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + cookieName + '=([^;]+)'));
+      return !m;
+    } catch (e) { return true; }
+  }
+
+  /* ============================================================
+     FETCH + RENDER
+     ============================================================ */
+  window.loadShorts = function (targetId) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
-    isFirstPlayTriggered = false;
 
-    container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;font-weight:700;">Loading CumBear Shorts...</div>';
+    container.innerHTML =
+      '<div class="shorts-loading">Loading CumBear Shorts…</div>';
 
-    try {
-      const res = await fetch(`${API_BASE}/api/videos?page=1&limit=50&sort=gem&_=${Date.now()}`);
-      const json = await res.json();
+    const url = CFG.helpers.videoListUrl({
+      page: 1,
+      limit: 50,
+      sort: 'gem',
+      _: Date.now()
+    });
 
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+    fetch(url, { credentials: 'omit' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        if (!json || !json.success || !Array.isArray(json.data) || json.data.length === 0) {
+          container.innerHTML = '<div class="shorts-empty">No shorts available right now.</div>';
+          return;
+        }
+
         shortsData = json.data;
 
+        /* Pin target short to front if requested */
         if (targetId) {
-          const targetIndex = shortsData.findIndex(v => v._id === targetId);
-          if (targetIndex > -1) {
-            const [matched] = shortsData.splice(targetIndex, 1);
-            shortsData.unshift(matched);
+          const idx = shortsData.findIndex(function (v) { return v._id === targetId; });
+          if (idx > -1) {
+            const item = shortsData.splice(idx, 1)[0];
+            shortsData.unshift(item);
           }
         }
-        renderShortsFeed();
-      } else {
-        container.innerHTML = '<div style="color:#ffffff;text-align:center;padding:4rem;">No shorts available.</div>';
-      }
-    } catch (err) {
-      container.innerHTML = `<div style="color:#ef4444;text-align:center;padding:4rem;">Error: ${err.message}</div>`;
-    }
+
+        renderFeed();
+      })
+      .catch(function (err) {
+        console.error('[CumBearShorts] load error:', err);
+        container.innerHTML = '<div class="shorts-empty">Could not load shorts. Please retry.</div>';
+      });
   };
 
-  function renderShortsFeed() {
+  function renderFeed() {
     const container = document.getElementById('shortsContainer');
+    if (!container) return;
     container.innerHTML = '';
 
-    shortsData.forEach((video, index) => {
-      // 1. Content Short Card (16:9 Widescreen)
-      const card = document.createElement('div');
-      card.className = 'short-card-item';
-      card.dataset.index = index;
-      card.dataset.id = video._id;
+    shortsData.forEach(function (video, index) {
+      container.appendChild(buildShortCard(video, index));
 
-      const randomLikes = formatCount(Math.floor(Math.random() * (100000 - 1000 + 1)) + 1000);
-      const randomViews = formatCount(Math.floor(Math.random() * (10000000 - 10000 + 1)) + 1000);
-      const safeTitle = (video.title || 'Untitled Short').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-      card.innerHTML = `
-        <div class="shorts-top-bar">
-          <button class="shorts-nav-btn back-btn-trigger" aria-label="Back to Home">
-            <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          </button>
-
-          <button class="shorts-sound-btn sound-btn-trigger" aria-label="Toggle Sound">
-            <svg class="icon-muted ${isGlobalMuted ? '' : 'hidden'}" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-            <svg class="icon-unmuted ${isGlobalMuted ? 'hidden' : ''}" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-            <span class="sound-label">${isGlobalMuted ? 'UNMUTE' : 'MUTE'}</span>
-          </button>
-        </div>
-
-        <div class="short-video-stage">
-          <img class="short-poster-img" src="${video.thumbnailUrl || '/cumb.png'}" loading="eager" alt="poster">
-          <video class="short-video-element" playsinline webkit-playsinline loop preload="none" data-src="${video.playableUrl}" oncontextmenu="return false;"></video>
-
-          ${index === 0 ? `
-          <div class="first-short-play-cover" id="firstShortPlayCover">
-            <div class="first-play-btn-circle">
-              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </div>
-          </div>` : ''}
-
-          <div class="center-play-hud">
-            <svg class="hud-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <svg class="hud-pause hidden" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-          </div>
-
-          <div class="double-tap-heart">
-            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          </div>
-        </div>
-
-        <div class="speed-indicator-pill">
-          <span>⚡ 2X SPEED</span>
-        </div>
-
-        <div class="side-hold-zone left"></div>
-        <div class="side-hold-zone right"></div>
-        <div class="short-scrim"></div>
-
-        <div class="short-progress-track">
-          <div class="short-progress-fill"></div>
-        </div>
-
-        <div class="short-action-stack">
-          <button class="short-btn-unit like-btn" aria-label="Like">
-            <div class="short-btn-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            </div>
-            <span class="short-btn-label">${randomLikes}</span>
-          </button>
-
-          <div class="short-btn-unit">
-            <div class="short-btn-icon">
-              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </div>
-            <span class="short-btn-label">${randomViews}</span>
-          </div>
-
-          <button class="short-btn-unit share-btn" aria-label="Share">
-            <div class="short-btn-icon">
-              <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            </div>
-            <span class="short-btn-label">Share</span>
-          </button>
-
-          <button class="short-btn-unit more-btn" aria-label="More options">
-            <div class="short-btn-icon">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-            </div>
-            <span class="short-btn-label">More</span>
-          </button>
-        </div>
-
-        <div class="short-info-zone">
-          <div class="short-creator">
-            <span class="short-creator-badge"></span>
-            <span>CumBear</span>
-          </div>
-          <div class="short-title-text">${safeTitle}</div>
-          <button class="watch-full-btn" data-id="${video._id}">
-            <span>Watch Full Video</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-
-        <div class="preview-ended-overlay hidden">
-          <div class="preview-ended-title">3-Minute Preview Ended</div>
-          <div class="preview-ended-subtitle">Watch the full video on CumBear Player</div>
-          <button class="watch-full-btn" data-id="${video._id}">Watch Full Scene</button>
-        </div>
-      `;
-
-      attachShortCardGestures(card, video, index);
-      container.appendChild(card);
-
-      // 2. Strict 9:16 ExoClick Vertical In-Stream Card (Every 3 Shorts)
-      if ((index + 1) % 3 === 0) {
-        const vastCard = document.createElement('div');
-        vastCard.className = 'exoclick-short-vast-card';
-        vastCard.dataset.isVastAd = 'true';
-
-        vastCard.innerHTML = `
-          <!-- 5-Second Unskippable Countdown / Skip Button -->
-          <button class="vast-ad-skip-pill" id="vastSkipPill_${index}">Ad: 5s</button>
-
-          <div class="vast-vertical-stage" id="exoclickAdStage_${index}">
-            <video class="vast-vertical-video" muted playsinline webkit-playsinline></video>
-          </div>
-
-          <div class="ad-bottom-cta-container">
-            <span class="ad-sponsor-label">Sponsored Ad</span>
-            <button class="ad-visit-site-btn" id="exoclickVisitBtn_${index}">
-              <span>Visit Site</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </button>
-          </div>
-        `;
-
-        const stageEl = vastCard.querySelector(`#exoclickAdStage_${index}`);
-        const btnEl = vastCard.querySelector(`#exoclickVisitBtn_${index}`);
-
-        const triggerExoclickClick = (e) => {
-          e.stopPropagation();
-          const targetUrl = currentExoclickClickUrl || EXOCLICK_DEFAULT_CLICK;
-          window.open(targetUrl, '_blank', 'noopener,noreferrer');
-        };
-
-        if (stageEl) stageEl.addEventListener('click', triggerExoclickClick);
-        if (btnEl) btnEl.addEventListener('click', triggerExoclickClick);
-
-        container.appendChild(vastCard);
+      /* Insert VAST ad card after every AD_EVERY shorts */
+      if ((index + 1) % AD_EVERY === 0) {
+        container.appendChild(buildVastCard(index));
       }
     });
 
-    setupShortsObserver();
+    wireStaticButtons();
+    setupObserver();
   }
 
-  function attachShortCardGestures(card, video, index) {
-    const backBtn = card.querySelector('.back-btn-trigger');
-    const soundBtn = card.querySelector('.sound-btn-trigger');
-    const watchFullBtns = card.querySelectorAll('.watch-full-btn');
-    const likeBtn = card.querySelector('.like-btn');
-    const shareBtn = card.querySelector('.share-btn');
-    const moreBtn = card.querySelector('.more-btn');
+  /* ============================================================
+     SHORT CARD
+     ============================================================ */
+  function buildShortCard(video, index) {
+    const card = document.createElement('div');
+    card.className = 'short-card-item';
+    card.dataset.index = index;
+    card.dataset.id = video._id;
+
+    const likes = formatCount(stableLikes(video._id));
+    const views = formatCount(stableViews(video._id));
+    const safeTitle = escapeHtml(video.title || 'Untitled Short');
+    const safeThumb = escapeHtml(video.thumbnailUrl || '/cumb.png');
+
+    card.innerHTML =
+      '<div class="shorts-top-bar">' +
+        '<button class="shorts-nav-btn back-btn-trigger" aria-label="Back to Home">' +
+          '<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>' +
+        '</button>' +
+        '<button class="shorts-sound-btn sound-btn-trigger" aria-label="Toggle Sound">' +
+          '<svg class="icon-muted" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>' +
+          '<svg class="icon-unmuted hidden" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>' +
+          '<span class="sound-label">UNMUTE</span>' +
+        '</button>' +
+      '</div>' +
+
+      '<div class="short-video-stage">' +
+        '<img class="short-poster-img" src="' + safeThumb + '" loading="lazy" alt="poster">' +
+        '<video class="short-video-element" playsinline webkit-playsinline loop preload="none" ' +
+                'data-src="' + escapeHtml(video.playableUrl || '') + '" ' +
+                'oncontextmenu="return false;"></video>' +
+
+        (index === 0
+          ? '<div class="first-short-play-cover" id="firstShortPlayCover">' +
+              '<div class="first-play-btn-circle">' +
+                '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+              '</div>' +
+            '</div>'
+          : '') +
+
+        '<div class="center-play-hud">' +
+          '<svg class="hud-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+          '<svg class="hud-pause hidden" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' +
+        '</div>' +
+
+        '<div class="double-tap-heart">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="speed-indicator-pill"><span>⚡ 2X SPEED</span></div>' +
+      '<div class="side-hold-zone left"></div>' +
+      '<div class="side-hold-zone right"></div>' +
+      '<div class="short-scrim"></div>' +
+
+      '<div class="short-progress-track"><div class="short-progress-fill"></div></div>' +
+
+      '<div class="short-action-stack">' +
+        '<button class="short-btn-unit like-btn" aria-label="Like">' +
+          '<div class="short-btn-icon"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>' +
+          '<span class="short-btn-label">' + likes + '</span>' +
+        '</button>' +
+
+        '<div class="short-btn-unit">' +
+          '<div class="short-btn-icon"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>' +
+          '<span class="short-btn-label">' + views + '</span>' +
+        '</div>' +
+
+        '<button class="short-btn-unit share-btn" aria-label="Share">' +
+          '<div class="short-btn-icon"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>' +
+          '<span class="short-btn-label">Share</span>' +
+        '</button>' +
+
+        '<button class="short-btn-unit more-btn" aria-label="More options">' +
+          '<div class="short-btn-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="12" cy="19" r="2"/></svg></div>' +
+          '<span class="short-btn-label">More</span>' +
+        '</button>' +
+      '</div>' +
+
+      '<div class="short-info-zone">' +
+        '<div class="short-creator"><span class="short-creator-badge"></span><span>CumBear</span></div>' +
+        '<div class="short-title-text">' + safeTitle + '</div>' +
+        '<button class="watch-full-btn" data-id="' + video._id + '">' +
+          '<span>Watch Full Video</span>' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '</button>' +
+      '</div>' +
+
+      '<div class="preview-ended-overlay hidden">' +
+        '<div class="preview-ended-title">Preview Ended</div>' +
+        '<div class="preview-ended-subtitle">Watch the full video on CumBear Player</div>' +
+        '<button class="watch-full-btn" data-id="' + video._id + '">Watch Full Scene</button>' +
+      '</div>';
+
+    wireShortCard(card, video, index);
+    return card;
+  }
+
+  /* ============================================================
+     VAST AD CARD
+     ============================================================ */
+  function buildVastCard(index) {
+    const card = document.createElement('div');
+    card.className = 'exoclick-short-vast-card';
+    card.dataset.isVastAd = 'true';
+    card.dataset.adIndex = index;
+
+    card.innerHTML =
+      '<button class="vast-ad-skip-pill" type="button" disabled>Ad: 5s</button>' +
+      '<div class="vast-vertical-stage">' +
+        '<video class="vast-vertical-video" muted playsinline webkit-playsinline></video>' +
+      '</div>' +
+      '<div class="ad-bottom-cta-container">' +
+        '<span class="ad-sponsor-label">Sponsored</span>' +
+        '<button class="ad-visit-site-btn" type="button">' +
+          '<span>Visit Site</span>' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
+        '</button>' +
+      '</div>';
+
+    /* Wire clicks */
+    const stage = card.querySelector('.vast-vertical-stage');
+    const visitBtn = card.querySelector('.ad-visit-site-btn');
+    const skipBtn = card.querySelector('.vast-ad-skip-pill');
+
+    const openAd = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(exoclickClickUrl, '_blank', 'noopener,noreferrer');
+    };
+    if (stage) stage.addEventListener('click', openAd);
+    if (visitBtn) visitBtn.addEventListener('click', openAd);
+
+    if (skipBtn) {
+      skipBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const next = card.nextElementSibling;
+        if (next) next.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
+    return card;
+  }
+
+  /* ============================================================
+     SHORT CARD GESTURES
+     ============================================================ */
+  function wireShortCard(card, video, index) {
     const videoEl = card.querySelector('video.short-video-element');
     const poster = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
@@ -237,32 +307,52 @@
     const hudPause = card.querySelector('.hud-pause');
     const sideZones = card.querySelectorAll('.side-hold-zone');
     const firstPlayCover = card.querySelector('#firstShortPlayCover');
+    const backBtn = card.querySelector('.back-btn-trigger');
+    const soundBtn = card.querySelector('.sound-btn-trigger');
+    const likeBtn = card.querySelector('.like-btn');
+    const shareBtn = card.querySelector('.share-btn');
+    const moreBtn = card.querySelector('.more-btn');
+    const watchFullBtns = card.querySelectorAll('.watch-full-btn');
 
     videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
-    // First Short Tap -> CrakRevenue SmartLink redirect
+    /* ---------- first play cover → popunder + play ---------- */
     if (index === 0 && firstPlayCover) {
-      firstPlayCover.addEventListener('click', (e) => {
+      firstPlayCover.addEventListener('click', function (e) {
+        e.preventDefault();
         e.stopPropagation();
-        isFirstPlayTriggered = true;
         firstPlayCover.classList.add('hidden');
 
-        window.open(CRAK_FIRST_TAP_SMARTLINK, '_blank', 'noopener,noreferrer');
+        /* Fire the ExoClick popunder (once per 24h) */
+        try {
+          if (
+            consentAllows() &&
+            cooldownAllows(COOLDOWNS.shortsFirstTap) &&
+            window.CumBearPopunder &&
+            typeof window.CumBearPopunder.trigger === 'function'
+          ) {
+            window.CumBearPopunder.trigger('shorts-first-tap');
+            CFG.helpers.markCooldown(COOLDOWNS.shortsFirstTap, CONSENT.shortsFirstTapCooldownMs);
+          }
+        } catch (err) { /* never block playback */ }
 
-        videoEl.src = videoEl.dataset.src;
-        videoEl.load();
-        videoEl.playbackRate = 1.0;
+        /* Start playback */
+        if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
+          videoEl.src = videoEl.dataset.src;
+          videoEl.load();
+        }
         videoEl.muted = isGlobalMuted;
-        videoEl.play().catch(() => {
+        videoEl.play().catch(function () {
           videoEl.muted = true;
-          videoEl.play();
+          videoEl.play().catch(function () { /* ignore */ });
         });
       });
     }
 
+    /* ---------- back ---------- */
     if (backBtn) {
-      backBtn.addEventListener('click', (e) => {
+      backBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         window.stopShorts();
         document.body.classList.remove('shorts-mode');
@@ -270,16 +360,18 @@
       });
     }
 
+    /* ---------- mute toggle ---------- */
     if (soundBtn) {
-      soundBtn.addEventListener('click', (e) => {
+      soundBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         isGlobalMuted = !isGlobalMuted;
-        updateSoundStateAcrossAllShorts();
+        syncMuteAcrossShorts();
       });
     }
 
-    watchFullBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    /* ---------- watch full ---------- */
+    watchFullBtns.forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
         e.stopPropagation();
         window.stopShorts();
         document.body.classList.remove('shorts-mode');
@@ -291,53 +383,114 @@
       });
     });
 
-    videoEl.addEventListener('playing', () => {
-      poster.classList.add('loaded');
-      videoEl.playbackRate = 1.0;
+    /* ---------- like / share / more ---------- */
+    if (likeBtn) {
+      likeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        likeBtn.classList.toggle('liked');
+        const isLiked = likeBtn.classList.contains('liked');
+        const heartEl = card.querySelector('.double-tap-heart');
+        if (isLiked && heartEl) {
+          heartEl.classList.remove('animate');
+          void heartEl.offsetWidth;
+          heartEl.classList.add('animate');
+        }
+      });
+    }
+
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const url = window.location.origin + '/shorts/' + encodeURIComponent(video._id);
+        if (navigator.share) {
+          navigator.share({ title: video.title, url: url }).catch(function () { /* ignore */ });
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () {
+            if (typeof window.showToast === 'function') window.showToast('Link copied');
+          }).catch(function () { /* ignore */ });
+        }
+      });
+    }
+
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const modal = document.getElementById('shortsMoreModal');
+        if (modal) modal.classList.remove('hidden');
+      });
+    }
+
+    /* ---------- center HUD helpers ---------- */
+    function showCenterHud(paused) {
+      if (!hud) return;
+      if (hudPlay) hudPlay.classList.toggle('hidden', !paused);
+      if (hudPause) hudPause.classList.toggle('hidden', paused);
+      hud.classList.add('show');
+      setTimeout(function () { hud.classList.remove('show'); }, 400);
+    }
+
+    /* ---------- progress + hard stop ---------- */
+    videoEl.addEventListener('timeupdate', function () {
+      if (progressFill) {
+        progressFill.style.width = Math.min(100, (videoEl.currentTime / PREVIEW_MAX) * 100) + '%';
+      }
+      if (videoEl.currentTime >= PREVIEW_MAX) {
+        videoEl.pause();
+        if (endedOverlay) endedOverlay.classList.remove('hidden');
+      }
     });
 
-    function showCenterHud(isPaused) {
-      if (isPaused) {
-        hudPlay.classList.remove('hidden');
-        hudPause.classList.add('hidden');
-      } else {
-        hudPlay.classList.add('hidden');
-        hudPause.classList.remove('hidden');
-      }
-      hud.classList.add('show');
-      setTimeout(() => { hud.classList.remove('show'); }, 400);
-    }
+    videoEl.addEventListener('playing', function () {
+      if (poster) poster.classList.add('loaded');
+      if (endedOverlay) endedOverlay.classList.add('hidden');
+    });
 
-    function triggerHeartAnimation() {
-      likeBtn.classList.add('liked');
-      heart.classList.remove('animate');
-      void heart.offsetWidth;
-      heart.classList.add('animate');
-    }
-
+    /* ---------- tap / double-tap / 2x hold ---------- */
     let lastTap = 0;
-    let singleTapTimeout = null;
+    let singleTapTimer = null;
     let holdTimer = null;
-    let isSpeedLocked = false;
-    let isHoldingSpeed = false;
     let holdStartY = 0;
+    let isHoldingSpeed = false;
+    let isSpeedLocked = false;
 
-    card.addEventListener('pointerup', (e) => {
-      if (e.target.closest('.short-action-stack') || e.target.closest('.watch-full-btn') || e.target.closest('.shorts-top-bar') || e.target.closest('#firstShortPlayCover')) return;
+    card.addEventListener('pointerup', function (e) {
+      /* Ignore taps on interactive chrome */
+      if (e.target.closest('.short-action-stack') ||
+          e.target.closest('.watch-full-btn') ||
+          e.target.closest('.shorts-top-bar') ||
+          e.target.closest('#firstShortPlayCover') ||
+          e.target.closest('.preview-ended-overlay')) return;
+
       if (isHoldingSpeed) return;
+
+      /* If speed is locked, first tap unlocks instead of pausing */
+      if (isSpeedLocked) {
+        isSpeedLocked = false;
+        isHoldingSpeed = false;
+        videoEl.playbackRate = 1.0;
+        if (speedPill) speedPill.classList.remove('active', 'locked');
+        return;
+      }
 
       const now = Date.now();
       const diff = now - lastTap;
 
-      if (diff < 300 && diff > 0) {
-        clearTimeout(singleTapTimeout);
-        triggerHeartAnimation();
+      if (diff > 0 && diff < 300) {
+        /* Double tap = like */
+        if (singleTapTimer) { clearTimeout(singleTapTimer); singleTapTimer = null; }
+        if (heart) {
+          heart.classList.remove('animate');
+          void heart.offsetWidth;
+          heart.classList.add('animate');
+        }
+        if (likeBtn) likeBtn.classList.add('liked');
         lastTap = 0;
       } else {
         lastTap = now;
-        singleTapTimeout = setTimeout(() => {
+        singleTapTimer = setTimeout(function () {
+          singleTapTimer = null;
           if (videoEl.paused) {
-            videoEl.play();
+            videoEl.play().catch(function () { /* ignore */ });
             showCenterHud(false);
           } else {
             videoEl.pause();
@@ -347,150 +500,118 @@
       }
     });
 
-    sideZones.forEach(zone => {
-      zone.addEventListener('pointerdown', (e) => {
+    /* Side hold = 2x speed */
+    sideZones.forEach(function (zone) {
+      zone.addEventListener('pointerdown', function (e) {
         holdStartY = e.clientY;
-        holdTimer = setTimeout(() => {
+        holdTimer = setTimeout(function () {
           isHoldingSpeed = true;
           videoEl.playbackRate = 2.0;
-          speedPill.classList.add('active');
-          speedPill.innerHTML = '<span>⚡ 2X SPEED (Pull down to lock)</span>';
+          if (speedPill) {
+            speedPill.classList.add('active');
+            speedPill.innerHTML = '<span>⚡ 2X SPEED (Pull down to lock)</span>';
+          }
         }, 300);
       });
 
-      zone.addEventListener('pointermove', (e) => {
-        if (!isHoldingSpeed) return;
-        const deltaY = e.clientY - holdStartY;
-        if (deltaY > 50 && !isSpeedLocked) {
+      zone.addEventListener('pointermove', function (e) {
+        if (!isHoldingSpeed || isSpeedLocked) return;
+        if (e.clientY - holdStartY > 50) {
           isSpeedLocked = true;
-          speedPill.classList.add('locked');
-          speedPill.innerHTML = '<span>🔒 2X SPEED LOCKED</span>';
+          if (speedPill) {
+            speedPill.classList.add('locked');
+            speedPill.innerHTML = '<span>🔒 2X SPEED LOCKED</span>';
+          }
         }
       });
 
-      const releaseSpeed = () => {
-        clearTimeout(holdTimer);
+      const releaseSpeed = function () {
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
         if (isHoldingSpeed && !isSpeedLocked) {
           isHoldingSpeed = false;
           videoEl.playbackRate = 1.0;
-          speedPill.classList.remove('active');
+          if (speedPill) speedPill.classList.remove('active');
         }
       };
-
       zone.addEventListener('pointerup', releaseSpeed);
       zone.addEventListener('pointercancel', releaseSpeed);
       zone.addEventListener('pointerleave', releaseSpeed);
     });
-
-    card.addEventListener('click', () => {
-      if (isSpeedLocked) {
-        isSpeedLocked = false;
-        isHoldingSpeed = false;
-        videoEl.playbackRate = 1.0;
-        speedPill.classList.remove('active', 'locked');
-      }
-    });
-
-    if (likeBtn) {
-      likeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        likeBtn.classList.toggle('liked');
-      });
-    }
-
-    if (shareBtn) {
-      shareBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const shareUrl = `${window.location.origin}/shorts/${video._id}`;
-        if (navigator.share) {
-          navigator.share({ title: video.title, url: shareUrl }).catch(() => {});
-        } else {
-          navigator.clipboard.writeText(shareUrl);
-          alert('Short URL copied to clipboard!');
-        }
-      });
-    }
-
-    if (moreBtn) {
-      moreBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        currentActiveShort = video;
-        const modal = document.getElementById('shortsMoreModal');
-        if (modal) modal.classList.remove('hidden');
-      });
-    }
-
-    videoEl.ontimeupdate = () => {
-      const current = videoEl.currentTime;
-      if (progressFill) {
-        progressFill.style.width = `${Math.min(100, (current / 180) * 100)}%`;
-      }
-      if (current >= 180) {
-        videoEl.pause();
-        if (endedOverlay) endedOverlay.classList.remove('hidden');
-      }
-    };
   }
 
-  function updateSoundStateAcrossAllShorts() {
-    document.querySelectorAll('.short-card-item').forEach(card => {
+  /* ============================================================
+     MUTE SYNC
+     ============================================================ */
+  function syncMuteAcrossShorts() {
+    document.querySelectorAll('.short-card-item').forEach(function (card) {
       const v = card.querySelector('video.short-video-element');
-      const soundBtn = card.querySelector('.sound-btn-trigger');
-      if (!v || !soundBtn) return;
-
+      const btn = card.querySelector('.sound-btn-trigger');
+      if (!v || !btn) return;
       v.muted = isGlobalMuted;
-      const iconMuted = soundBtn.querySelector('.icon-muted');
-      const iconUnmuted = soundBtn.querySelector('.icon-unmuted');
-      const soundLabel = soundBtn.querySelector('.sound-label');
-
-      if (isGlobalMuted) {
-        iconMuted.classList.remove('hidden');
-        iconUnmuted.classList.add('hidden');
-        soundLabel.textContent = 'UNMUTE';
-      } else {
-        iconMuted.classList.add('hidden');
-        iconUnmuted.classList.remove('hidden');
-        soundLabel.textContent = 'MUTE';
-      }
+      const iMuted = btn.querySelector('.icon-muted');
+      const iUnmuted = btn.querySelector('.icon-unmuted');
+      const lbl = btn.querySelector('.sound-label');
+      if (iMuted) iMuted.classList.toggle('hidden', !isGlobalMuted);
+      if (iUnmuted) iUnmuted.classList.toggle('hidden', isGlobalMuted);
+      if (lbl) lbl.textContent = isGlobalMuted ? 'UNMUTE' : 'MUTE';
     });
   }
 
-  // --- Instagram-style Single Video Isolation ---
-  function setupShortsObserver() {
-    const container = document.getElementById('shortsContainer');
+  /* ============================================================
+     OBSERVER — network isolation + ad card handling
+     ============================================================ */
+  function setupObserver() {
+    if (observer) { observer.disconnect(); observer = null; }
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        // A. ExoClick 9:16 Vertical In-Stream Card
-        if (entry.target.dataset.isVastAd === 'true') {
+    const container = document.getElementById('shortsContainer');
+    if (!container) return;
+
+    observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        const el = entry.target;
+
+        /* VAST ad card */
+        if (el.dataset.isVastAd === 'true') {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            handleExoclickVastCard(entry.target, container);
+            activateVastCard(el, container);
           } else {
-            if (activeAdTimer) clearInterval(activeAdTimer);
-            const adV = entry.target.querySelector('video.vast-vertical-video');
-            if (adV) {
-              adV.pause();
-              adV.removeAttribute('src');
-              adV.load();
-            }
+            deactivateVastCard(el, container);
           }
           return;
         }
 
-        // B. Content Short Video
-        const videoEl = entry.target.querySelector('video.short-video-element');
-        const posterEl = entry.target.querySelector('.short-poster-img');
-        const shortIndex = parseInt(entry.target.dataset.index, 10);
-        const shortId = entry.target.dataset.id;
+        /* Short card */
+        const videoEl = el.querySelector('video.short-video-element');
+        const poster = el.querySelector('.short-poster-img');
+        const idx = parseInt(el.dataset.index, 10);
+        const id = el.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-          activeVideoElement = videoEl;
-          history.replaceState({ view: 'shortsView' }, '', `/shorts/${shortId}`);
-
-          if (shortIndex === 0 && !isFirstPlayTriggered) {
-            return;
+          /* First short with play cover → don't autoplay until tap */
+          if (idx === 0) {
+            const cover = el.querySelector('#firstShortPlayCover');
+            if (cover && !cover.classList.contains('hidden')) {
+              activeVideoEl = null;
+              return;
+            }
           }
 
+          /* Isolate: pause all other short video elements */
+          document.querySelectorAll('video.short-video-element').forEach(function (v) {
+            if (v !== videoEl && !v.paused) {
+              v.pause();
+            }
+          });
+
+          activeVideoEl = videoEl;
+          currentActiveId = id;
+
+          /* URL update */
+          try {
+            history.replaceState({ view: 'shortsView', videoId: id }, '', '/shorts/' + encodeURIComponent(id));
+          } catch (err) { /* ignore */ }
+
+          /* Lazy-load src */
           if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
             videoEl.load();
@@ -498,134 +619,193 @@
 
           videoEl.playbackRate = 1.0;
           videoEl.muted = isGlobalMuted;
-          videoEl.play().catch(() => {
-            videoEl.muted = true;
-            videoEl.play();
-          });
+          const p = videoEl.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(function () {
+              videoEl.muted = true;
+              videoEl.play().catch(function () { /* ignore */ });
+            });
+          }
         } else {
-          // Drop network downloads immediately
+          /* Not visible → free network */
           if (videoEl) {
-            videoEl.pause();
-            videoEl.removeAttribute('src');
-            videoEl.load();
-            videoEl.currentTime = 0;
-            videoEl.playbackRate = 1.0;
-            if (posterEl) posterEl.classList.remove('loaded');
+            try {
+              videoEl.pause();
+              videoEl.removeAttribute('src');
+              videoEl.load();
+              videoEl.currentTime = 0;
+              videoEl.playbackRate = 1.0;
+            } catch (err) { /* ignore */ }
+            if (poster) poster.classList.remove('loaded');
           }
         }
       });
     }, { threshold: 0.6 });
 
-    document.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(el => observer.observe(el));
+    container.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(function (el) {
+      observer.observe(el);
+    });
   }
 
-  // Parse ExoClick MediaFile and manage 5-second unskippable countdown
-  async function handleExoclickVastCard(adCard, container) {
-    if (activeVideoElement) {
-      activeVideoElement.pause();
-      activeVideoElement.removeAttribute('src');
-      activeVideoElement.load();
+  /* ============================================================
+     VAST AD ACTIVATION
+     ============================================================ */
+  async function activateVastCard(card, container) {
+    /* Pause the current short */
+    if (activeVideoEl) {
+      try { activeVideoEl.pause(); } catch (e) { /* ignore */ }
     }
 
-    const adVideo = adCard.querySelector('.vast-vertical-video');
-    const skipBtn = adCard.querySelector('.vast-ad-skip-pill');
+    const adVideo = card.querySelector('.vast-vertical-video');
+    const skipBtn = card.querySelector('.vast-ad-skip-pill');
     if (!adVideo || !skipBtn) return;
 
-    // Lock scrolling for 5 seconds
-    container.classList.add('scroll-locked');
-    skipBtn.classList.remove('unlocked');
-
-    try {
-      const res = await fetch(EXOCLICK_VAST_URL);
-      const text = await res.text();
-      const xmlDoc = new DOMParser().parseFromString(text, 'text/xml');
-      
-      const mediaFiles = xmlDoc.querySelectorAll('MediaFile');
-      let mediaUrl = null;
-      for (let i = 0; i < mediaFiles.length; i++) {
-        const src = (mediaFiles[i].textContent || '').trim();
-        if (src.startsWith('http')) {
-          mediaUrl = src;
-          break;
-        }
-      }
-
-      const clickThroughNode = xmlDoc.querySelector('ClickThrough');
-      if (clickThroughNode) {
-        const clickUrl = (clickThroughNode.textContent || '').trim();
-        if (clickUrl.startsWith('http')) {
-          currentExoclickClickUrl = clickUrl;
-        }
-      } else {
-        currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
-      }
-
-      if (mediaUrl) {
-        adVideo.src = mediaUrl;
-        adVideo.muted = true;
-        adVideo.load();
-        adVideo.play().catch(() => {});
-      }
-    } catch (e) {
-      console.warn('ExoClick VAST fetch fallback:', e);
-      currentExoclickClickUrl = EXOCLICK_DEFAULT_CLICK;
+    /* Skip already-fetched ad on revisit */
+    if (card.dataset.adLoaded === '1') {
+      try { adVideo.play().catch(function () { /* ignore */ }); } catch (e) { /* ignore */ }
+      return;
     }
 
-    // 5-Second Unskippable Countdown
-    let secondsLeft = 5;
-    skipBtn.textContent = `Ad: ${secondsLeft}s`;
+    const myRequestId = ++currentVastRequestId;
 
-    if (activeAdTimer) clearInterval(activeAdTimer);
+    /* Lock scroll — with HARD timeout so user never gets stuck */
+    container.classList.add('scroll-locked');
+    if (adLockTimer) clearTimeout(adLockTimer);
+    adLockTimer = setTimeout(function () {
+      container.classList.remove('scroll-locked');
+      adLockTimer = null;
+    }, AD_LOCK_MAX_MS);
 
-    activeAdTimer = setInterval(() => {
+    skipBtn.disabled = true;
+    skipBtn.classList.remove('unlocked');
+    skipBtn.textContent = 'Ad: 5s';
+
+    /* Fetch VAST with abort timeout */
+    let mediaUrl = null;
+    let clickThroughUrl = null;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(function () { controller.abort(); }, 3500);
+      const res = await fetch(CFG.helpers.vastUrl(ZONES.shortsVast), { signal: controller.signal });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const text = await res.text();
+        const xml = new DOMParser().parseFromString(text, 'text/xml');
+
+        const mediaFiles = xml.querySelectorAll('MediaFile');
+        for (let i = 0; i < mediaFiles.length; i++) {
+          const s = (mediaFiles[i].textContent || '').trim();
+          if (s.indexOf('http') === 0) { mediaUrl = s; break; }
+        }
+
+        const ct = xml.querySelector('ClickThrough');
+        if (ct) {
+          const c = (ct.textContent || '').trim();
+          if (c.indexOf('http') === 0) clickThroughUrl = c;
+        }
+      }
+    } catch (err) {
+      console.warn('[CumBearShorts] VAST fetch failed:', err.message);
+    }
+
+    /* Race guard */
+    if (myRequestId !== currentVastRequestId) return;
+
+    /* Update global click URL if VAST provided a ClickThrough */
+    if (clickThroughUrl) exoclickClickUrl = clickThroughUrl;
+
+    /* If no media → skip ad entirely */
+    if (!mediaUrl) {
+      container.classList.remove('scroll-locked');
+      if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
+      skipBtn.disabled = false;
+      skipBtn.classList.add('unlocked');
+      skipBtn.textContent = 'Skip ✕';
+      return;
+    }
+
+    /* Play ad */
+    card.dataset.adLoaded = '1';
+    adVideo.src = mediaUrl;
+    adVideo.muted = true;
+    adVideo.load();
+    adVideo.play().catch(function () { /* ignore */ });
+
+    /* Countdown */
+    let secondsLeft = Math.ceil(AD_SKIP_MS / 1000);
+    skipBtn.textContent = 'Ad: ' + secondsLeft + 's';
+
+    if (adSkipTimer) clearInterval(adSkipTimer);
+    adSkipTimer = setInterval(function () {
       secondsLeft--;
       if (secondsLeft > 0) {
-        skipBtn.textContent = `Ad: ${secondsLeft}s`;
+        skipBtn.textContent = 'Ad: ' + secondsLeft + 's';
       } else {
-        clearInterval(activeAdTimer);
-        activeAdTimer = null;
-
+        clearInterval(adSkipTimer);
+        adSkipTimer = null;
         container.classList.remove('scroll-locked');
+        if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
+        skipBtn.disabled = false;
         skipBtn.classList.add('unlocked');
         skipBtn.textContent = 'Skip Ad ✕';
-
-        skipBtn.onclick = (e) => {
-          e.stopPropagation();
-          const nextCard = adCard.nextElementSibling;
-          if (nextCard) {
-            nextCard.scrollIntoView({ behavior: 'smooth' });
-          }
-        };
       }
     }, 1000);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function deactivateVastCard(card, container) {
+    container.classList.remove('scroll-locked');
+    if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
+    if (adSkipTimer) { clearInterval(adSkipTimer); adSkipTimer = null; }
+
+    const adVideo = card.querySelector('.vast-vertical-video');
+    if (adVideo && card.dataset.adLoaded === '1') {
+      try {
+        adVideo.pause();
+        /* Keep src so revisiting resumes without re-fetch, but release memory:
+           remove the src and reset data flag so next activation refetches if needed. */
+        adVideo.removeAttribute('src');
+        adVideo.load();
+      } catch (e) { /* ignore */ }
+      card.dataset.adLoaded = '';
+    }
+  }
+
+  /* ============================================================
+     STATIC BUTTONS (delegated once)
+     ============================================================ */
+  function wireStaticButtons() {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
-    if (closeBtn && modal) {
-      closeBtn.onclick = () => modal.classList.add('hidden');
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', function () {
+        if (modal) modal.classList.add('hidden');
+      });
     }
-  });
+  }
 
+  /* ============================================================
+     STOP
+     ============================================================ */
   window.stopShorts = function () {
-    if (activeAdTimer) clearInterval(activeAdTimer);
-    if (activeVideoElement) {
-      activeVideoElement.pause();
-      activeVideoElement.removeAttribute('src');
-      activeVideoElement.load();
-    }
-    document.querySelectorAll('.short-video-element').forEach(v => {
-      v.pause();
-      v.removeAttribute('src');
-      v.load();
+    if (observer) { observer.disconnect(); observer = null; }
+    if (adSkipTimer) { clearInterval(adSkipTimer); adSkipTimer = null; }
+    if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
+
+    document.querySelectorAll('.short-video-element, .vast-vertical-video').forEach(function (v) {
+      try {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
+      } catch (e) { /* ignore */ }
     });
-    document.querySelectorAll('.vast-vertical-video').forEach(v => {
-      v.pause();
-      v.removeAttribute('src');
-      v.load();
-    });
+
     const container = document.getElementById('shortsContainer');
     if (container) container.classList.remove('scroll-locked');
+
+    activeVideoEl = null;
+    currentActiveId = null;
+    currentVastRequestId = 0;
   };
 })();

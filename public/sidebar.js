@@ -1,19 +1,48 @@
 /**
  * ==========================================================================
- * CUMBEAR SIDEBAR & 100+ LANGUAGE GOOGLE TRANSLATE CONTROLLER
+ * CUMBEAR — SIDEBAR & LANGUAGE CONTROLLER
+ * --------------------------------------------------------------------------
+ * Handles:
+ *   - Open/close sidebar (drawer)
+ *   - PWA install prompt
+ *   - Theme toggle (light / dark)
+ *   - Grid view picker (Auto / Compact / Large)
+ *   - Language modal (100+ languages via Google Translate)
+ *   - Navigation (Home / Shorts / Categories)
+ *
+ * Public API:
+ *   window.openSidebar()
+ *   window.closeSidebar()
  * ==========================================================================
  */
-
 (function () {
   'use strict';
 
-  let deferredPrompt = null;
+  if (window.__cumbearSidebarLoaded) return;
+  window.__cumbearSidebarLoaded = true;
 
-  window.addEventListener('beforeinstallprompt', (e) => {
+  /* ============================================================
+     PWA INSTALL PROMPT — attach immediately (before DOMContentLoaded)
+     ============================================================ */
+  let deferredPrompt = null;
+  let installPromptAvailable = false;
+
+  window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
+    installPromptAvailable = true;
   });
 
+  window.addEventListener('appinstalled', function () {
+    deferredPrompt = null;
+    installPromptAvailable = false;
+    const btn = document.getElementById('appInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
+
+  /* ============================================================
+     LANGUAGES — full list
+     ============================================================ */
   const LANGUAGES = [
     { code: 'en', name: 'English' }, { code: 'es', name: 'Spanish (Español)' },
     { code: 'hi', name: 'Hindi (हिन्दी)' }, { code: 'ar', name: 'Arabic (العربية)' },
@@ -70,147 +99,395 @@
     { code: 'zu', name: 'Zulu' }
   ];
 
-  document.addEventListener('DOMContentLoaded', () => {
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function safeGet(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeSet(key, val) {
+    try { localStorage.setItem(key, val); } catch (e) { /* ignore */ }
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('cumbear-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'cumbear-toast';
+      t.className = 'cumbear-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('visible');
+    setTimeout(function () { t.classList.remove('visible'); }, 2400);
+  }
+
+  /* ============================================================
+     SIDEBAR OPEN/CLOSE
+     ============================================================ */
+  let savedBodyOverflow = '';
+
+  function openSidebar() {
     const sidebar = document.getElementById('siteSidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    const closeBtn = document.getElementById('closeSidebar');
-    const installBtn = document.getElementById('appInstallBtn');
-    const themeBtn = document.getElementById('themeToggleBtn');
-    const languageRow = document.getElementById('languageRow');
-    const langModal = document.getElementById('languageModal');
-    const closeLangModal = document.getElementById('closeLangModal');
-    const langSearchInput = document.getElementById('langSearchInput');
-    const langListGrid = document.getElementById('langListGrid');
-    const langValueDisplay = document.getElementById('langValueDisplay');
-    const navButtons = document.querySelectorAll('.site-sidebar .nav-links button.nav-link');
+    if (!sidebar) return;
+    sidebar.classList.add('active');
+    sidebar.setAttribute('aria-hidden', 'false');
+    if (overlay) overlay.classList.add('active');
+    savedBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
 
-    // Sidebar open/close handlers
-    window.openSidebar = function () {
-      if (sidebar) sidebar.classList.add('active');
-      if (overlay) overlay.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    };
+  function closeSidebar() {
+    const sidebar = document.getElementById('siteSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) {
+      sidebar.classList.remove('active');
+      sidebar.setAttribute('aria-hidden', 'true');
+    }
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = savedBodyOverflow || '';
+    savedBodyOverflow = '';
+  }
 
-    window.closeSidebar = function () {
-      if (sidebar) sidebar.classList.remove('active');
-      if (overlay) overlay.classList.remove('active');
-      document.body.style.overflow = '';
-    };
+  window.openSidebar = openSidebar;
+  window.closeSidebar = closeSidebar;
 
-    if (closeBtn) closeBtn.addEventListener('click', window.closeSidebar);
-    if (overlay) overlay.addEventListener('click', window.closeSidebar);
+  /* ============================================================
+     THEME
+     ============================================================ */
+  function applyTheme(theme) {
+    theme = (theme === 'dark') ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    safeSet('cumbear_theme', theme);
 
-    // 1. Direct Chrome Install CTA
-    if (installBtn) {
-      installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          deferredPrompt = null;
-        } else {
-          console.log('Install prompt already completed or not supported');
-        }
-      });
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) btn.textContent = (theme === 'dark') ? 'Light Mode' : 'Dark Mode';
+
+    /* Update meta theme-color */
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#000000' : '#7c1d40');
+
+    try {
+      window.dispatchEvent(new CustomEvent('cumbear:themeChanged', {
+        detail: { theme: theme }
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function wireThemeToggle() {
+    const btn = document.getElementById('themeToggleBtn');
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+
+    btn.addEventListener('click', function () {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    /* Init */
+    const saved = safeGet('cumbear_theme') || 'light';
+    applyTheme(saved);
+  }
+
+  /* ============================================================
+     INSTALL BUTTON
+     ============================================================ */
+  function wireInstall() {
+    const btn = document.getElementById('appInstallBtn');
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+
+    if (!installPromptAvailable) {
+      /* Hidden until browser fires beforeinstallprompt */
+      btn.style.opacity = '0.6';
     }
 
-    // 2. Navigation Actions (Home, Shorts, Categories)
-    navButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', function () {
+      if (!deferredPrompt) {
+        showToast('Install not available — try adding to home screen from your browser menu');
+        return;
+      }
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (choice) {
+        if (choice && choice.outcome === 'accepted') {
+          showToast('Installing CumBear…');
+        }
+        deferredPrompt = null;
+        installPromptAvailable = false;
+      }).catch(function () { /* ignore */ });
+    });
+  }
+
+  /* ============================================================
+     GRID VIEW
+     ============================================================ */
+  function wireGridPicker() {
+    const row = document.getElementById('gridViewRow');
+    const label = document.getElementById('gridValueDisplay');
+    if (!row || row.dataset.wired) return;
+    row.dataset.wired = '1';
+
+    const modes = [
+      { key: 'auto',    label: 'Responsive', cols: '' },
+      { key: 'compact', label: 'Compact',    cols: '2' },
+      { key: 'large',   label: 'Large',      cols: '1' }
+    ];
+
+    let modeIndex = 0;
+    const savedMode = safeGet('cumbear_grid_mode');
+    const foundIdx = modes.findIndex(function (m) { return m.key === savedMode; });
+    if (foundIdx >= 0) modeIndex = foundIdx;
+
+    function applyMode() {
+      const m = modes[modeIndex];
+      if (label) label.textContent = m.label;
+      safeSet('cumbear_grid_mode', m.key);
+
+      if (m.cols) {
+        document.documentElement.style.setProperty('--grid-cols-override', m.cols);
+        document.body.classList.add('grid-override');
+      } else {
+        document.documentElement.style.removeProperty('--grid-cols-override');
+        document.body.classList.remove('grid-override');
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('cumbear:gridChanged', {
+          detail: { mode: m.key, cols: m.cols }
+        }));
+      } catch (e) { /* ignore */ }
+    }
+
+    /* Apply saved mode on init */
+    applyMode();
+
+    row.addEventListener('click', function () {
+      modeIndex = (modeIndex + 1) % modes.length;
+      applyMode();
+    });
+  }
+
+  /* ============================================================
+     NAVIGATION
+     ============================================================ */
+  function wireNav() {
+    document.querySelectorAll('.site-sidebar .nav-links button.nav-link').forEach(function (btn) {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', function (e) {
         e.preventDefault();
         const targetView = btn.getAttribute('data-view');
-        if (targetView && window.switchView) {
-          window.closeSidebar();
+        if (!targetView) return;
+        closeSidebar();
+        if (typeof window.switchView === 'function') {
           window.switchView(targetView, true);
-
-          if (targetView === 'shortsView' && typeof window.loadShorts === 'function') {
-            window.loadShorts();
-          }
         }
       });
     });
+  }
 
-    // 3. Dark/Light Mode Switcher
-    const savedTheme = localStorage.getItem('cumbear_theme') || 'dark';
-    applyTheme(savedTheme);
+  /* ============================================================
+     LANGUAGE MODAL — chunked render
+     ============================================================ */
+  let langRenderToken = 0;
 
-    if (themeBtn) {
-      themeBtn.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
-      });
-    }
+  function renderLanguages(filter) {
+    const grid = document.getElementById('langListGrid');
+    if (!grid) return;
 
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      try { localStorage.setItem('cumbear_theme', theme); } catch (e) {}
-      if (themeBtn) themeBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
-    }
+    const query = (filter || '').toLowerCase().trim();
+    const filtered = LANGUAGES.filter(function (l) {
+      return l.name.toLowerCase().indexOf(query) !== -1 ||
+             l.code.toLowerCase().indexOf(query) !== -1;
+    });
 
-    // 4. 100+ Language Modal & Live Search Filter
-    function renderLanguages(filter = '') {
-      if (!langListGrid) return;
-      langListGrid.innerHTML = '';
+    const myToken = ++langRenderToken;
+    grid.innerHTML = '';
 
-      const query = filter.toLowerCase().trim();
-      const filtered = LANGUAGES.filter(l => l.name.toLowerCase().includes(query) || l.code.toLowerCase().includes(query));
+    /* Chunked render: 25 per frame → no jank */
+    let cursor = 0;
+    function renderChunk() {
+      if (myToken !== langRenderToken) return; /* another render superseded */
+      if (cursor >= filtered.length) return;
 
-      filtered.forEach(lang => {
+      const end = Math.min(cursor + 25, filtered.length);
+      const frag = document.createDocumentFragment();
+
+      for (let i = cursor; i < end; i++) {
+        const lang = filtered[i];
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'lang-item-btn';
-        btn.innerHTML = `<span>${lang.name}</span><span style="opacity:0.5;font-size:0.72rem;">${lang.code}</span>`;
-        btn.addEventListener('click', () => {
+        btn.innerHTML =
+          '<span>' + lang.name + '</span>' +
+          '<span style="opacity:0.5;font-size:0.72rem;">' + lang.code + '</span>';
+
+        btn.addEventListener('click', function () {
           translateSite(lang.code, lang.name);
-          if (langModal) langModal.classList.add('hidden');
+          const modal = document.getElementById('languageModal');
+          if (modal) modal.classList.add('hidden');
         });
-        langListGrid.appendChild(btn);
-      });
+
+        frag.appendChild(btn);
+      }
+
+      grid.appendChild(frag);
+      cursor = end;
+      if (cursor < filtered.length) {
+        requestAnimationFrame(renderChunk);
+      }
+    }
+    renderChunk();
+  }
+
+  /* ============================================================
+     GOOGLE TRANSLATE INTEGRATION
+     ============================================================ */
+  function translateSite(langCode, langName) {
+    const label = document.getElementById('langValueDisplay');
+    if (label) label.textContent = langName.split(' ')[0];
+    safeSet('cumbear_lang', langCode);
+    safeSet('cumbear_lang_name', langName);
+
+    /* Set cookie — try domain-scoped first, fall back to path-only */
+    const domain = window.location.hostname;
+    try {
+      document.cookie = 'googtrans=/en/' + langCode +
+        '; path=/; domain=' + domain + '; SameSite=Lax';
+    } catch (e) { /* ignore */ }
+    try {
+      document.cookie = 'googtrans=/en/' + langCode +
+        '; path=/; SameSite=Lax';
+    } catch (e) { /* ignore */ }
+
+    /* Try to invoke the widget */
+    const select = document.querySelector('.goog-te-combo');
+    if (select) {
+      select.value = langCode;
+      select.dispatchEvent(new Event('change'));
+      return;
     }
 
-    if (languageRow && langModal) {
-      languageRow.addEventListener('click', () => {
-        window.closeSidebar();
+    /* If widget not ready yet, wait up to 800ms for it */
+    let waited = 0;
+    const interval = setInterval(function () {
+      const sel = document.querySelector('.goog-te-combo');
+      if (sel) {
+        clearInterval(interval);
+        sel.value = langCode;
+        sel.dispatchEvent(new Event('change'));
+        return;
+      }
+      waited += 100;
+      if (waited >= 800) {
+        clearInterval(interval);
+        /* Google Translate probably blocked (ad-blocker) — show message,
+           clear the cookie so next load isn't stuck in a broken state. */
+        showToast('Translation unavailable — try disabling ad-blockers or refreshing');
+        try {
+          document.cookie = 'googtrans=; max-age=0; path=/; SameSite=Lax';
+          document.cookie = 'googtrans=; max-age=0; path=/; domain=' + domain + '; SameSite=Lax';
+        } catch (e) { /* ignore */ }
+      }
+    }, 100);
+  }
+
+  /* ============================================================
+     LANGUAGE MODAL WIRING
+     ============================================================ */
+  function wireLanguageModal() {
+    const row = document.getElementById('languageRow');
+    const modal = document.getElementById('languageModal');
+    const closeBtn = document.getElementById('closeLangModal');
+    const searchInput = document.getElementById('langSearchInput');
+    if (!row || !modal) return;
+
+    if (!row.dataset.wired) {
+      row.dataset.wired = '1';
+      row.addEventListener('click', function () {
+        closeSidebar();
         renderLanguages();
-        langModal.classList.remove('hidden');
-        if (langSearchInput) {
-          langSearchInput.value = '';
-          setTimeout(() => langSearchInput.focus(), 150);
+        modal.classList.remove('hidden');
+        if (searchInput) {
+          searchInput.value = '';
+          setTimeout(function () {
+            try { searchInput.focus({ preventScroll: true }); } catch (e) { searchInput.focus(); }
+          }, 150);
         }
       });
     }
 
-    if (closeLangModal && langModal) {
-      closeLangModal.addEventListener('click', () => langModal.classList.add('hidden'));
-    }
-
-    if (langSearchInput) {
-      langSearchInput.addEventListener('input', (e) => {
-        renderLanguages(e.target.value);
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', function () {
+        modal.classList.add('hidden');
       });
     }
 
-    function translateSite(langCode, langName) {
-      if (langValueDisplay) langValueDisplay.textContent = langName.split(' ')[0];
-      try {
-        localStorage.setItem('cumbear_lang', langCode);
-        localStorage.setItem('cumbear_lang_name', langName);
-      } catch (e) {}
+    if (searchInput && !searchInput.dataset.wired) {
+      searchInput.dataset.wired = '1';
+      let debounceTimer = null;
+      searchInput.addEventListener('input', function (e) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          renderLanguages(e.target.value);
+        }, 120);
+      });
+    }
 
-      const domain = window.location.hostname;
-      document.cookie = `googtrans=/en/${langCode}; path=/; domain=${domain}`;
-      document.cookie = `googtrans=/en/${langCode}; path=/;`;
+    /* Restore saved language label */
+    const savedName = safeGet('cumbear_lang_name');
+    const labelEl = document.getElementById('langValueDisplay');
+    if (savedName && labelEl) {
+      labelEl.textContent = savedName.split(' ')[0];
+    }
+  }
 
-      const select = document.querySelector('.goog-te-combo');
-      if (select) {
-        select.value = langCode;
-        select.dispatchEvent(new Event('change'));
-      } else {
-        window.location.reload();
+  /* ============================================================
+     KEYBOARD / OUTSIDE CLICKS
+     ============================================================ */
+  function wireKeyboard() {
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      const sidebar = document.getElementById('siteSidebar');
+      const langModal = document.getElementById('languageModal');
+      if (sidebar && sidebar.classList.contains('active')) {
+        closeSidebar();
       }
+      if (langModal && !langModal.classList.contains('hidden')) {
+        langModal.classList.add('hidden');
+      }
+    });
+  }
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  function init() {
+    /* Close wiring */
+    const closeBtn = document.getElementById('closeSidebar');
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', closeSidebar);
     }
 
-    const savedLangName = localStorage.getItem('cumbear_lang_name');
-    if (savedLangName && langValueDisplay) {
-      langValueDisplay.textContent = savedLangName.split(' ')[0];
+    const overlay = document.getElementById('sidebarOverlay');
+    if (overlay && !overlay.dataset.wired) {
+      overlay.dataset.wired = '1';
+      overlay.addEventListener('click', closeSidebar);
     }
-  });
+
+    wireThemeToggle();
+    wireInstall();
+    wireGridPicker();
+    wireNav();
+    wireLanguageModal();
+    wireKeyboard();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

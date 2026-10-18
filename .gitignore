@@ -1,3 +1,12 @@
 node_modules/
-.DS_Store
 .env
+.env.*
+*.log
+*.bak
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+.vercel
+.wrangler/

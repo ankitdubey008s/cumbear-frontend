@@ -1,297 +1,314 @@
 /**
  * ==========================================================================
- * CUMBEAR SEARCH CONTROLLER (Guaranteed 50 Videos & Interactive Gestures)
+ * CUMBEAR — SEARCH & CATEGORIES CONTROLLER
+ * --------------------------------------------------------------------------
+ * Handles the Search/Categories view:
+ *   - Categories hub (image grid)
+ *   - Search results grid with FapHouse injection
+ *   - Live search-as-you-type (debounced)
+ *   - State preservation via sessionStorage
+ *
+ * Uses:
+ *   - window.attachHoldAndSlidePreview  (attach-preview.js)
+ *   - window.mixAffiliateVideos         (faphouse.js)
+ *   - window.renderMixedVideoCard       (faphouse.js)
+ *   - window.CumBearAds.refreshBanners  (ads.js)
+ *
+ * Exposes:
+ *   window.performSearch(term, page)  → programmatic search
  * ==========================================================================
  */
-
 (function () {
   'use strict';
 
-  const API_BASE = 'https://cumbear-backend.vercel.app';
-  let searchPage = 1;
-  let activeSearchTerm = '';
+  if (window.__cumbearSearchLoaded) return;
+  window.__cumbearSearchLoaded = true;
 
-  const fallbackCategories = [
+  const CFG = window.CUMBEAR;
+  if (!CFG) {
+    console.warn('[CumBearSearch] config.js not loaded — aborting');
+    return;
+  }
+
+  const SESSION_KEY = 'cumbear_search_state_v1';
+  const DEBOUNCE_MS = 300;
+
+  const FALLBACK_CATEGORIES = [
     'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
     'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
     'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
     'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
   ];
 
-  function formatCount(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return String(num);
+  let searchPage   = 1;
+  let activeSearchTerm = '';
+  let activeFetchId = 0;
+  let searchInFlight = false;
+  let debounceTimer = null;
+  let hubInitialized = false;
+
+  /* ---------- utils ---------- */
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
-  function getRandomViews() {
-    return Math.floor(Math.random() * (10000000 - 10000 + 1)) + 10000;
+  function hashString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
   }
 
-  function getRandomLikeRate() {
-    return Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+  function stableViews(id) { return 10000 + (hashString(String(id) + 'v') % 9990000); }
+  function stableLikeRate(id) { return 55 + (hashString(String(id) + 'l') % 44); }
+
+  function formatCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
   }
 
+  /* ---------- state persistence ---------- */
+  function saveState() {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        term: activeSearchTerm,
+        page: searchPage,
+        ts: Date.now()
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function readState() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.term !== 'string') return null;
+      /* Ignore states older than 30 minutes */
+      if (parsed.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
+      return parsed;
+    } catch (e) { return null; }
+  }
+
+  function clearState() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- categories hub ---------- */
   function initCategoriesHub() {
+    if (hubInitialized) return;
     const hubGrid = document.getElementById('searchCategoriesGrid');
     if (!hubGrid) return;
 
     hubGrid.innerHTML = '';
-    fallbackCategories.forEach((catName, idx) => {
+
+    FALLBACK_CATEGORIES.forEach(function (catName, idx) {
       const imgIdx = idx + 1;
       const card = document.createElement('div');
       card.className = 'image-cat-card';
-      card.innerHTML = `
-        <img src="/categories/${imgIdx}.jpg" alt="${catName}" loading="lazy" decoding="async" onerror="this.src='/cumb.png'">
-        <div class="image-cat-overlay">
-          <span class="image-cat-title">${catName}</span>
-        </div>
-      `;
-      card.addEventListener('click', () => {
-        executeSearch(catName);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', 'Search ' + catName + ' videos');
+      card.innerHTML =
+        '<img src="/categories/' + imgIdx + '.jpg" alt="' + escapeHtml(catName) + '" ' +
+             'loading="lazy" decoding="async" onerror="this.src=\'/cumb.png\'">' +
+        '<div class="image-cat-overlay">' +
+          '<span class="image-cat-title">' + escapeHtml(catName) + '</span>' +
+        '</div>';
+
+      const activate = function () { executeSearch(catName, 1); };
+      card.addEventListener('click', activate);
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate();
+        }
       });
+
       hubGrid.appendChild(card);
     });
+
+    hubInitialized = true;
   }
 
-  async function executeSearch(term, page = 1) {
-    if (!term || !term.trim()) return;
-    activeSearchTerm = term.trim();
-    searchPage = page;
+  /* ---------- main search ---------- */
+  function executeSearch(term, page) {
+    term = (term || '').trim();
+    if (!term) return;
+    if (searchInFlight) return;
 
-    const hubSection = document.getElementById('searchCategoriesHub');
-    const resultsSection = document.getElementById('searchResultsSection');
-    const resultTitle = document.getElementById('searchResultTitle');
-    const resultsGrid = document.getElementById('searchVideoGrid');
-    const input = document.getElementById('searchInput');
+    activeSearchTerm = term;
+    searchPage = page || 1;
 
-    if (input) input.value = activeSearchTerm;
-    if (hubSection) hubSection.classList.add('hidden');
-    if (resultsSection) resultsSection.classList.remove('hidden');
-    if (resultTitle) resultTitle.textContent = `Results for: "${activeSearchTerm}"`;
+    const hub       = document.getElementById('searchCategoriesHub');
+    const results   = document.getElementById('searchResultsSection');
+    const title     = document.getElementById('searchResultTitle');
+    const grid      = document.getElementById('searchVideoGrid');
+    const input     = document.getElementById('searchInput');
+    const clearBtn  = document.getElementById('clearSearchBtn');
 
-    if (resultsGrid) {
-      resultsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);font-weight:700;">Loading 50 matching videos...</div>';
+    if (input)     input.value = activeSearchTerm;
+    if (clearBtn)  clearBtn.classList.remove('hidden');
+    if (hub)       hub.classList.add('hidden');
+    if (results)   results.classList.remove('hidden');
+    if (title)     title.textContent = 'Results for: "' + activeSearchTerm + '"';
+
+    if (grid) {
+      grid.innerHTML =
+        '<div class="grid-status">Searching…</div>';
     }
 
-    try {
-      // Uses the new search query pipeline
-      const res = await fetch(`${API_BASE}/api/videos?page=${searchPage}&limit=50&search=${encodeURIComponent(activeSearchTerm)}&_=${Date.now()}`);
-      const json = await res.json();
+    saveState();
 
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        renderSearchResults(json.data);
-        renderSearchPagination(json.pagination ? json.pagination.totalPages : 10);
-      } else {
-        if (resultsGrid) {
-          resultsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No videos found.</div>';
+    activeFetchId++;
+    const myId = activeFetchId;
+    searchInFlight = true;
+
+    const url = CFG.helpers.videoListUrl({
+      page: searchPage,
+      limit: 50,
+      search: activeSearchTerm,
+      _: Date.now()
+    });
+
+    fetch(url, { credentials: 'omit' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        if (myId !== activeFetchId) return;
+        if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+          renderResults(json.data);
+          renderPagination(json.pagination ? json.pagination.totalPages : 1);
+        } else {
+          if (grid) {
+            grid.innerHTML =
+              '<div class="grid-empty">' +
+                '<p>No results for "' + escapeHtml(activeSearchTerm) + '".</p>' +
+                '<button id="searchResetBtn" class="page-btn" style="margin-top:12px;">Back to categories</button>' +
+              '</div>';
+            const btn = document.getElementById('searchResetBtn');
+            if (btn) btn.addEventListener('click', backToHub);
+          }
+          renderPagination(0);
         }
-      }
-    } catch (e) {
-      if (resultsGrid) {
-        resultsGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:#ef4444;">Search error: ${e.message}</div>`;
-      }
-    }
+      })
+      .catch(function (err) {
+        if (myId !== activeFetchId) return;
+        console.error('[CumBearSearch] error:', err);
+        if (grid) {
+          grid.innerHTML =
+            '<div class="grid-empty">' +
+              '<p>Search failed. Please check your connection.</p>' +
+              '<button id="searchRetryBtn" class="page-btn" style="margin-top:12px;">Retry</button>' +
+            '</div>';
+          const btn = document.getElementById('searchRetryBtn');
+          if (btn) btn.addEventListener('click', function () {
+            executeSearch(activeSearchTerm, searchPage);
+          });
+        }
+      })
+      .finally(function () {
+        if (myId === activeFetchId) searchInFlight = false;
+      });
   }
 
-  function renderSearchResults(videos) {
+  /* ---------- render ---------- */
+  function renderResults(videos) {
     const grid = document.getElementById('searchVideoGrid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    videos.forEach(v => {
-      const card = document.createElement('div');
-      card.className = 'video-card';
-      const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
-      const views = formatCount(getRandomViews());
-      const likeRate = getRandomLikeRate();
-      const safeTitle = (v.title || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const mixed = (typeof window.mixAffiliateVideos === 'function')
+      ? window.mixAffiliateVideos(videos)
+      : videos;
 
-      card.innerHTML = `
-        <div class="video-thumb">
-          <img class="hd-thumb" src="${v.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
-          <div class="preview-video-holder"></div>
-          <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
-          <div class="preview-loading"><div class="preview-spinner"></div></div>
-          <span class="duration-badge">${duration}</span>
-        </div>
-        <div class="video-info">
-          <div class="video-title">${safeTitle}</div>
-          <div class="video-meta-row">
-            <span class="provider-tag">${v.category || 'CumBear'}</span>
-            <span>•</span>
-            <span>${views} views</span>
-            <span>•</span>
-            <span>${likeRate}%</span>
-          </div>
-        </div>
-      `;
-
-      attachSearchGestures(card, v);
-      grid.appendChild(card);
-    });
-  }
-
-  function attachSearchGestures(card, video) {
-    const thumb = card.querySelector('.video-thumb');
-    const title = card.querySelector('.video-title');
-    const holder = card.querySelector('.preview-video-holder');
-    const timeline = card.querySelector('.preview-timeline');
-    const timelineFill = card.querySelector('.preview-timeline-fill');
-    const loading = card.querySelector('.preview-loading');
-
-    let pressTimer = null;
-    let isPreviewPlaying = false;
-    let startX = 0;
-    let startY = 0;
-    let heldDown = false;
-    let videoEl = null;
-
-    thumb.addEventListener('contextmenu', (e) => e.preventDefault());
-    thumb.querySelectorAll('img').forEach(img => img.addEventListener('dragstart', (e) => e.preventDefault()));
-
-    function stopPreview() {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-      if (isPreviewPlaying) {
-        isPreviewPlaying = false;
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.src = '';
-          videoEl.load();
-          videoEl.remove();
-          videoEl = null;
-        }
-        thumb.classList.remove('previewing');
-        title.classList.remove('previewing-text');
-        if (timeline) timeline.classList.remove('active');
-        if (loading) loading.classList.remove('active');
-        if (timelineFill) timelineFill.style.width = '0%';
-      }
-    }
-
-    function startPreview() {
-      document.querySelectorAll('.video-thumb.previewing').forEach(el => {
-        const v = el.querySelector('video');
-        if (v) { v.pause(); v.src = ''; v.load(); v.remove(); }
-        el.classList.remove('previewing');
-      });
-
-      isPreviewPlaying = true;
-      thumb.classList.add('previewing');
-      title.classList.add('previewing-text');
-      if (timeline) timeline.classList.add('active');
-      if (loading) loading.classList.add('active');
-
-      videoEl = document.createElement('video');
-      videoEl.setAttribute('muted', '');
-      videoEl.muted = true;
-      videoEl.setAttribute('playsinline', '');
-      videoEl.setAttribute('webkit-playsinline', '');
-      videoEl.preload = 'auto';
-      videoEl.src = video.playableUrl;
-      videoEl.playbackRate = 1.0;
-
-      videoEl.oncanplay = () => {
-        if (loading) loading.classList.remove('active');
-        videoEl.play().catch(() => stopPreview());
-      };
-
-      videoEl.ontimeupdate = () => {
-        if (videoEl.currentTime > 60) {
-          stopPreview();
-          return;
-        }
-        if (timelineFill) {
-          timelineFill.style.width = `${(videoEl.currentTime / 60) * 100}%`;
-        }
-      };
-
-      videoEl.onerror = () => stopPreview();
-      holder.appendChild(videoEl);
-    }
-
-    thumb.addEventListener('pointerdown', (e) => {
-      startX = e.clientX;
-      startY = e.clientY;
-      heldDown = true;
-
-      if (isPreviewPlaying) {
-        stopPreview();
-        heldDown = false;
+    mixed.forEach(function (video) {
+      if (typeof window.renderMixedVideoCard === 'function') {
+        const card = window.renderMixedVideoCard(video, function () {
+          openPlayer(video._id);
+        });
+        grid.appendChild(card);
         return;
       }
 
-      pressTimer = setTimeout(() => {
-        if (heldDown) {
-          startPreview();
-        }
-      }, 1000);
-    });
+      /* Fallback renderer (rare) */
+      const card = document.createElement('div');
+      card.className = 'video-card';
 
-    thumb.addEventListener('pointermove', (e) => {
-      if (!heldDown && !isPreviewPlaying) return;
+      const duration = (video.duration || '00:00').replace(/^HD\s*/i, '');
+      const views = formatCount(stableViews(video._id));
+      const likeRate = stableLikeRate(video._id);
+      const safeTitle = escapeHtml(video.title || 'Untitled');
 
-      const diffX = Math.abs(e.clientX - startX);
-      const diffY = Math.abs(e.clientY - startY);
+      card.innerHTML =
+        '<div class="video-thumb">' +
+          '<img class="hd-thumb" src="' + (video.thumbnailUrl || '/cumb.png') + '" ' +
+               'alt="' + safeTitle + '" loading="lazy" decoding="async" draggable="false" ' +
+               'onerror="this.src=\'/cumb.png\'">' +
+          '<div class="preview-video-holder"></div>' +
+          '<div class="preview-timeline"><div class="preview-timeline-fill"></div></div>' +
+          '<div class="preview-loading"><div class="preview-spinner"></div></div>' +
+          '<span class="duration-badge">' + duration + '</span>' +
+        '</div>' +
+        '<div class="video-info">' +
+          '<div class="video-title">' + safeTitle + '</div>' +
+          '<div class="video-meta-row">' +
+            '<span class="provider-tag">' + escapeHtml(video.category || 'CumBear') + '</span>' +
+            '<span>•</span><span>' + views + ' views</span>' +
+            '<span>•</span><span>' + likeRate + '%</span>' +
+          '</div>' +
+        '</div>';
 
-      if (!isPreviewPlaying && (diffX > 10 || diffY > 10)) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      } else if (isPreviewPlaying && videoEl && videoEl.duration) {
-        const rect = thumb.getBoundingClientRect();
-        const scrubRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        videoEl.currentTime = scrubRatio * Math.min(videoEl.duration, 60);
-      }
-    });
-
-    thumb.addEventListener('pointerup', () => {
-      heldDown = false;
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-        if (!isPreviewPlaying) {
+      if (typeof window.attachHoldAndSlidePreview === 'function') {
+        window.attachHoldAndSlidePreview(card, video, function () {
           openPlayer(video._id);
-        }
+        });
+      } else {
+        card.addEventListener('click', function () { openPlayer(video._id); });
       }
+
+      grid.appendChild(card);
     });
 
-    thumb.addEventListener('pointercancel', () => {
-      heldDown = false;
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-    });
-
-    card.querySelector('.video-info').addEventListener('click', () => {
-      stopPreview();
-      openPlayer(video._id);
-    });
+    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
+      try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
+    }
   }
 
   function openPlayer(videoId) {
-    if (window.switchView) {
-      window.switchView('playerView', true);
-    }
+    if (!videoId) return;
+    if (window.switchView) window.switchView('playerView', true);
     if (typeof window.loadPlayerVideoById === 'function') {
       window.loadPlayerVideoById(videoId);
     }
   }
 
-  function renderSearchPagination(totalPages) {
+  /* ---------- pagination ---------- */
+  function renderPagination(totalPages) {
     const wrapper = document.getElementById('searchPaginationWrapper');
     if (!wrapper) return;
-
     wrapper.innerHTML = '';
-    const max = Math.min(totalPages, 10);
-    for (let i = 1; i <= max; i++) {
+
+    totalPages = Math.max(0, parseInt(totalPages, 10) || 0);
+    if (totalPages <= 1) return;
+
+    const maxPages = Math.min(totalPages, 10);
+    for (let i = 1; i <= maxPages; i++) {
       const btn = document.createElement('button');
-      btn.className = `page-btn ${i === searchPage ? 'active' : ''}`;
+      btn.type = 'button';
+      btn.className = 'page-btn' + (i === searchPage ? ' active' : '');
       btn.textContent = i;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', function () {
+        if (searchPage === i) return;
         executeSearch(activeSearchTerm, i);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
@@ -299,30 +316,93 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    initCategoriesHub();
+  /* ---------- back to hub ---------- */
+  function backToHub() {
+    const hub     = document.getElementById('searchCategoriesHub');
+    const results = document.getElementById('searchResultsSection');
+    const input   = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (results) results.classList.add('hidden');
+    if (hub)     hub.classList.remove('hidden');
+    if (input)   input.value = '';
+    if (clearBtn) clearBtn.classList.add('hidden');
+    activeSearchTerm = '';
+    searchPage = 1;
+    clearState();
+  }
 
-    const input = document.getElementById('searchInput');
+  /* ---------- wiring ---------- */
+  function wireInput() {
+    const input     = document.getElementById('searchInput');
     const submitBtn = document.getElementById('searchSubmitBtn');
-    const backBtn = document.getElementById('backToHubBtn');
+    const clearBtn  = document.getElementById('clearSearchBtn');
+    const backBtn   = document.getElementById('backToHubBtn');
+
+    if (input) {
+      input.addEventListener('input', function () {
+        if (clearBtn) {
+          clearBtn.classList.toggle('hidden', !input.value.trim());
+        }
+        if (debounceTimer) clearTimeout(debounceTimer);
+        const val = input.value.trim();
+        if (val.length < 2) return;   /* don't fire on 1-char */
+        debounceTimer = setTimeout(function () {
+          executeSearch(val, 1);
+        }, DEBOUNCE_MS);
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+          executeSearch(input.value, 1);
+        }
+      });
+    }
 
     if (submitBtn && input) {
-      submitBtn.addEventListener('click', () => executeSearch(input.value));
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') executeSearch(input.value);
+      submitBtn.addEventListener('click', function () {
+        if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+        executeSearch(input.value, 1);
       });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', backToHub);
     }
 
     if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        const hubSection = document.getElementById('searchCategoriesHub');
-        const resultsSection = document.getElementById('searchResultsSection');
-        if (resultsSection) resultsSection.classList.add('hidden');
-        if (hubSection) hubSection.classList.remove('hidden');
-        if (input) input.value = '';
-      });
+      backBtn.addEventListener('click', backToHub);
     }
-  });
+  }
+
+  /* ---------- restore on return ---------- */
+  function restoreIfNeeded() {
+    const state = readState();
+    if (!state || !state.term) return;
+    /* Only restore if we came back to search/categories view — script.js
+       will call this only when the view is (re)activated. */
+    executeSearch(state.term, state.page || 1);
+  }
+
+  /* ---------- init ---------- */
+  function init() {
+    initCategoriesHub();
+    wireInput();
+
+    /* Only auto-restore when user lands back on categoriesView */
+    document.addEventListener('cumbear:viewChanged', function (ev) {
+      if (ev && ev.detail && ev.detail.view === 'categoriesView') {
+        restoreIfNeeded();
+      }
+    });
+  }
 
   window.performSearch = executeSearch;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

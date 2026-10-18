@@ -1,25 +1,66 @@
 /**
  * ==========================================================================
- * CUMBEAR HOME CONTROLLER (Guaranteed Category Chips & 50-Video Feed)
+ * CUMBEAR — HOME CONTROLLER
+ * --------------------------------------------------------------------------
+ * Fetches videos + categories, renders the grid with FapHouse injection,
+ * wires pagination, category chips, and sort dropdown.
+ *
+ * Uses:
+ *   - window.mixAffiliateVideos(videos)       (faphouse.js)
+ *   - window.renderMixedVideoCard(video)      (faphouse.js → attach-preview.js)
+ *   - window.CumBearAds.refreshBanners()      (ads.js)
+ *
+ * Exposes:
+ *   window.resetHomeState()      → reset filters + reload
+ *   window.setCategoryFilter(c)  → set category programmatically
  * ==========================================================================
  */
-
 (function () {
   'use strict';
 
-  const API_BASE = 'https://cumbear-backend.vercel.app';
-  const CRAK_NATIVE_URL = 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN';
+  if (window.__cumbearHomeLoaded) return;
+  window.__cumbearHomeLoaded = true;
 
-  let currentPage = 1;
+  const CFG = window.CUMBEAR;
+  if (!CFG) {
+    console.warn('[CumBearHome] config.js not loaded — aborting');
+    return;
+  }
+
+  /* ---------- state ---------- */
+  let currentPage     = 1;
   let currentCategory = 'all';
-  let currentSort = 'gem';
+  let currentSort     = 'gem';
+  let activeFetchId   = 0;   /* guards against race between rapid page switches */
 
-  const defaultCategories = [
+  const CATEGORY_CACHE_KEY = 'cumbear_categories_v1';
+  const CATEGORY_CACHE_MS  = 5 * 60 * 1000;   /* 5 min */
+
+  const DEFAULT_CATEGORIES = [
     'all', 'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
     'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
     'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
     'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
   ];
+
+  /* ---------- deterministic pseudo-random (stable stats per card) ---------- */
+  function hashString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function stableViews(id) {
+    const n = 10000 + (hashString(String(id) + 'v') % 9990000);
+    return n;
+  }
+
+  function stableLikeRate(id) {
+    return 55 + (hashString(String(id) + 'l') % 44);
+  }
 
   function formatCount(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -27,327 +68,259 @@
     return String(num);
   }
 
-  function getRandomViews() {
-    return Math.floor(Math.random() * (10000000 - 10000 + 1)) + 10000;
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
-  function getRandomLikeRate() {
-    return Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+  /* ---------- categories cache ---------- */
+  function readCategoryCache() {
+    try {
+      const raw = localStorage.getItem(CATEGORY_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.ts !== 'number' || !Array.isArray(parsed.list)) return null;
+      if (Date.now() - parsed.ts > CATEGORY_CACHE_MS) return null;
+      return parsed.list;
+    } catch (e) { return null; }
   }
 
-  // Render Category Chips
+  function writeCategoryCache(list) {
+    try {
+      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify({ ts: Date.now(), list: list }));
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- category chips ---------- */
   function renderCategoryChips(list) {
-    const catsBar = document.getElementById('globalHorizontalCats');
-    if (!catsBar) return;
+    const bar = document.getElementById('globalHorizontalCats');
+    if (!bar) return;
 
-    catsBar.innerHTML = '';
-    list.forEach(item => {
-      const catName = typeof item === 'object' ? item._id : item;
-      if (!catName || catName.trim() === '') return;
+    /* Preserve the "All" chip; rebuild the rest */
+    const wasScrolled = bar.scrollLeft;
+    bar.innerHTML = '';
+
+    list.forEach(function (item) {
+      /* New backend shape: { _id, label, count } */
+      /* Old shape (fallback): plain string or { _id } */
+      let filterValue, displayLabel;
+      if (typeof item === 'object' && item) {
+        filterValue = item._id;
+        displayLabel = item.label || item._id;
+      } else {
+        filterValue = item;
+        displayLabel = item;
+      }
+      if (!filterValue || String(filterValue).trim() === '') return;
 
       const btn = document.createElement('button');
-      btn.className = `h-cat-chip ${catName.toLowerCase() === currentCategory.toLowerCase() ? 'active' : ''}`;
-      btn.textContent = catName.toLowerCase() === 'all' ? 'All' : catName;
+      btn.className = 'h-cat-chip' +
+        (String(filterValue).toLowerCase() === currentCategory.toLowerCase() ? ' active' : '');
+      btn.type = 'button';
+      btn.textContent = (String(filterValue).toLowerCase() === 'all')
+        ? 'All'
+        : displayLabel;
 
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.h-cat-chip').forEach(b => b.classList.remove('active'));
+      btn.addEventListener('click', function () {
+        if (currentCategory === String(filterValue).toLowerCase()) return;
+        bar.querySelectorAll('.h-cat-chip').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
-        currentCategory = catName.toLowerCase();
+        currentCategory = String(filterValue).toLowerCase();
         currentPage = 1;
         loadVideos();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      catsBar.appendChild(btn);
+      bar.appendChild(btn);
     });
+
+    /* Restore horizontal scroll position */
+    bar.scrollLeft = wasScrolled;
   }
 
-  async function loadCategories() {
-    // 1. Immediately render default categories to avoid layout jump
-    renderCategoryChips(defaultCategories);
+  /* ---------- bottom "Explore Categories" grid ---------- */
+  function renderImageCategories() {
+    const grid = document.getElementById('imageCategoriesGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
 
-    // 2. Fetch from backend to sync any new dynamic categories
-    try {
-      const res = await fetch(`${API_BASE}/api/categories?t=${Date.now()}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        renderCategoryChips(data.data);
-      }
-    } catch (err) {
-      console.warn('Using default category set:', err);
-    }
+    const showcase = DEFAULT_CATEGORIES.filter(function (c) { return c !== 'all'; });
 
-    // 3. Render 20 Image Categories at Bottom
-    const bottomGrid = document.getElementById('imageCategoriesGrid');
-    if (bottomGrid) {
-      bottomGrid.innerHTML = '';
-      const showcaseNames = defaultCategories.filter(c => c !== 'all');
+    for (let i = 1; i <= 20; i++) {
+      const name = showcase[i - 1] || ('Category ' + i);
+      const card = document.createElement('div');
+      card.className = 'image-cat-card';
+      card.innerHTML =
+        '<img src="/categories/' + i + '.jpg" alt="' + escapeHtml(name) + '" ' +
+             'loading="lazy" decoding="async" ' +
+             'onerror="this.src=\'/cumb.png\'">' +
+        '<div class="image-cat-overlay">' +
+          '<span class="image-cat-title">' + escapeHtml(name) + '</span>' +
+        '</div>';
 
-      for (let i = 1; i <= 20; i++) {
-        const catName = showcaseNames[i - 1] || `Category ${i}`;
-        const card = document.createElement('div');
-        card.className = 'image-cat-card';
-        card.innerHTML = `
-          <img src="/categories/${i}.jpg" alt="${catName}" loading="lazy" decoding="async" onerror="this.src='/cumb.png'">
-          <div class="image-cat-overlay">
-            <span class="image-cat-title">${catName}</span>
-          </div>
-        `;
-        card.addEventListener('click', () => {
-          currentCategory = catName.toLowerCase();
-          currentPage = 1;
-          renderCategoryChips(defaultCategories);
-          loadVideos();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        bottomGrid.appendChild(card);
-      }
+      card.addEventListener('click', function () {
+        currentCategory = name.toLowerCase();
+        currentPage = 1;
+        renderCategoryChips(DEFAULT_CATEGORIES);
+        loadVideos();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      grid.appendChild(card);
     }
   }
 
-  async function loadVideos() {
+  /* ---------- video fetch + render ---------- */
+  function loadVideos() {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
 
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);font-weight:700;">Loading videos...</div>';
+    /* Race guard */
+    activeFetchId++;
+    const myFetchId = activeFetchId;
 
-    try {
-      let url = `${API_BASE}/api/videos?page=${currentPage}&limit=50&sort=${currentSort}&_=${Date.now()}`;
-      if (currentCategory && currentCategory !== 'all') {
-        url += `&category=${encodeURIComponent(currentCategory)}`;
-      }
+    grid.innerHTML =
+      '<div class="grid-status">Loading videos…</div>';
 
-      const res = await fetch(url);
-      const json = await res.json();
-
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        renderVideoGrid(json.data);
-        renderPagination(json.pagination ? json.pagination.totalPages : 10);
-      } else {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No videos found.</div>';
-      }
-    } catch (err) {
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:#ef4444;">Error loading videos: ${err.message}</div>`;
+    const params = {
+      page: currentPage,
+      limit: 50,
+      sort: currentSort,
+      _: Date.now()
+    };
+    if (currentCategory && currentCategory !== 'all') {
+      params.category = currentCategory;
     }
+
+    const url = CFG.helpers.videoListUrl(params);
+
+    fetch(url, { credentials: 'omit' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        if (myFetchId !== activeFetchId) return;   /* a newer fetch superseded us */
+        if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+          renderVideoGrid(json.data);
+          renderPagination(json.pagination ? json.pagination.totalPages : 10);
+        } else {
+          grid.innerHTML =
+            '<div class="grid-empty">' +
+              '<p>No videos found in this category.</p>' +
+              '<button id="resetFiltersBtn" class="page-btn" style="margin-top:12px;">Show all videos</button>' +
+            '</div>';
+          const resetBtn = document.getElementById('resetFiltersBtn');
+          if (resetBtn) {
+            resetBtn.addEventListener('click', function () { window.resetHomeState(); });
+          }
+          renderPagination(0);
+        }
+      })
+      .catch(function (err) {
+        if (myFetchId !== activeFetchId) return;
+        console.error('[CumBearHome] loadVideos error:', err);
+        grid.innerHTML =
+          '<div class="grid-empty">' +
+            '<p>Could not load videos right now. Please check your connection.</p>' +
+            '<button id="retryLoadBtn" class="page-btn" style="margin-top:12px;">Retry</button>' +
+          '</div>';
+        const retryBtn = document.getElementById('retryLoadBtn');
+        if (retryBtn) retryBtn.addEventListener('click', loadVideos);
+      });
   }
 
   function renderVideoGrid(videos) {
     const grid = document.getElementById('videoGrid');
+    if (!grid) return;
     grid.innerHTML = '';
 
-    videos.forEach((video, index) => {
-      if (index > 0 && index % 5 === 0) {
-        const adCard = document.createElement('a');
-        adCard.className = 'crak-native-card';
-        adCard.href = CRAK_NATIVE_URL;
-        adCard.target = '_blank';
-        adCard.rel = 'noopener noreferrer';
-        adCard.innerHTML = `
-          <div class="crak-thumb-box">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=640&h=360&fit=crop" loading="lazy" decoding="async">
-            <span class="sponsored-pill">Sponsored</span>
-          </div>
-          <div class="video-info">
-            <div class="crak-title">Meet Local Singles Near You Tonight</div>
-            <div class="crak-meta">Verified • Free Access</div>
-          </div>
-        `;
-        grid.appendChild(adCard);
+    /* Mix in FapHouse affiliate cards every 5 videos */
+    const mixed = (typeof window.mixAffiliateVideos === 'function')
+      ? window.mixAffiliateVideos(videos)
+      : videos;
+
+    mixed.forEach(function (video) {
+      /* Use the shared renderer if available (handles affiliate + organic) */
+      if (typeof window.renderMixedVideoCard === 'function') {
+        const card = window.renderMixedVideoCard(video, function () {
+          openPlayer(video._id);
+        });
+        grid.appendChild(card);
+        return;
       }
 
+      /* Fallback: build card manually if faphouse.js failed to load */
       const card = document.createElement('div');
       card.className = 'video-card';
 
       const duration = (video.duration || '00:00').replace(/^HD\s*/i, '');
-      const views = formatCount(getRandomViews());
-      const likeRate = getRandomLikeRate();
-      const safeTitle = (video.title || 'Untitled Video').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const views = formatCount(stableViews(video._id));
+      const likeRate = stableLikeRate(video._id);
+      const safeTitle = escapeHtml(video.title || 'Untitled Video');
 
-      card.innerHTML = `
-        <div class="video-thumb">
-          <img class="hd-thumb" src="${video.thumbnailUrl || '/cumb.png'}" alt="${safeTitle}" loading="lazy" decoding="async" draggable="false" onerror="this.src='/cumb.png'">
-          <div class="preview-video-holder"></div>
-          <div class="preview-timeline"><div class="preview-timeline-fill"></div></div>
-          <div class="preview-loading"><div class="preview-spinner"></div></div>
-          <span class="duration-badge">${duration}</span>
-        </div>
-        <div class="video-info">
-          <div class="video-title">${safeTitle}</div>
-          <div class="video-meta-row">
-            <span class="provider-tag">${video.category || 'CumBear'}</span>
-            <span>•</span>
-            <span>${views} views</span>
-            <span>•</span>
-            <span>${likeRate}%</span>
-          </div>
-        </div>
-      `;
+      card.innerHTML =
+        '<div class="video-thumb">' +
+          '<img class="hd-thumb" src="' + (video.thumbnailUrl || '/cumb.png') + '" ' +
+               'alt="' + safeTitle + '" loading="lazy" decoding="async" draggable="false" ' +
+               'onerror="this.src=\'/cumb.png\'">' +
+          '<div class="preview-video-holder"></div>' +
+          '<div class="preview-timeline"><div class="preview-timeline-fill"></div></div>' +
+          '<div class="preview-loading"><div class="preview-spinner"></div></div>' +
+          '<span class="duration-badge">' + duration + '</span>' +
+        '</div>' +
+        '<div class="video-info">' +
+          '<div class="video-title">' + safeTitle + '</div>' +
+          '<div class="video-meta-row">' +
+            '<span class="provider-tag">' + escapeHtml(video.category || 'CumBear') + '</span>' +
+            '<span>•</span><span>' + views + ' views</span>' +
+            '<span>•</span><span>' + likeRate + '%</span>' +
+          '</div>' +
+        '</div>';
 
-      attachHoldAndSlidePreview(card, video);
+      if (typeof window.attachHoldAndSlidePreview === 'function') {
+        window.attachHoldAndSlidePreview(card, video, function () { openPlayer(video._id); });
+      } else {
+        card.addEventListener('click', function () { openPlayer(video._id); });
+      }
+
       grid.appendChild(card);
     });
-  }
 
-  function attachHoldAndSlidePreview(card, video) {
-    const thumb = card.querySelector('.video-thumb');
-    const title = card.querySelector('.video-title');
-    const holder = card.querySelector('.preview-video-holder');
-    const timeline = card.querySelector('.preview-timeline');
-    const timelineFill = card.querySelector('.preview-timeline-fill');
-    const loading = card.querySelector('.preview-loading');
-
-    let pressTimer = null;
-    let isPreviewPlaying = false;
-    let startX = 0;
-    let startY = 0;
-    let heldDown = false;
-    let videoEl = null;
-
-    thumb.addEventListener('contextmenu', (e) => e.preventDefault());
-    thumb.querySelectorAll('img').forEach(img => img.addEventListener('dragstart', (e) => e.preventDefault()));
-
-    function stopPreview() {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-      if (isPreviewPlaying) {
-        isPreviewPlaying = false;
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.src = '';
-          videoEl.load();
-          videoEl.remove();
-          videoEl = null;
-        }
-        thumb.classList.remove('previewing');
-        title.classList.remove('previewing-text');
-        if (timeline) timeline.classList.remove('active');
-        if (loading) loading.classList.remove('active');
-        if (timelineFill) timelineFill.style.width = '0%';
-      }
+    /* Tell ads.js to (re)serve banners for the newly rendered zone tags */
+    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
+      try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
     }
-
-    function startPreview() {
-      document.querySelectorAll('.video-thumb.previewing').forEach(el => {
-        const v = el.querySelector('video');
-        if (v) { v.pause(); v.src = ''; v.load(); v.remove(); }
-        el.classList.remove('previewing');
-      });
-
-      isPreviewPlaying = true;
-      thumb.classList.add('previewing');
-      title.classList.add('previewing-text');
-      if (timeline) timeline.classList.add('active');
-      if (loading) loading.classList.add('active');
-
-      videoEl = document.createElement('video');
-      videoEl.setAttribute('muted', '');
-      videoEl.muted = true;
-      videoEl.setAttribute('playsinline', '');
-      videoEl.setAttribute('webkit-playsinline', '');
-      videoEl.preload = 'auto';
-      videoEl.src = video.playableUrl;
-      videoEl.playbackRate = 1.0;
-
-      videoEl.oncanplay = () => {
-        if (loading) loading.classList.remove('active');
-        videoEl.play().catch(() => stopPreview());
-      };
-
-      videoEl.ontimeupdate = () => {
-        if (videoEl.currentTime > 60) {
-          stopPreview();
-          return;
-        }
-        if (timelineFill) {
-          timelineFill.style.width = `${(videoEl.currentTime / 60) * 100}%`;
-        }
-      };
-
-      videoEl.onerror = () => stopPreview();
-      holder.appendChild(videoEl);
-    }
-
-    thumb.addEventListener('pointerdown', (e) => {
-      startX = e.clientX;
-      startY = e.clientY;
-      heldDown = true;
-
-      if (isPreviewPlaying) {
-        stopPreview();
-        heldDown = false;
-        return;
-      }
-
-      pressTimer = setTimeout(() => {
-        if (heldDown) {
-          startPreview();
-        }
-      }, 1000);
-    });
-
-    thumb.addEventListener('pointermove', (e) => {
-      if (!heldDown && !isPreviewPlaying) return;
-
-      const diffX = Math.abs(e.clientX - startX);
-      const diffY = Math.abs(e.clientY - startY);
-
-      if (!isPreviewPlaying && (diffX > 10 || diffY > 10)) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      } else if (isPreviewPlaying && videoEl && videoEl.duration) {
-        const rect = thumb.getBoundingClientRect();
-        const scrubRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        videoEl.currentTime = scrubRatio * Math.min(videoEl.duration, 60);
-      }
-    });
-
-    thumb.addEventListener('pointerup', () => {
-      heldDown = false;
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-        if (!isPreviewPlaying) {
-          openPlayer(video._id);
-        }
-      }
-    });
-
-    thumb.addEventListener('pointercancel', () => {
-      heldDown = false;
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-    });
-
-    card.querySelector('.video-info').addEventListener('click', () => {
-      stopPreview();
-      openPlayer(video._id);
-    });
   }
 
   function openPlayer(videoId) {
-    if (window.switchView) {
-      window.switchView('playerView', true);
-    }
+    if (!videoId) return;
+    if (window.switchView) window.switchView('playerView', true);
     if (typeof window.loadPlayerVideoById === 'function') {
       window.loadPlayerVideoById(videoId);
     }
   }
 
+  /* ---------- pagination ---------- */
   function renderPagination(totalPages) {
     const wrapper = document.getElementById('paginationWrapper');
     if (!wrapper) return;
-
     wrapper.innerHTML = '';
-    const maxPages = Math.min(totalPages, 10);
 
+    totalPages = Math.max(0, parseInt(totalPages, 10) || 0);
+    if (totalPages <= 1) return;
+
+    const maxPages = Math.min(totalPages, 10);
     for (let i = 1; i <= maxPages; i++) {
       const btn = document.createElement('button');
-      btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+      btn.type = 'button';
+      btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
       btn.textContent = i;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', function () {
+        if (currentPage === i) return;
         currentPage = i;
         loadVideos();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -356,49 +329,92 @@
     }
   }
 
-  const filterBtn = document.getElementById('filterDropdownBtn');
-  const filterMenu = document.getElementById('filterMenu');
-  const currentSortLabel = document.getElementById('currentSortLabel');
+  /* ---------- sort dropdown ---------- */
+  function wireSortDropdown() {
+    const filterBtn   = document.getElementById('filterDropdownBtn');
+    const filterMenu  = document.getElementById('filterMenu');
+    const sortLabel   = document.getElementById('currentSortLabel');
+    if (!filterBtn || !filterMenu) return;
 
-  if (filterBtn && filterMenu) {
-    filterBtn.addEventListener('click', (e) => {
+    filterBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       filterMenu.classList.toggle('show');
     });
 
-    document.querySelectorAll('.filter-option').forEach(opt => {
-      opt.addEventListener('click', () => {
-        document.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
+    filterMenu.querySelectorAll('.filter-option').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        filterMenu.querySelectorAll('.filter-option').forEach(function (o) {
+          o.classList.remove('active');
+        });
         opt.classList.add('active');
         currentSort = opt.getAttribute('data-sort') || 'gem';
-        if (currentSortLabel) currentSortLabel.textContent = opt.textContent;
+        if (sortLabel) sortLabel.textContent = opt.textContent.trim();
         filterMenu.classList.remove('show');
         currentPage = 1;
         loadVideos();
       });
     });
 
-    document.addEventListener('click', () => {
-      filterMenu.classList.remove('show');
-    });
+    document.addEventListener('click', function () { filterMenu.classList.remove('show'); });
   }
 
+  /* ---------- public API ---------- */
   window.resetHomeState = function () {
     currentCategory = 'all';
     currentPage = 1;
     currentSort = 'gem';
-    renderCategoryChips(defaultCategories);
+    const sortLabel = document.getElementById('currentSortLabel');
+    if (sortLabel) sortLabel.textContent = 'Popularity';
+    document.querySelectorAll('.filter-option').forEach(function (o) {
+      o.classList.toggle('active', o.getAttribute('data-sort') === 'gem');
+    });
+    renderCategoryChips(DEFAULT_CATEGORIES);
     loadVideos();
   };
 
   window.setCategoryFilter = function (category) {
-    currentCategory = category;
+    if (!category) return;
+    currentCategory = String(category).toLowerCase();
     currentPage = 1;
     loadVideos();
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadCategories();
+  /* ---------- init ---------- */
+  function initCategories() {
+    /* 1. Immediate render — no layout jump */
+    renderCategoryChips(DEFAULT_CATEGORIES);
+
+    /* 2. Try cache first */
+    const cached = readCategoryCache();
+    if (cached && cached.length > 0) {
+      renderCategoryChips(cached);
+      return;
+    }
+
+    /* 3. Live fetch (won't block initial render) */
+    fetch(CFG.helpers.categoriesUrl(), { credentials: 'omit' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (json) {
+        if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+          writeCategoryCache(json.data);
+          renderCategoryChips(json.data);
+        }
+      })
+      .catch(function (err) {
+        console.warn('[CumBearHome] category fetch failed, using defaults:', err.message);
+      });
+  }
+
+  function init() {
+    renderImageCategories();
+    initCategories();
+    wireSortDropdown();
     loadVideos();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
