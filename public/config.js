@@ -16,7 +16,7 @@
   const CONFIG = Object.freeze({
     /* ---------- API ---------- */
     api: Object.freeze({
-      base: 'http://localhost:5000',
+      base: 'https://cumbearbackend-snowy.vercel.app',
       videosPath: '/api/videos',
       singleVideoPath: '/api/videos',          // + '/:id'
       categoriesPath: '/api/categories',
