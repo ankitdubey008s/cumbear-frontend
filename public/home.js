@@ -1,18 +1,15 @@
 /**
  * ==========================================================================
- * CUMBEAR — HOME CONTROLLER
+ * CUMBEAR — HOME CONTROLLER (v2, fragment-optimized)
  * --------------------------------------------------------------------------
- * Fetches videos + categories, renders the grid with FapHouse injection,
- * wires pagination, category chips, and sort dropdown.
+ * Thin controller: fetch → mix with FapHouse → append to grid.
+ * All card rendering and preview attachment delegated to faphouse.js.
  *
- * Uses:
- *   - window.mixAffiliateVideos(videos)       (faphouse.js)
- *   - window.renderMixedVideoCard(video)      (faphouse.js → attach-preview.js)
- *   - window.CumBearAds.refreshBanners()      (ads.js)
- *
- * Exposes:
- *   window.resetHomeState()      → reset filters + reload
- *   window.setCategoryFilter(c)  → set category programmatically
+ * Perf:
+ *   - Single DocumentFragment append (one reflow, not 50)
+ *   - Cached stable views/likes per _id
+ *   - Race guard for rapid category switches
+ *   - Category list cached in localStorage for 5 minutes
  * ==========================================================================
  */
 (function () {
@@ -31,19 +28,40 @@
   let currentPage     = 1;
   let currentCategory = 'all';
   let currentSort     = 'gem';
-  let activeFetchId   = 0;   /* guards against race between rapid page switches */
+  let activeFetchId   = 0;
 
-  const CATEGORY_CACHE_KEY = 'cumbear_categories_v1';
-  const CATEGORY_CACHE_MS  = 5 * 60 * 1000;   /* 5 min */
+  /* Perf: cache stable stats per _id */
+  const viewsCache = new Map();
+  const likesCache = new Map();
+
+  const CATEGORY_CACHE_KEY = 'cumbear_categories_v2';
+  const CATEGORY_CACHE_MS  = 5 * 60 * 1000;
 
   const DEFAULT_CATEGORIES = [
-    'all', 'Teen', 'MILF', 'Japanese', 'Anal', 'Amateur',
-    'Blowjob', 'Big Tits', 'Ebony', 'Latina', 'Hardcore',
-    'POV', 'Lesbian', 'Threesome', 'Vintage', 'BDSM',
-    'Masturbation', 'Creampie', 'Interracial', 'Hentai', 'Compilation'
+    { _id: 'all', label: 'All' },
+    { _id: 'teen', label: 'Teen' },
+    { _id: 'milf', label: 'MILF' },
+    { _id: 'japanese', label: 'Japanese' },
+    { _id: 'anal', label: 'Anal' },
+    { _id: 'amateur', label: 'Amateur' },
+    { _id: 'blowjob', label: 'Blowjob' },
+    { _id: 'big-tits', label: 'Big Tits' },
+    { _id: 'ebony', label: 'Ebony' },
+    { _id: 'latina', label: 'Latina' },
+    { _id: 'hardcore', label: 'Hardcore' },
+    { _id: 'pov', label: 'POV' },
+    { _id: 'lesbian', label: 'Lesbian' },
+    { _id: 'threesome', label: 'Threesome' },
+    { _id: 'vintage', label: 'Vintage' },
+    { _id: 'bdsm', label: 'BDSM' },
+    { _id: 'masturbation', label: 'Masturbation' },
+    { _id: 'creampie', label: 'Creampie' },
+    { _id: 'interracial', label: 'Interracial' },
+    { _id: 'hentai', label: 'Hentai' },
+    { _id: 'compilation', label: 'Compilation' }
   ];
 
-  /* ---------- deterministic pseudo-random (stable stats per card) ---------- */
+  /* ---------- utils ---------- */
   function hashString(str) {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) {
@@ -54,37 +72,44 @@
   }
 
   function stableViews(id) {
-    const n = 10000 + (hashString(String(id) + 'v') % 9990000);
-    return n;
+    let v = viewsCache.get(id);
+    if (v === undefined) {
+      v = 10000 + (hashString(String(id) + 'v') % 9990000);
+      viewsCache.set(id, v);
+    }
+    return v;
   }
 
   function stableLikeRate(id) {
-    return 55 + (hashString(String(id) + 'l') % 44);
+    let l = likesCache.get(id);
+    if (l === undefined) {
+      l = 55 + (hashString(String(id) + 'l') % 44);
+      likesCache.set(id, l);
+    }
+    return l;
   }
 
-  function formatCount(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return String(num);
+  function formatCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
   }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /* ---------- categories cache ---------- */
+  /* ---------- category cache ---------- */
   function readCategoryCache() {
     try {
       const raw = localStorage.getItem(CATEGORY_CACHE_KEY);
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed.ts !== 'number' || !Array.isArray(parsed.list)) return null;
-      if (Date.now() - parsed.ts > CATEGORY_CACHE_MS) return null;
-      return parsed.list;
+      const p = JSON.parse(raw);
+      if (!p || typeof p.ts !== 'number' || !Array.isArray(p.list)) return null;
+      if (Date.now() - p.ts > CATEGORY_CACHE_MS) return null;
+      return p.list;
     } catch (e) { return null; }
   }
 
@@ -99,91 +124,84 @@
     const bar = document.getElementById('globalHorizontalCats');
     if (!bar) return;
 
-    /* Preserve the "All" chip; rebuild the rest */
-    const wasScrolled = bar.scrollLeft;
     bar.innerHTML = '';
+    const frag = document.createDocumentFragment();
 
     list.forEach(function (item) {
-      /* New backend shape: { _id, label, count } */
-      /* Old shape (fallback): plain string or { _id } */
-      let filterValue, displayLabel;
+      let value, label;
       if (typeof item === 'object' && item) {
-        filterValue = item._id;
-        displayLabel = item.label || item._id;
+        value = item._id;
+        label = item.label || item._id;
       } else {
-        filterValue = item;
-        displayLabel = item;
+        value = item;
+        label = item;
       }
-      if (!filterValue || String(filterValue).trim() === '') return;
+      if (!value) return;
 
       const btn = document.createElement('button');
-      btn.className = 'h-cat-chip' +
-        (String(filterValue).toLowerCase() === currentCategory.toLowerCase() ? ' active' : '');
       btn.type = 'button';
-      btn.textContent = (String(filterValue).toLowerCase() === 'all')
-        ? 'All'
-        : displayLabel;
+      btn.className = 'h-cat-chip' +
+        (String(value).toLowerCase() === currentCategory.toLowerCase() ? ' active' : '');
+      btn.textContent = (String(value).toLowerCase() === 'all') ? 'All' : label;
 
       btn.addEventListener('click', function () {
-        if (currentCategory === String(filterValue).toLowerCase()) return;
+        if (currentCategory === String(value).toLowerCase()) return;
         bar.querySelectorAll('.h-cat-chip').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
-        currentCategory = String(filterValue).toLowerCase();
+        currentCategory = String(value).toLowerCase();
         currentPage = 1;
         loadVideos();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      bar.appendChild(btn);
+      frag.appendChild(btn);
     });
 
-    /* Restore horizontal scroll position */
-    bar.scrollLeft = wasScrolled;
+    bar.appendChild(frag);
   }
 
-  /* ---------- bottom "Explore Categories" grid ---------- */
+  /* ---------- bottom category tiles ---------- */
   function renderImageCategories() {
     const grid = document.getElementById('imageCategoriesGrid');
     if (!grid) return;
     grid.innerHTML = '';
-
-    const showcase = DEFAULT_CATEGORIES.filter(function (c) { return c !== 'all'; });
+    const frag = document.createDocumentFragment();
+    const showcase = DEFAULT_CATEGORIES.filter(function (c) { return c._id !== 'all'; });
 
     for (let i = 1; i <= 20; i++) {
-      const name = showcase[i - 1] || ('Category ' + i);
+      const cat = showcase[i - 1] || { _id: 'category-' + i, label: 'Category ' + i };
       const card = document.createElement('div');
       card.className = 'image-cat-card';
       card.innerHTML =
-        '<img src="/categories/' + i + '.jpg" alt="' + escapeHtml(name) + '" ' +
+        '<img src="/categories/' + i + '.jpg" alt="' + escapeHtml(cat.label) + '" ' +
              'loading="lazy" decoding="async" ' +
              'onerror="this.src=\'/cumb.png\'">' +
         '<div class="image-cat-overlay">' +
-          '<span class="image-cat-title">' + escapeHtml(name) + '</span>' +
+          '<span class="image-cat-title">' + escapeHtml(cat.label) + '</span>' +
         '</div>';
 
       card.addEventListener('click', function () {
-        currentCategory = name.toLowerCase();
+        currentCategory = cat._id;
         currentPage = 1;
         renderCategoryChips(DEFAULT_CATEGORIES);
         loadVideos();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      grid.appendChild(card);
+      frag.appendChild(card);
     }
+    grid.appendChild(frag);
   }
 
-  /* ---------- video fetch + render ---------- */
+  /* ---------- load videos ---------- */
   function loadVideos() {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
 
-    /* Race guard */
     activeFetchId++;
-    const myFetchId = activeFetchId;
+    const myId = activeFetchId;
 
-    grid.innerHTML =
-      '<div class="grid-status">Loading videos…</div>';
+    grid.innerHTML = '<div class="grid-status">Loading videos…</div>';
 
     const params = {
       page: currentPage,
@@ -195,15 +213,13 @@
       params.category = currentCategory;
     }
 
-    const url = CFG.helpers.videoListUrl(params);
-
-    fetch(url, { credentials: 'omit' })
+    fetch(CFG.helpers.videoListUrl(params), { credentials: 'omit' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .then(function (json) {
-        if (myFetchId !== activeFetchId) return;   /* a newer fetch superseded us */
+        if (myId !== activeFetchId) return;
         if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
           renderVideoGrid(json.data);
           renderPagination(json.pagination ? json.pagination.totalPages : 10);
@@ -214,18 +230,16 @@
               '<button id="resetFiltersBtn" class="page-btn" style="margin-top:12px;">Show all videos</button>' +
             '</div>';
           const resetBtn = document.getElementById('resetFiltersBtn');
-          if (resetBtn) {
-            resetBtn.addEventListener('click', function () { window.resetHomeState(); });
-          }
+          if (resetBtn) resetBtn.addEventListener('click', window.resetHomeState);
           renderPagination(0);
         }
       })
       .catch(function (err) {
-        if (myFetchId !== activeFetchId) return;
+        if (myId !== activeFetchId) return;
         console.error('[CumBearHome] loadVideos error:', err);
         grid.innerHTML =
           '<div class="grid-empty">' +
-            '<p>Could not load videos right now. Please check your connection.</p>' +
+            '<p>Could not load videos. Check your connection.</p>' +
             '<button id="retryLoadBtn" class="page-btn" style="margin-top:12px;">Retry</button>' +
           '</div>';
         const retryBtn = document.getElementById('retryLoadBtn');
@@ -233,64 +247,63 @@
       });
   }
 
+  /* ---------- render grid (fragment) ---------- */
   function renderVideoGrid(videos) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    /* Mix in FapHouse affiliate cards every 5 videos */
+    /* Mix in FapHouse (every 5) */
     const mixed = (typeof window.mixAffiliateVideos === 'function')
       ? window.mixAffiliateVideos(videos)
       : videos;
 
+    const frag = document.createDocumentFragment();
+    const hasRenderer = typeof window.renderMixedVideoCard === 'function';
+
     mixed.forEach(function (video) {
-      /* Use the shared renderer if available (handles affiliate + organic) */
-      if (typeof window.renderMixedVideoCard === 'function') {
+      if (hasRenderer) {
+        /* faphouse.js handles both organic + affiliate */
         const card = window.renderMixedVideoCard(video, function () {
           openPlayer(video._id);
         });
-        grid.appendChild(card);
+        /* Mark as e2e — CSS handles sizing */
+        card.classList.add('e2e');
+        frag.appendChild(card);
         return;
       }
 
-      /* Fallback: build card manually if faphouse.js failed to load */
+      /* Emergency fallback (should never happen if faphouse.js is loaded) */
       const card = document.createElement('div');
-      card.className = 'video-card';
-
-      const duration = (video.duration || '00:00').replace(/^HD\s*/i, '');
+      card.className = 'video-card e2e';
+      const dur = (video.duration || '00:00').replace(/^HD\s*/i, '');
       const views = formatCount(stableViews(video._id));
       const likeRate = stableLikeRate(video._id);
-      const safeTitle = escapeHtml(video.title || 'Untitled Video');
-
+      const safe = escapeHtml(video.title || 'Untitled');
       card.innerHTML =
         '<div class="video-thumb">' +
-          '<img class="hd-thumb" src="' + (video.thumbnailUrl || '/cumb.png') + '" ' +
-               'alt="' + safeTitle + '" loading="lazy" decoding="async" draggable="false" ' +
-               'onerror="this.src=\'/cumb.png\'">' +
+          '<img src="' + (video.thumbnailUrl || '/cumb.png') + '" alt="' + safe + '" loading="lazy" onerror="this.src=\'/cumb.png\'">' +
           '<div class="preview-video-holder"></div>' +
           '<div class="preview-timeline"><div class="preview-timeline-fill"></div></div>' +
-          '<div class="preview-loading"><div class="preview-spinner"></div></div>' +
-          '<span class="duration-badge">' + duration + '</span>' +
+          '<div class="preview-loading"></div>' +
+          '<span class="duration-badge">' + dur + '</span>' +
         '</div>' +
         '<div class="video-info">' +
-          '<div class="video-title">' + safeTitle + '</div>' +
+          '<div class="video-title">' + safe + '</div>' +
           '<div class="video-meta-row">' +
             '<span class="provider-tag">' + escapeHtml(video.category || 'CumBear') + '</span>' +
             '<span>•</span><span>' + views + ' views</span>' +
             '<span>•</span><span>' + likeRate + '%</span>' +
           '</div>' +
         '</div>';
-
-      if (typeof window.attachHoldAndSlidePreview === 'function') {
-        window.attachHoldAndSlidePreview(card, video, function () { openPlayer(video._id); });
-      } else {
-        card.addEventListener('click', function () { openPlayer(video._id); });
-      }
-
-      grid.appendChild(card);
+      card.addEventListener('click', function () { openPlayer(video._id); });
+      frag.appendChild(card);
     });
 
-    /* Tell ads.js to (re)serve banners for the newly rendered zone tags */
+    /* Single reflow */
+    grid.appendChild(frag);
+
+    /* Serve banners once */
     if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
       try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
     }
@@ -309,12 +322,12 @@
     const wrapper = document.getElementById('paginationWrapper');
     if (!wrapper) return;
     wrapper.innerHTML = '';
-
     totalPages = Math.max(0, parseInt(totalPages, 10) || 0);
     if (totalPages <= 1) return;
 
-    const maxPages = Math.min(totalPages, 10);
-    for (let i = 1; i <= maxPages; i++) {
+    const frag = document.createDocumentFragment();
+    const max = Math.min(totalPages, 10);
+    for (let i = 1; i <= max; i++) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
@@ -325,15 +338,16 @@
         loadVideos();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
-      wrapper.appendChild(btn);
+      frag.appendChild(btn);
     }
+    wrapper.appendChild(frag);
   }
 
   /* ---------- sort dropdown ---------- */
   function wireSortDropdown() {
-    const filterBtn   = document.getElementById('filterDropdownBtn');
-    const filterMenu  = document.getElementById('filterMenu');
-    const sortLabel   = document.getElementById('currentSortLabel');
+    const filterBtn  = document.getElementById('filterDropdownBtn');
+    const filterMenu = document.getElementById('filterMenu');
+    const sortLabel  = document.getElementById('currentSortLabel');
     if (!filterBtn || !filterMenu) return;
 
     filterBtn.addEventListener('click', function (e) {
@@ -343,9 +357,7 @@
 
     filterMenu.querySelectorAll('.filter-option').forEach(function (opt) {
       opt.addEventListener('click', function () {
-        filterMenu.querySelectorAll('.filter-option').forEach(function (o) {
-          o.classList.remove('active');
-        });
+        filterMenu.querySelectorAll('.filter-option').forEach(function (o) { o.classList.remove('active'); });
         opt.classList.add('active');
         currentSort = opt.getAttribute('data-sort') || 'gem';
         if (sortLabel) sortLabel.textContent = opt.textContent.trim();
@@ -372,26 +384,23 @@
     loadVideos();
   };
 
-  window.setCategoryFilter = function (category) {
-    if (!category) return;
-    currentCategory = String(category).toLowerCase();
+  window.setCategoryFilter = function (c) {
+    if (!c) return;
+    currentCategory = String(c).toLowerCase();
     currentPage = 1;
     loadVideos();
   };
 
-  /* ---------- init ---------- */
+  /* ---------- init categories ---------- */
   function initCategories() {
-    /* 1. Immediate render — no layout jump */
     renderCategoryChips(DEFAULT_CATEGORIES);
 
-    /* 2. Try cache first */
     const cached = readCategoryCache();
     if (cached && cached.length > 0) {
       renderCategoryChips(cached);
       return;
     }
 
-    /* 3. Live fetch (won't block initial render) */
     fetch(CFG.helpers.categoriesUrl(), { credentials: 'omit' })
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (json) {
@@ -400,9 +409,7 @@
           renderCategoryChips(json.data);
         }
       })
-      .catch(function (err) {
-        console.warn('[CumBearHome] category fetch failed, using defaults:', err.message);
-      });
+      .catch(function () { /* use defaults */ });
   }
 
   function init() {

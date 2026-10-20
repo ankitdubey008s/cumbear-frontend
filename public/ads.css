@@ -212,3 +212,28 @@ body.shorts-mode .video-slider-popup-wrapper,
   border-color: var(--border-color);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
 }
+
+/* ==========================================================================
+   CUMBEAR — STICKY VIDEO CLOSE (large touch target, isolated from link)
+   ========================================================================== */
+.sticky-video-close {
+  /* 44x44 is the minimum reliable mobile touch target.
+     The visual can be smaller but the hit area is 44x44. */
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 18px !important;
+  top: 4px !important;
+  right: 6px !important;
+  /* Stronger visual affordance */
+  background: rgba(200, 20, 20, 0.92) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85) !important;
+  /* Isolate from link tap */
+  z-index: 9957 !important;
+}
+
+/* Ensure the link does NOT cover the close button */
+.sticky-video-link {
+  position: relative;
+  padding-top: 8px; /* give the close button room */
+}

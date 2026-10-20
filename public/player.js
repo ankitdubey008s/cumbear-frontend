@@ -1,18 +1,15 @@
 /**
  * ==========================================================================
- * CUMBEAR — VIDEO PLAYER CONTROLLER
+ * CUMBEAR — VIDEO PLAYER CONTROLLER (v2)
  * --------------------------------------------------------------------------
- * - Fetches video by ID
- * - Mounts native HTML5 player
- * - 5s skippable ExoClick pre-roll (with proper failure fallback)
- * - First-play popunder (once per 24h, via CumBearPopunder)
- * - Related videos with FapHouse injection every 5
- * - Per-video share URL: /watch/:id
+ * - Leaderboard above player (in HTML)
+ * - First-play popunder (once per 24h)
+ * - 5s skippable ExoClick pre-roll (with safe fallback)
+ * - Related videos with FapHouse injection
+ * - Per-video URL: /watch/:id
  * - Persistent like state
- *
- * Public API:
- *   window.loadPlayerVideoById(id)
- *   window.stopPlayer()  (called by script.js on view change)
+ * - Edge-to-edge 16:9 cards
+ * - Chrome auto-captions enabled via <video crossorigin="anonymous">
  * ==========================================================================
  */
 (function () {
@@ -27,26 +24,22 @@
     return;
   }
 
-  const ZONES       = CFG.exo.zones;
-  const CONSENT     = CFG.consent;
-  const COOLDOWNS   = CONSENT.cookies;
-  const LIKED_KEY   = function (id) { return 'cumbear_liked_' + id; };
+  const ZONES          = CFG.exo.zones;
+  const CONSENT        = CFG.consent;
+  const COOLDOWNS      = CONSENT.cookies;
+  const LIKED_KEY      = function (id) { return 'cumbear_liked_' + id; };
 
-  /* ---------- state ---------- */
   let currentVideoData = null;
-  let adTimer = null;
-  let adFinished = false;
+  let adTimer          = null;
+  let adFinished       = false;
   let exoclickClickUrl = CFG.helpers.clickUrl(ZONES.playerVast);
-  let currentLoadId = 0;
-  let mounted = false;
+  let currentLoadId    = 0;
 
   /* ---------- utils ---------- */
   function escapeHtml(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function formatCount(n) {
@@ -71,7 +64,6 @@
     return window.CumBearConsent && window.CumBearConsent.isAdAllowed() === true;
   }
 
-  /* ---------- toast helper ---------- */
   function showToast(text) {
     let t = document.getElementById('cumbear-toast');
     if (!t) {
@@ -85,7 +77,7 @@
     setTimeout(function () { t.classList.remove('visible'); }, 2200);
   }
 
-  /* ---------- cleanup ---------- */
+  /* ---------- stop ---------- */
   window.stopPlayer = function () {
     if (adTimer) { clearInterval(adTimer); adTimer = null; }
     adFinished = false;
@@ -107,26 +99,18 @@
     }
   };
 
-  /* ---------- entry point ---------- */
+  /* ---------- load video ---------- */
   window.loadPlayerVideoById = function (videoId) {
     if (!videoId) return;
 
-    /* Stop whatever was playing */
     window.stopPlayer();
-
-    /* Clear view state */
     currentVideoData = null;
-    mounted = false;
-
-    /* Race guard */
     currentLoadId++;
     const myId = currentLoadId;
 
-    /* Reset UI immediately to avoid stale content flicker */
     const titleEl = document.getElementById('playerTitle');
     if (titleEl) titleEl.textContent = 'Loading video…';
 
-    /* Update URL to /watch/:id */
     try {
       history.replaceState(
         { view: 'playerView', videoId: videoId },
@@ -158,7 +142,7 @@
       });
   };
 
-  /* ---------- error state ---------- */
+  /* ---------- error ---------- */
   function showPlayerError() {
     const container = document.getElementById('playerAspectBox');
     if (container) {
@@ -172,13 +156,11 @@
     if (titleEl) titleEl.textContent = 'Video unavailable';
   }
 
-  /* ---------- mount player ---------- */
+  /* ---------- mount ---------- */
   function mountPlayer() {
     const container = document.getElementById('playerAspectBox');
-    const titleEl = document.getElementById('playerTitle');
+    const titleEl   = document.getElementById('playerTitle');
     if (!container || !currentVideoData) return;
-
-    mounted = true;
 
     const safeTitle = escapeHtml(currentVideoData.title || 'CumBear Video');
     if (titleEl) titleEl.textContent = currentVideoData.title || 'CumBear Video';
@@ -187,9 +169,10 @@
       try { return localStorage.getItem(LIKED_KEY(currentVideoData._id)) === '1'; }
       catch (e) { return false; }
     })();
-    const views = formatCount(stableViews(currentVideoData._id));
-    const likeRate = stableLikeRate(currentVideoData._id);
-    const likeCount = Math.max(1, Math.round(views * likeRate / 100));
+
+    const views     = formatCount(stableViews(currentVideoData._id));
+    const likeRate  = stableLikeRate(currentVideoData._id);
+    const likeCount = Math.max(1, Math.round(stableViews(currentVideoData._id) * likeRate / 100));
 
     container.innerHTML =
       '<div class="player-poster-cover" id="playerPosterCover">' +
@@ -200,59 +183,57 @@
       '</div>' +
 
       '<div class="player-vast-overlay hidden" id="playerVastOverlay">' +
-        '<video class="player-vast-video" id="playerVastVideo" playsinline webkit-playsinline muted></video>' +
+        '<video class="player-vast-video" id="playerVastVideo" playsinline webkit-playsinline muted preload="none"></video>' +
         '<div class="vast-player-hud">' +
           '<span class="vast-sponsor-badge">Sponsor Ad</span>' +
           '<button class="vast-skip-btn" id="vastSkipBtn" disabled>Ad: 5s</button>' +
         '</div>' +
         '<button class="vast-bottom-cta" id="vastVisitBtn">' +
           '<span>Visit Sponsor Site</span>' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
-            '<line x1="5" y1="12" x2="19" y2="12"/>' +
-            '<polyline points="12 5 19 12 12 19"/>' +
-          '</svg>' +
         '</button>' +
       '</div>' +
 
-      '<video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata"></video>';
+      /* crossorigin="anonymous" enables Chrome auto-captions.
+         If the CDN lacks CORS headers, remove the attribute to allow playback. */
+      '<video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata">' +
+        '<track kind="captions" src="data:text/vtt;base64,V0VCVlRUCg==" srclang="en" label="English (auto)" default>' +
+      '</video>';
 
-    /* Update meta count elements */
+    /* Meta */
     const likeCountEl = document.getElementById('playerLikeCount');
     if (likeCountEl) likeCountEl.textContent = formatCount(likeCount);
     const viewsEl = document.getElementById('playerViewsCount');
     if (viewsEl) viewsEl.textContent = views;
 
-    /* Restore like state */
     const likeBtn = document.getElementById('playerLikeBtn');
     if (likeBtn && isLiked) likeBtn.classList.add('liked');
 
     bindPlayerEngine();
   }
 
-  /* ---------- bind player ---------- */
+  /* ---------- bind ---------- */
   function bindPlayerEngine() {
     const posterCover = document.getElementById('playerPosterCover');
-    const adOverlay = document.getElementById('playerVastOverlay');
-    const adVideo = document.getElementById('playerVastVideo');
-    const adSkipBtn = document.getElementById('vastSkipBtn');
-    const adVisitBtn = document.getElementById('vastVisitBtn');
-    const mainVideo = document.getElementById('playerMainVideo');
-    const shareBtn = document.getElementById('playerShareBtn');
-    const likeBtn = document.getElementById('playerLikeBtn');
+    const adOverlay   = document.getElementById('playerVastOverlay');
+    const adVideo     = document.getElementById('playerVastVideo');
+    const adSkipBtn   = document.getElementById('vastSkipBtn');
+    const adVisitBtn  = document.getElementById('vastVisitBtn');
+    const mainVideo   = document.getElementById('mainPlayerVideo');
+    const shareBtn    = document.getElementById('playerShareBtn');
+    const likeBtn     = document.getElementById('playerLikeBtn');
 
     if (!posterCover || !mainVideo) return;
 
-    /* ---------- poster click → first-play popunder + ad + play ---------- */
-    posterCover.addEventListener('click', function onPosterClick() {
+    /* ---------- poster click → popunder + pre-roll ---------- */
+    posterCover.addEventListener('click', function () {
       posterCover.classList.add('hidden');
       posterCover.style.display = 'none';
 
-      /* First-play popunder (once per 24h, gated by consent) */
+      /* First-play popunder — once per 24h */
       try {
         if (
           consentAllows() &&
-          window.CumBEAR &&
-          window.CUMBEAR.helpers &&
+          window.CUMBEAR && window.CUMBEAR.helpers &&
           window.CUMBEAR.helpers.cooldownPassed(COOLDOWNS.playerFirstPlay) &&
           window.CumBearPopunder &&
           typeof window.CumBearPopunder.trigger === 'function'
@@ -263,85 +244,61 @@
             CONSENT.playerFirstPlayCooldownMs
           );
         }
-      } catch (e) { /* popunder must never block playback */ }
+      } catch (e) { /* never block playback */ }
 
-      /* Then show pre-roll */
       startPreRollAd();
     }, { once: true });
 
-    /* ---------- pre-roll ad ---------- */
+    /* ---------- pre-roll ---------- */
     async function startPreRollAd() {
-      if (!adOverlay || !adVideo) {
-        finishAdAndStartMainVideo();
-        return;
-      }
-
-      if (!consentAllows()) {
-        /* No consent → skip ads entirely, play main video directly */
-        finishAdAndStartMainVideo();
-        return;
-      }
+      if (!adOverlay || !adVideo) { finishAd(); return; }
+      if (!consentAllows())      { finishAd(); return; }
 
       adOverlay.classList.remove('hidden');
       adOverlay.style.display = '';
 
-      /* Fetch VAST with timeout */
       let adMediaSrc = null;
-      let adError = false;
+      let adError    = false;
 
       try {
         const controller = new AbortController();
         const timer = setTimeout(function () { controller.abort(); }, 3500);
-        const res = await fetch(CFG.helpers.vastUrl(ZONES.playerVast), {
-          signal: controller.signal
-        });
+        const res = await fetch(CFG.helpers.vastUrl(ZONES.playerVast), { signal: controller.signal });
         clearTimeout(timer);
 
         if (!res.ok) throw new Error('VAST HTTP ' + res.status);
         const text = await res.text();
-        const xml = new DOMParser().parseFromString(text, 'text/xml');
+        const xml  = new DOMParser().parseFromString(text, 'text/xml');
 
-        /* MediaFiles */
         const mediaFiles = xml.querySelectorAll('MediaFile');
         for (let i = 0; i < mediaFiles.length; i++) {
           const s = (mediaFiles[i].textContent || '').trim();
           if (s.indexOf('http') === 0) { adMediaSrc = s; break; }
         }
 
-        /* ClickThrough */
         const clickThrough = xml.querySelector('ClickThrough');
         if (clickThrough) {
           const c = (clickThrough.textContent || '').trim();
           if (c.indexOf('http') === 0) exoclickClickUrl = c;
         }
-      } catch (err) {
-        adError = true;
-      }
+      } catch (err) { adError = true; }
 
-      /* ---- CRITICAL FIX ----
-         Never assign the VAST XML URL to <video src>.
-         If we couldn't parse a real MediaFile, skip the ad completely
-         and play the main video. */
+      /* CRITICAL: never assign VAST XML URL to <video src> */
       if (adError || !adMediaSrc) {
         adOverlay.classList.add('hidden');
         adOverlay.style.display = 'none';
-        finishAdAndStartMainVideo();
+        finishAd();
         return;
       }
 
-      /* Play the actual ad media */
       adVideo.muted = true;
       adVideo.src = adMediaSrc;
       adVideo.load();
       const p = adVideo.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(function () {
-          /* Autoplay blocked → finish ad immediately */
-          finishAdAndStartMainVideo();
-        });
+        p.catch(function () { finishAd(); });
       }
 
-      /* 5-second countdown */
       let secondsLeft = 5;
       if (adSkipBtn) {
         adSkipBtn.disabled = true;
@@ -360,16 +317,13 @@
             adSkipBtn.disabled = false;
             adSkipBtn.classList.add('unlocked');
             adSkipBtn.textContent = 'Skip Ad ✕';
-            adSkipBtn.onclick = function (e) {
-              e.stopPropagation();
-              finishAdAndStartMainVideo();
-            };
+            adSkipBtn.onclick = function (e) { e.stopPropagation(); finishAd(); };
           }
         }
       }, 1000);
 
-      adVideo.onended = finishAdAndStartMainVideo;
-      adVideo.onerror = finishAdAndStartMainVideo;
+      adVideo.onended = finishAd;
+      adVideo.onerror = finishAd;
 
       const openAdClick = function (e) {
         e.stopPropagation();
@@ -380,13 +334,11 @@
       if (adVisitBtn) adVisitBtn.onclick = openAdClick;
     }
 
-    /* ---------- finish ad, play main video ---------- */
-    function finishAdAndStartMainVideo() {
+    function finishAd() {
       if (adFinished) return;
       adFinished = true;
 
       if (adTimer) { clearInterval(adTimer); adTimer = null; }
-
       if (adVideo) {
         try {
           adVideo.pause();
@@ -405,7 +357,6 @@
       const p = mainVideo.play();
       if (p && typeof p.catch === 'function') {
         p.catch(function () {
-          /* Autoplay blocked → user can click native controls */
           mainVideo.muted = true;
           mainVideo.play().catch(function () { /* ignore */ });
         });
@@ -419,22 +370,18 @@
         if (!currentVideoData) return;
         const url = window.location.origin + '/watch/' + encodeURIComponent(currentVideoData._id);
         const title = currentVideoData.title || 'CumBear Video';
-
         if (navigator.share) {
-          navigator.share({ title: title, url: url }).catch(function () { /* user cancelled */ });
+          navigator.share({ title: title, url: url }).catch(function () { /* ignore */ });
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(function () {
-            showToast('Link copied');
-          }).catch(function () {
-            showToast('Copy failed — ' + url);
-          });
+          navigator.clipboard.writeText(url).then(function () { showToast('Link copied'); })
+            .catch(function () { showToast(url); });
         } else {
           showToast(url);
         }
       });
     }
 
-    /* ---------- like toggle (persisted) ---------- */
+    /* ---------- like ---------- */
     if (likeBtn && !likeBtn.dataset.wired) {
       likeBtn.dataset.wired = '1';
       likeBtn.addEventListener('click', function () {
@@ -449,23 +396,19 @@
     }
   }
 
-  /* ---------- related videos ---------- */
+  /* ---------- related ---------- */
   function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
-
     grid.innerHTML = '<div class="grid-status">Loading recommendations…</div>';
-
-    const params = {
-      limit: 12,
-      category: category || 'all',
-      _: Date.now()
-    };
-    const url = CFG.helpers.videoListUrl(params);
 
     const myId = currentLoadId;
 
-    fetch(url, { credentials: 'omit' })
+    fetch(CFG.helpers.videoListUrl({
+      limit: 12,
+      category: category || 'all',
+      _: Date.now()
+    }), { credentials: 'omit' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -478,58 +421,51 @@
         }
         grid.innerHTML = '';
 
-        /* Filter out the current video */
         const filtered = json.data.filter(function (v) {
           return !currentVideoData || v._id !== currentVideoData._id;
         });
 
-        /* Inject FapHouse every 5 */
         const mixed = (typeof window.mixAffiliateVideos === 'function')
           ? window.mixAffiliateVideos(filtered)
           : filtered;
 
+        const frag = document.createDocumentFragment();
+        const hasRenderer = typeof window.renderMixedVideoCard === 'function';
+
         mixed.forEach(function (v) {
-          if (typeof window.renderMixedVideoCard === 'function') {
+          if (hasRenderer) {
             const card = window.renderMixedVideoCard(v, function () {
               window.loadPlayerVideoById(v._id);
             });
-            grid.appendChild(card);
+            card.classList.add('e2e');
+            frag.appendChild(card);
             return;
           }
 
           /* Fallback */
           const card = document.createElement('div');
-          card.className = 'video-card';
-          const duration = (v.duration || '00:00').replace(/^HD\s*/i, '');
-          const views = formatCount(stableViews(v._id));
-          const safeTitle = escapeHtml(v.title || 'Untitled');
+          card.className = 'video-card e2e';
+          const safe = escapeHtml(v.title || 'Untitled');
           card.innerHTML =
             '<div class="video-thumb">' +
-              '<img class="hd-thumb" src="' + (v.thumbnailUrl || '/cumb.png') + '" alt="' + safeTitle + '" loading="lazy" onerror="this.src=\'/cumb.png\'">' +
+              '<img src="' + (v.thumbnailUrl || '/cumb.png') + '" alt="' + safe + '" loading="lazy" onerror="this.src=\'/cumb.png\'">' +
               '<div class="preview-video-holder"></div>' +
               '<div class="preview-timeline"><div class="preview-timeline-fill"></div></div>' +
-              '<div class="preview-loading"><div class="preview-spinner"></div></div>' +
-              '<span class="duration-badge">' + duration + '</span>' +
+              '<div class="preview-loading"></div>' +
+              '<span class="duration-badge">' + (v.duration || '00:00') + '</span>' +
             '</div>' +
             '<div class="video-info">' +
-              '<div class="video-title">' + safeTitle + '</div>' +
+              '<div class="video-title">' + safe + '</div>' +
               '<div class="video-meta-row">' +
                 '<span class="provider-tag">' + escapeHtml(v.category || 'CumBear') + '</span>' +
-                '<span>•</span><span>' + views + ' views</span>' +
               '</div>' +
             '</div>';
-
-          if (typeof window.attachHoldAndSlidePreview === 'function') {
-            window.attachHoldAndSlidePreview(card, v, function () {
-              window.loadPlayerVideoById(v._id);
-            });
-          } else {
-            card.addEventListener('click', function () { window.loadPlayerVideoById(v._id); });
-          }
-          grid.appendChild(card);
+          card.addEventListener('click', function () { window.loadPlayerVideoById(v._id); });
+          frag.appendChild(card);
         });
 
-        /* Serve the player's banner zones */
+        grid.appendChild(frag);
+
         if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
           try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
         }

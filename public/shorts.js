@@ -1,17 +1,23 @@
-/**
+
+node -c shorts.js && echo "✅ Syntax OK"
+grep -c "shortsLeaderboard" shorts.js          # → 1
+grep -c "CumBearPopunder" shorts.js             # → 1
+grep -c "firstInteraction" shorts.js            # → 3+
+grep -c "preload=\"none\"" shorts.js            # → 2
+grep -c "rootMargin: '20% 0px 20% 0px'" shorts.js  # → 1
+
+git add shorts.js shorts.css
+git commit -m "Shorts v2: leaderboard below top-bar, first-tap popunder, safe VAST, network isolation"
+git push/**
  * ==========================================================================
- * CUMBEAR — SHORTS CONTROLLER
+ * CUMBEAR — SHORTS CONTROLLER (v2)
  * --------------------------------------------------------------------------
- * - Vertical 16:9 content feed with tap-to-play
- * - First tap fires ExoClick popunder (once per 24h, gated by consent)
- * - 9:16 VAST ad after every 3 shorts (5s skippable, hard 6s lock timeout)
- * - Scroll-lock never traps user
+ * - Leaderboard below top-bar (mobile rectangle / desktop leaderboard)
+ * - First short: always poster + play button; first tap fires popunder
+ * - After first tap, all shorts autoplay
+ * - Vertical ExoClick VAST every 3 shorts (5s skip lock, hard 6s timeout)
+ * - Network isolation: only visible short has src set
  * - Per-short URL: /shorts/:id
- * - Full network isolation (only visible short has src)
- *
- * Public API:
- *   window.loadShorts(targetId?)
- *   window.stopShorts()
  * ==========================================================================
  */
 (function () {
@@ -26,24 +32,23 @@
     return;
   }
 
-  const ZONES      = CFG.exo.zones;
-  const CONSENT    = CFG.consent;
-  const COOLDOWNS  = CONSENT.cookies;
-  const AD_EVERY   = 3;                          /* insert VAST after every N shorts */
-  const AD_SKIP_MS = 5000;                       /* 5s before skip unlocks */
-  const AD_LOCK_MAX_MS = 6000;                   /* hard unlock timeout */
-  const PREVIEW_MAX = CFG.ux.shortsPreviewMaxSeconds;  /* 180s */
+  const ZONES         = CFG.exo.zones;
+  const CONSENT       = CFG.consent;
+  const COOLDOWNS     = CONSENT.cookies;
+  const AD_EVERY      = 3;
+  const AD_SKIP_MS    = 5000;
+  const AD_LOCK_MAX   = 6000;
+  const PREVIEW_MAX   = CFG.ux.shortsPreviewMaxSeconds;
 
-  /* ---------- state ---------- */
-  let shortsData = [];
-  let activeVideoEl = null;
-  let currentActiveId = null;
-  let observer = null;
-  let isGlobalMuted = true;
-  let currentVastRequestId = 0;
-  let adSkipTimer = null;
-  let adLockTimer = null;
-  let exoclickClickUrl = CFG.helpers.clickUrl(ZONES.shortsVast);
+  let shortsData         = [];
+  let activeVideoEl      = null;
+  let observer           = null;
+  let isGlobalMuted      = true;
+  let currentVastReqId   = 0;
+  let adSkipTimer        = null;
+  let adLockTimer        = null;
+  let exoclickClickUrl   = CFG.helpers.clickUrl(ZONES.shortsVast);
+  let firstInteraction   = false;
 
   /* ---------- utils ---------- */
   function escapeHtml(s) {
@@ -66,6 +71,7 @@
     }
     return h >>> 0;
   }
+
   function stableViews(id) { return 10000 + (hashString(String(id) + 'v') % 9990000); }
   function stableLikes(id) { return 1000 + (hashString(String(id) + 'l') % 99000); }
 
@@ -73,46 +79,55 @@
     return window.CumBearConsent && window.CumBearConsent.isAdAllowed() === true;
   }
 
-  function cooldownAllows(cookieName) {
+  function cooldownAllows(name) {
     try {
-      const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + cookieName + '=([^;]+)'));
+      const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
       return !m;
     } catch (e) { return true; }
   }
 
-  /* ============================================================
-     FETCH + RENDER
-     ============================================================ */
+  /* ---------- leaderboard ---------- */
+  function mountLeaderboard() {
+    const slot = document.getElementById('shortsLeaderboard');
+    if (!slot || slot.dataset.mounted) return;
+    slot.dataset.mounted = '1';
+
+    slot.innerHTML =
+      '<div class="ad-banner-mobile">' +
+        '<ins class="eas6a97888e2" data-zoneid="6057032"></ins>' +
+      '</div>' +
+      '<div class="ad-banner-desktop">' +
+        '<ins class="eas6a97888e2" data-zoneid="6056586"></ins>' +
+      '</div>';
+
+    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
+      try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  /* ---------- load ---------- */
   window.loadShorts = function (targetId) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
+    firstInteraction = false;
+    mountLeaderboard();
 
-    container.innerHTML =
-      '<div class="shorts-loading">Loading CumBear Shorts…</div>';
+    container.innerHTML = '<div class="shorts-loading">Loading CumBear Shorts…</div>';
 
-    const url = CFG.helpers.videoListUrl({
-      page: 1,
-      limit: 50,
-      sort: 'gem',
-      _: Date.now()
-    });
-
-    fetch(url, { credentials: 'omit' })
+    fetch(CFG.helpers.videoListUrl({ page: 1, limit: 50, sort: 'gem', _: Date.now() }), { credentials: 'omit' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .then(function (json) {
         if (!json || !json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          container.innerHTML = '<div class="shorts-empty">No shorts available right now.</div>';
+          container.innerHTML = '<div class="shorts-empty">No shorts available.</div>';
           return;
         }
 
         shortsData = json.data;
-
-        /* Pin target short to front if requested */
         if (targetId) {
           const idx = shortsData.findIndex(function (v) { return v._id === targetId; });
           if (idx > -1) {
@@ -120,50 +135,51 @@
             shortsData.unshift(item);
           }
         }
-
         renderFeed();
       })
       .catch(function (err) {
         console.error('[CumBearShorts] load error:', err);
-        container.innerHTML = '<div class="shorts-empty">Could not load shorts. Please retry.</div>';
+        container.innerHTML = '<div class="shorts-empty">Could not load shorts. Retry from Home.</div>';
       });
   };
 
+  /* ---------- render ---------- */
   function renderFeed() {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
     container.innerHTML = '';
 
-    shortsData.forEach(function (video, index) {
-      container.appendChild(buildShortCard(video, index));
+    const frag = document.createDocumentFragment();
 
-      /* Insert VAST ad card after every AD_EVERY shorts */
+    shortsData.forEach(function (video, index) {
+      frag.appendChild(buildShortCard(video, index));
       if ((index + 1) % AD_EVERY === 0) {
-        container.appendChild(buildVastCard(index));
+        frag.appendChild(buildVastCard(index));
       }
     });
 
+    container.appendChild(frag);
     wireStaticButtons();
     setupObserver();
   }
 
-  /* ============================================================
-     SHORT CARD
-     ============================================================ */
+  /* ---------- short card ---------- */
   function buildShortCard(video, index) {
     const card = document.createElement('div');
     card.className = 'short-card-item';
     card.dataset.index = index;
     card.dataset.id = video._id;
 
-    const likes = formatCount(stableLikes(video._id));
-    const views = formatCount(stableViews(video._id));
-    const safeTitle = escapeHtml(video.title || 'Untitled Short');
-    const safeThumb = escapeHtml(video.thumbnailUrl || '/cumb.png');
+    const likes   = formatCount(stableLikes(video._id));
+    const views   = formatCount(stableViews(video._id));
+    const title   = escapeHtml(video.title || 'Untitled Short');
+    const thumb   = escapeHtml(video.thumbnailUrl || '/cumb.png');
+    const eager   = index === 0 ? 'eager' : 'lazy';
+    const isFirst = index === 0;
 
     card.innerHTML =
       '<div class="shorts-top-bar">' +
-        '<button class="shorts-nav-btn back-btn-trigger" aria-label="Back to Home">' +
+        '<button class="shorts-nav-btn back-btn-trigger" aria-label="Back">' +
           '<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>' +
         '</button>' +
         '<button class="shorts-sound-btn sound-btn-trigger" aria-label="Toggle Sound">' +
@@ -174,12 +190,11 @@
       '</div>' +
 
       '<div class="short-video-stage">' +
-        '<img class="short-poster-img" src="' + safeThumb + '" loading="lazy" alt="poster">' +
+        '<img class="short-poster-img" src="' + thumb + '" loading="' + eager + '" alt="poster">' +
         '<video class="short-video-element" playsinline webkit-playsinline loop preload="none" ' +
-                'data-src="' + escapeHtml(video.playableUrl || '') + '" ' +
-                'oncontextmenu="return false;"></video>' +
+                'data-src="' + escapeHtml(video.playableUrl || '') + '"></video>' +
 
-        (index === 0
+        (isFirst
           ? '<div class="first-short-play-cover" id="firstShortPlayCover">' +
               '<div class="first-play-btn-circle">' +
                 '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
@@ -220,7 +235,7 @@
           '<span class="short-btn-label">Share</span>' +
         '</button>' +
 
-        '<button class="short-btn-unit more-btn" aria-label="More options">' +
+        '<button class="short-btn-unit more-btn" aria-label="More">' +
           '<div class="short-btn-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="12" cy="19" r="2"/></svg></div>' +
           '<span class="short-btn-label">More</span>' +
         '</button>' +
@@ -228,7 +243,7 @@
 
       '<div class="short-info-zone">' +
         '<div class="short-creator"><span class="short-creator-badge"></span><span>CumBear</span></div>' +
-        '<div class="short-title-text">' + safeTitle + '</div>' +
+        '<div class="short-title-text">' + title + '</div>' +
         '<button class="watch-full-btn" data-id="' + video._id + '">' +
           '<span>Watch Full Video</span>' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
@@ -245,9 +260,7 @@
     return card;
   }
 
-  /* ============================================================
-     VAST AD CARD
-     ============================================================ */
+  /* ---------- VAST card ---------- */
   function buildVastCard(index) {
     const card = document.createElement('div');
     card.className = 'exoclick-short-vast-card';
@@ -257,7 +270,7 @@
     card.innerHTML =
       '<button class="vast-ad-skip-pill" type="button" disabled>Ad: 5s</button>' +
       '<div class="vast-vertical-stage">' +
-        '<video class="vast-vertical-video" muted playsinline webkit-playsinline></video>' +
+        '<video class="vast-vertical-video" muted playsinline webkit-playsinline preload="none"></video>' +
       '</div>' +
       '<div class="ad-bottom-cta-container">' +
         '<span class="ad-sponsor-label">Sponsored</span>' +
@@ -267,17 +280,16 @@
         '</button>' +
       '</div>';
 
-    /* Wire clicks */
-    const stage = card.querySelector('.vast-vertical-stage');
+    const stage    = card.querySelector('.vast-vertical-stage');
     const visitBtn = card.querySelector('.ad-visit-site-btn');
-    const skipBtn = card.querySelector('.vast-ad-skip-pill');
+    const skipBtn  = card.querySelector('.vast-ad-skip-pill');
 
     const openAd = function (e) {
       e.preventDefault();
       e.stopPropagation();
       window.open(exoclickClickUrl, '_blank', 'noopener,noreferrer');
     };
-    if (stage) stage.addEventListener('click', openAd);
+    if (stage)    stage.addEventListener('click', openAd);
     if (visitBtn) visitBtn.addEventListener('click', openAd);
 
     if (skipBtn) {
@@ -292,39 +304,36 @@
     return card;
   }
 
-  /* ============================================================
-     SHORT CARD GESTURES
-     ============================================================ */
+  /* ---------- short card gestures ---------- */
   function wireShortCard(card, video, index) {
-    const videoEl = card.querySelector('video.short-video-element');
-    const poster = card.querySelector('.short-poster-img');
+    const videoEl      = card.querySelector('video.short-video-element');
+    const poster       = card.querySelector('.short-poster-img');
     const progressFill = card.querySelector('.short-progress-fill');
     const endedOverlay = card.querySelector('.preview-ended-overlay');
-    const speedPill = card.querySelector('.speed-indicator-pill');
-    const heart = card.querySelector('.double-tap-heart');
-    const hud = card.querySelector('.center-play-hud');
-    const hudPlay = card.querySelector('.hud-play');
-    const hudPause = card.querySelector('.hud-pause');
-    const sideZones = card.querySelectorAll('.side-hold-zone');
-    const firstPlayCover = card.querySelector('#firstShortPlayCover');
-    const backBtn = card.querySelector('.back-btn-trigger');
-    const soundBtn = card.querySelector('.sound-btn-trigger');
-    const likeBtn = card.querySelector('.like-btn');
-    const shareBtn = card.querySelector('.share-btn');
-    const moreBtn = card.querySelector('.more-btn');
-    const watchFullBtns = card.querySelectorAll('.watch-full-btn');
+    const speedPill    = card.querySelector('.speed-indicator-pill');
+    const heart        = card.querySelector('.double-tap-heart');
+    const hud          = card.querySelector('.center-play-hud');
+    const hudPlay      = card.querySelector('.hud-play');
+    const hudPause     = card.querySelector('.hud-pause');
+    const sideZones    = card.querySelectorAll('.side-hold-zone');
+    const firstPlay    = card.querySelector('#firstShortPlayCover');
+    const backBtn      = card.querySelector('.back-btn-trigger');
+    const soundBtn     = card.querySelector('.sound-btn-trigger');
+    const likeBtn      = card.querySelector('.like-btn');
+    const shareBtn     = card.querySelector('.share-btn');
+    const moreBtn      = card.querySelector('.more-btn');
+    const fullBtns     = card.querySelectorAll('.watch-full-btn');
 
-    videoEl.defaultPlaybackRate = 1.0;
     videoEl.playbackRate = 1.0;
 
-    /* ---------- first play cover → popunder + play ---------- */
-    if (index === 0 && firstPlayCover) {
-      firstPlayCover.addEventListener('click', function (e) {
+    /* First short: tap to fire popunder + play */
+    if (index === 0 && firstPlay) {
+      firstPlay.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        firstPlayCover.classList.add('hidden');
+        firstPlay.classList.add('hidden');
+        firstInteraction = true;
 
-        /* Fire the ExoClick popunder (once per 24h) */
         try {
           if (
             consentAllows() &&
@@ -335,9 +344,9 @@
             window.CumBearPopunder.trigger('shorts-first-tap');
             CFG.helpers.markCooldown(COOLDOWNS.shortsFirstTap, CONSENT.shortsFirstTapCooldownMs);
           }
-        } catch (err) { /* never block playback */ }
+        } catch (err) { /* never block */ }
 
-        /* Start playback */
+        /* Load + play */
         if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
           videoEl.src = videoEl.dataset.src;
           videoEl.load();
@@ -350,7 +359,7 @@
       });
     }
 
-    /* ---------- back ---------- */
+    /* Back */
     if (backBtn) {
       backBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -360,40 +369,36 @@
       });
     }
 
-    /* ---------- mute toggle ---------- */
+    /* Sound */
     if (soundBtn) {
       soundBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         isGlobalMuted = !isGlobalMuted;
-        syncMuteAcrossShorts();
+        syncMute();
       });
     }
 
-    /* ---------- watch full ---------- */
-    watchFullBtns.forEach(function (btn) {
+    /* Watch full */
+    fullBtns.forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         window.stopShorts();
         document.body.classList.remove('shorts-mode');
-        const vidId = btn.dataset.id || video._id;
+        const id = btn.dataset.id || video._id;
         if (window.switchView) window.switchView('playerView', true);
-        if (typeof window.loadPlayerVideoById === 'function') {
-          window.loadPlayerVideoById(vidId);
-        }
+        if (typeof window.loadPlayerVideoById === 'function') window.loadPlayerVideoById(id);
       });
     });
 
-    /* ---------- like / share / more ---------- */
+    /* Like / share / more */
     if (likeBtn) {
       likeBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         likeBtn.classList.toggle('liked');
-        const isLiked = likeBtn.classList.contains('liked');
-        const heartEl = card.querySelector('.double-tap-heart');
-        if (isLiked && heartEl) {
-          heartEl.classList.remove('animate');
-          void heartEl.offsetWidth;
-          heartEl.classList.add('animate');
+        if (likeBtn.classList.contains('liked') && heart) {
+          heart.classList.remove('animate');
+          void heart.offsetWidth;
+          heart.classList.add('animate');
         }
       });
     }
@@ -405,9 +410,7 @@
         if (navigator.share) {
           navigator.share({ title: video.title, url: url }).catch(function () { /* ignore */ });
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(function () {
-            if (typeof window.showToast === 'function') window.showToast('Link copied');
-          }).catch(function () { /* ignore */ });
+          navigator.clipboard.writeText(url).then(function () { /* toasts go through player */ });
         }
       });
     }
@@ -420,16 +423,16 @@
       });
     }
 
-    /* ---------- center HUD helpers ---------- */
+    /* Center HUD */
     function showCenterHud(paused) {
       if (!hud) return;
-      if (hudPlay) hudPlay.classList.toggle('hidden', !paused);
+      if (hudPlay)  hudPlay.classList.toggle('hidden', !paused);
       if (hudPause) hudPause.classList.toggle('hidden', paused);
       hud.classList.add('show');
       setTimeout(function () { hud.classList.remove('show'); }, 400);
     }
 
-    /* ---------- progress + hard stop ---------- */
+    /* Progress + 3-min stop */
     videoEl.addEventListener('timeupdate', function () {
       if (progressFill) {
         progressFill.style.width = Math.min(100, (videoEl.currentTime / PREVIEW_MAX) * 100) + '%';
@@ -445,7 +448,15 @@
       if (endedOverlay) endedOverlay.classList.add('hidden');
     });
 
-    /* ---------- tap / double-tap / 2x hold ---------- */
+    videoEl.addEventListener('canplay', function () {
+      if (!videoEl.paused) return;
+      const p = videoEl.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(function () { /* user gesture needed */ });
+      }
+    }, { once: true });
+
+    /* Taps */
     let lastTap = 0;
     let singleTapTimer = null;
     let holdTimer = null;
@@ -454,7 +465,6 @@
     let isSpeedLocked = false;
 
     card.addEventListener('pointerup', function (e) {
-      /* Ignore taps on interactive chrome */
       if (e.target.closest('.short-action-stack') ||
           e.target.closest('.watch-full-btn') ||
           e.target.closest('.shorts-top-bar') ||
@@ -463,7 +473,6 @@
 
       if (isHoldingSpeed) return;
 
-      /* If speed is locked, first tap unlocks instead of pausing */
       if (isSpeedLocked) {
         isSpeedLocked = false;
         isHoldingSpeed = false;
@@ -476,7 +485,6 @@
       const diff = now - lastTap;
 
       if (diff > 0 && diff < 300) {
-        /* Double tap = like */
         if (singleTapTimer) { clearTimeout(singleTapTimer); singleTapTimer = null; }
         if (heart) {
           heart.classList.remove('animate');
@@ -500,7 +508,7 @@
       }
     });
 
-    /* Side hold = 2x speed */
+    /* 2x hold */
     sideZones.forEach(function (zone) {
       zone.addEventListener('pointerdown', function (e) {
         holdStartY = e.clientY;
@@ -513,7 +521,6 @@
           }
         }, 300);
       });
-
       zone.addEventListener('pointermove', function (e) {
         if (!isHoldingSpeed || isSpeedLocked) return;
         if (e.clientY - holdStartY > 50) {
@@ -524,8 +531,7 @@
           }
         }
       });
-
-      const releaseSpeed = function () {
+      const release = function () {
         if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
         if (isHoldingSpeed && !isSpeedLocked) {
           isHoldingSpeed = false;
@@ -533,36 +539,31 @@
           if (speedPill) speedPill.classList.remove('active');
         }
       };
-      zone.addEventListener('pointerup', releaseSpeed);
-      zone.addEventListener('pointercancel', releaseSpeed);
-      zone.addEventListener('pointerleave', releaseSpeed);
+      zone.addEventListener('pointerup', release);
+      zone.addEventListener('pointercancel', release);
+      zone.addEventListener('pointerleave', release);
     });
   }
 
-  /* ============================================================
-     MUTE SYNC
-     ============================================================ */
-  function syncMuteAcrossShorts() {
+  /* ---------- mute sync ---------- */
+  function syncMute() {
     document.querySelectorAll('.short-card-item').forEach(function (card) {
       const v = card.querySelector('video.short-video-element');
       const btn = card.querySelector('.sound-btn-trigger');
       if (!v || !btn) return;
       v.muted = isGlobalMuted;
-      const iMuted = btn.querySelector('.icon-muted');
-      const iUnmuted = btn.querySelector('.icon-unmuted');
+      const iM = btn.querySelector('.icon-muted');
+      const iU = btn.querySelector('.icon-unmuted');
       const lbl = btn.querySelector('.sound-label');
-      if (iMuted) iMuted.classList.toggle('hidden', !isGlobalMuted);
-      if (iUnmuted) iUnmuted.classList.toggle('hidden', isGlobalMuted);
+      if (iM)  iM.classList.toggle('hidden', !isGlobalMuted);
+      if (iU)  iU.classList.toggle('hidden', isGlobalMuted);
       if (lbl) lbl.textContent = isGlobalMuted ? 'UNMUTE' : 'MUTE';
     });
   }
 
-  /* ============================================================
-     OBSERVER — network isolation + ad card handling
-     ============================================================ */
+  /* ---------- observer ---------- */
   function setupObserver() {
     if (observer) { observer.disconnect(); observer = null; }
-
     const container = document.getElementById('shortsContainer');
     if (!container) return;
 
@@ -570,25 +571,20 @@
       entries.forEach(function (entry) {
         const el = entry.target;
 
-        /* VAST ad card */
         if (el.dataset.isVastAd === 'true') {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            activateVastCard(el, container);
-          } else {
-            deactivateVastCard(el, container);
-          }
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) activateVast(el, container);
+          else deactivateVast(el, container);
           return;
         }
 
-        /* Short card */
         const videoEl = el.querySelector('video.short-video-element');
-        const poster = el.querySelector('.short-poster-img');
-        const idx = parseInt(el.dataset.index, 10);
-        const id = el.dataset.id;
+        const poster  = el.querySelector('.short-poster-img');
+        const idx     = parseInt(el.dataset.index, 10);
+        const id      = el.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-          /* First short with play cover → don't autoplay until tap */
-          if (idx === 0) {
+          /* First short: don't autoplay until cover tapped */
+          if (idx === 0 && !firstInteraction) {
             const cover = el.querySelector('#firstShortPlayCover');
             if (cover && !cover.classList.contains('hidden')) {
               activeVideoEl = null;
@@ -596,22 +592,17 @@
             }
           }
 
-          /* Isolate: pause all other short video elements */
+          /* Pause others */
           document.querySelectorAll('video.short-video-element').forEach(function (v) {
-            if (v !== videoEl && !v.paused) {
-              v.pause();
-            }
+            if (v !== videoEl && !v.paused) v.pause();
           });
 
           activeVideoEl = videoEl;
-          currentActiveId = id;
 
-          /* URL update */
           try {
             history.replaceState({ view: 'shortsView', videoId: id }, '', '/shorts/' + encodeURIComponent(id));
           } catch (err) { /* ignore */ }
 
-          /* Lazy-load src */
           if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
             videoEl.src = videoEl.dataset.src;
             videoEl.load();
@@ -627,62 +618,54 @@
             });
           }
         } else {
-          /* Not visible → free network */
           if (videoEl) {
             try {
               videoEl.pause();
               videoEl.removeAttribute('src');
               videoEl.load();
               videoEl.currentTime = 0;
-              videoEl.playbackRate = 1.0;
             } catch (err) { /* ignore */ }
             if (poster) poster.classList.remove('loaded');
           }
         }
       });
-    }, { threshold: 0.6 });
+    }, { threshold: 0.6, rootMargin: '20% 0px 20% 0px' });
 
     container.querySelectorAll('.short-card-item, .exoclick-short-vast-card').forEach(function (el) {
       observer.observe(el);
     });
   }
 
-  /* ============================================================
-     VAST AD ACTIVATION
-     ============================================================ */
-  async function activateVastCard(card, container) {
-    /* Pause the current short */
+  /* ---------- VAST activation ---------- */
+  async function activateVast(card, container) {
     if (activeVideoEl) {
       try { activeVideoEl.pause(); } catch (e) { /* ignore */ }
     }
-
     const adVideo = card.querySelector('.vast-vertical-video');
     const skipBtn = card.querySelector('.vast-ad-skip-pill');
     if (!adVideo || !skipBtn) return;
 
-    /* Skip already-fetched ad on revisit */
     if (card.dataset.adLoaded === '1') {
-      try { adVideo.play().catch(function () { /* ignore */ }); } catch (e) { /* ignore */ }
+      try { adVideo.play().catch(function () {}); } catch (e) { /* ignore */ }
       return;
     }
 
-    const myRequestId = ++currentVastRequestId;
+    const reqId = ++currentVastReqId;
 
-    /* Lock scroll — with HARD timeout so user never gets stuck */
     container.classList.add('scroll-locked');
     if (adLockTimer) clearTimeout(adLockTimer);
     adLockTimer = setTimeout(function () {
       container.classList.remove('scroll-locked');
       adLockTimer = null;
-    }, AD_LOCK_MAX_MS);
+    }, AD_LOCK_MAX);
 
     skipBtn.disabled = true;
     skipBtn.classList.remove('unlocked');
     skipBtn.textContent = 'Ad: 5s';
 
-    /* Fetch VAST with abort timeout */
     let mediaUrl = null;
     let clickThroughUrl = null;
+
     try {
       const controller = new AbortController();
       const timer = setTimeout(function () { controller.abort(); }, 3500);
@@ -691,11 +674,11 @@
 
       if (res.ok) {
         const text = await res.text();
-        const xml = new DOMParser().parseFromString(text, 'text/xml');
+        const xml  = new DOMParser().parseFromString(text, 'text/xml');
 
-        const mediaFiles = xml.querySelectorAll('MediaFile');
-        for (let i = 0; i < mediaFiles.length; i++) {
-          const s = (mediaFiles[i].textContent || '').trim();
+        const files = xml.querySelectorAll('MediaFile');
+        for (let i = 0; i < files.length; i++) {
+          const s = (files[i].textContent || '').trim();
           if (s.indexOf('http') === 0) { mediaUrl = s; break; }
         }
 
@@ -705,17 +688,12 @@
           if (c.indexOf('http') === 0) clickThroughUrl = c;
         }
       }
-    } catch (err) {
-      console.warn('[CumBearShorts] VAST fetch failed:', err.message);
-    }
+    } catch (err) { /* ignore */ }
 
-    /* Race guard */
-    if (myRequestId !== currentVastRequestId) return;
+    if (reqId !== currentVastReqId) return;
 
-    /* Update global click URL if VAST provided a ClickThrough */
     if (clickThroughUrl) exoclickClickUrl = clickThroughUrl;
 
-    /* If no media → skip ad entirely */
     if (!mediaUrl) {
       container.classList.remove('scroll-locked');
       if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
@@ -725,22 +703,20 @@
       return;
     }
 
-    /* Play ad */
     card.dataset.adLoaded = '1';
     adVideo.src = mediaUrl;
     adVideo.muted = true;
     adVideo.load();
     adVideo.play().catch(function () { /* ignore */ });
 
-    /* Countdown */
-    let secondsLeft = Math.ceil(AD_SKIP_MS / 1000);
-    skipBtn.textContent = 'Ad: ' + secondsLeft + 's';
+    let s = Math.ceil(AD_SKIP_MS / 1000);
+    skipBtn.textContent = 'Ad: ' + s + 's';
 
     if (adSkipTimer) clearInterval(adSkipTimer);
     adSkipTimer = setInterval(function () {
-      secondsLeft--;
-      if (secondsLeft > 0) {
-        skipBtn.textContent = 'Ad: ' + secondsLeft + 's';
+      s--;
+      if (s > 0) {
+        skipBtn.textContent = 'Ad: ' + s + 's';
       } else {
         clearInterval(adSkipTimer);
         adSkipTimer = null;
@@ -753,17 +729,14 @@
     }, 1000);
   }
 
-  function deactivateVastCard(card, container) {
+  function deactivateVast(card, container) {
     container.classList.remove('scroll-locked');
     if (adLockTimer) { clearTimeout(adLockTimer); adLockTimer = null; }
     if (adSkipTimer) { clearInterval(adSkipTimer); adSkipTimer = null; }
-
     const adVideo = card.querySelector('.vast-vertical-video');
     if (adVideo && card.dataset.adLoaded === '1') {
       try {
         adVideo.pause();
-        /* Keep src so revisiting resumes without re-fetch, but release memory:
-           remove the src and reset data flag so next activation refetches if needed. */
         adVideo.removeAttribute('src');
         adVideo.load();
       } catch (e) { /* ignore */ }
@@ -771,9 +744,7 @@
     }
   }
 
-  /* ============================================================
-     STATIC BUTTONS (delegated once)
-     ============================================================ */
+  /* ---------- static ---------- */
   function wireStaticButtons() {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
@@ -785,9 +756,7 @@
     }
   }
 
-  /* ============================================================
-     STOP
-     ============================================================ */
+  /* ---------- stop ---------- */
   window.stopShorts = function () {
     if (observer) { observer.disconnect(); observer = null; }
     if (adSkipTimer) { clearInterval(adSkipTimer); adSkipTimer = null; }
@@ -805,7 +774,6 @@
     if (container) container.classList.remove('scroll-locked');
 
     activeVideoEl = null;
-    currentActiveId = null;
-    currentVastRequestId = 0;
+    currentVastReqId = 0;
   };
 })();

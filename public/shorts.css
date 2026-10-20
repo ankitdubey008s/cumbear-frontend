@@ -568,3 +568,32 @@ body.shorts-mode main {
   font-weight: 700;
 }
 
+
+/* ==========================================================================
+   CUMBEAR — SHORTS LEADERBOARD (below top-bar, above the feed)
+   ========================================================================== */
+body.shorts-mode .shorts-leaderboard-container {
+  position: relative;
+  z-index: 998;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0;
+  background: #000;
+  min-height: 90px;
+}
+
+@media (max-width: 767px) {
+  body.shorts-mode .shorts-leaderboard-container {
+    min-height: 100px;
+  }
+}
+
+body.shorts-mode:not(.shorts-mode) .shorts-leaderboard-container {
+  display: none !important;
+}
+
+/* Leaderboard only shows when shortsView is active */
+body:not(.shorts-mode) .shorts-leaderboard-container {
+  display: none !important;
+}
