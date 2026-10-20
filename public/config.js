@@ -13,7 +13,7 @@
   /* Guard against double-load (e.g. deferred + inline include) */
   if (window.CUMBEAR) return;
 
-  const CONFIG = Object.freeze({
+  const CONFIG = {
     /* ---------- API ---------- */
     api: Object.freeze({
       base: 'https://cumbearbackend-snowy.vercel.app',
@@ -102,7 +102,7 @@
       sliderPopScrollTriggerPx: 120,
       sliderPopDismissCooldownMs: 45000
     })
-  });
+  };
 
   window.CUMBEAR = CONFIG;
 
