@@ -262,7 +262,7 @@
 
       try {
         const controller = new AbortController();
-        const timer = setTimeout(function () { controller.abort(); }, 3500);
+        const timer = setTimeout(function () { controller.abort(); }, 2500);
         const res = await fetch(CFG.helpers.vastUrl(ZONES.playerVast), { signal: controller.signal });
         clearTimeout(timer);
 

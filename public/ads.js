@@ -242,7 +242,7 @@
     }
     stickyTimer = setTimeout(function () {
       if (!isShortsView() && !AdState.isInCooldown()) showSticky();
-    }, 12000); /* 12s initial delay */
+    }, 3000); /* 3s initial delay — matches config.stickyDelayMs */
   }
 
   /* ==========================================================================
@@ -366,6 +366,31 @@
       });
     }
   }
+
+  /* Ad health check — logs which zones rendered vs which didn't
+     Run once after 8s to see if the network is slow/blocking. */
+  function adHealthCheck() {
+    if (!consentAllows()) return;
+    const zones = [
+      { name: 'top-mobile', sel: '#globalTopBannerWrapper .ad-banner-mobile ins[data-zoneid]' },
+      { name: 'top-desktop', sel: '#globalTopBannerWrapper .ad-banner-desktop ins[data-zoneid]' },
+      { name: 'slider', sel: '#videoSliderPopup ins[data-zoneid]' },
+      { name: 'home-bottom', sel: '#homeBottomBanner ins[data-zoneid]' },
+      { name: 'player-top', sel: '#playerTopBanner ins[data-zoneid]' }
+    ];
+    const report = [];
+    zones.forEach(function (z) {
+      const el = document.querySelector(z.sel);
+      if (!el) return;
+      /* An <ins> renders when it has a child iframe or img */
+      const rendered = el.querySelector('iframe, img') !== null;
+      report.push(z.name + ': ' + (rendered ? '✅' : '⏳'));
+    });
+    if (report.length > 0) {
+      console.log('[CumBearAds] ' + report.join(' | '));
+    }
+  }
+  setTimeout(adHealthCheck, 8000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

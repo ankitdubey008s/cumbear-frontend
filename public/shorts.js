@@ -1,21 +1,11 @@
-
-node -c shorts.js && echo "✅ Syntax OK"
-grep -c "shortsLeaderboard" shorts.js          # → 1
-grep -c "CumBearPopunder" shorts.js             # → 1
-grep -c "firstInteraction" shorts.js            # → 3+
-grep -c "preload=\"none\"" shorts.js            # → 2
-grep -c "rootMargin: '20% 0px 20% 0px'" shorts.js  # → 1
-
-git add shorts.js shorts.css
-git commit -m "Shorts v2: leaderboard below top-bar, first-tap popunder, safe VAST, network isolation"
-git push/**
+/**
  * ==========================================================================
  * CUMBEAR — SHORTS CONTROLLER (v2)
  * --------------------------------------------------------------------------
  * - Leaderboard below top-bar (mobile rectangle / desktop leaderboard)
- * - First short: always poster + play button; first tap fires popunder
- * - After first tap, all shorts autoplay
- * - Vertical ExoClick VAST every 3 shorts (5s skip lock, hard 6s timeout)
+ * - First short: poster + play button; first tap fires popunder
+ * - After first tap: autoplay subsequent shorts
+ * - Vertical ExoClick VAST every 3 shorts (5s skip, 6s hard timeout)
  * - Network isolation: only visible short has src set
  * - Per-short URL: /shorts/:id
  * ==========================================================================
@@ -668,7 +658,7 @@ git push/**
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(function () { controller.abort(); }, 3500);
+      const timer = setTimeout(function () { controller.abort(); }, 2500);
       const res = await fetch(CFG.helpers.vastUrl(ZONES.shortsVast), { signal: controller.signal });
       clearTimeout(timer);
 
