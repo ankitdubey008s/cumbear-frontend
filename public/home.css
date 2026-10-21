@@ -222,3 +222,42 @@
   color: #fbbf24 !important;
   font-weight: 700 !important;
 }
+
+/* ==========================================================================
+   CUMBEAR — FAPHOUSE AUTOPLAY PREVIEW VIDEO
+   ========================================================================== */
+.faphouse-thumb {
+  background: #000;
+  overflow: hidden;
+}
+
+.faphouse-autoplay-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  background: #000;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.faphouse-thumb .faphouse-sponsored-badge,
+.faphouse-thumb .duration-badge {
+  z-index: 5;
+}
+
+/* An "affiliate card" click cursor */
+.affiliate-video-card {
+  cursor: pointer;
+}
+
+/* Prevent chrome context menu on the card */
+.affiliate-video-card * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

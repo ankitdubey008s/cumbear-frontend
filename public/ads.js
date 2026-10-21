@@ -1,22 +1,23 @@
 /**
  * ==========================================================================
- * CUMBEAR — AD CONTROLLER (v3)
+ * CUMBEAR — AD CONTROLLER (v4)
  * --------------------------------------------------------------------------
- * Manages three placements:
- *   1. Top banner       (mobile rectangle / desktop leaderboard)
- *   2. Bottom banners   (home / search / player)
- *   3. Video slider popup (zone 6056606)
- *   + Sticky video banner (uses /sticky-ad.mp4, opens CrakRevenue on tap)
+ * Zones:
+ *   6057032 — mobile 300×250 (home/search/player)
+ *   6056586 — desktop 728×90 (home/search/player)
+ *   6056606 — video slider popup (bottom-right)
+ *   6061614 — mobile 300×100 (player page only — NEW)
+ *   6056604 — player VAST pre-roll (handled by player.js)
+ *   6056608 — shorts VAST (handled by shorts.js)
  *
- * Shared 60s cooldown via window.CumBearAdState:
- *   - Dismissing either sticky or slider hides BOTH for 60s
- *   - After 60s both reappear (if view allows)
+ * Sticky video banner:
+ *   - Shows after 2s of consent
+ *   - Click → CrakRevenue (URL hidden — not visible in href)
+ *   - Close → 60s cooldown (shared with slider)
  *
- * Public API:
- *   window.updateAdVisibility(viewId)
- *   window.CumBearAds.refreshBanners()
- *   window.CumBearAds.hideSticky()   → user-initiated close
- *   window.CumBearAds.hideSlider()   → user-initiated close
+ * Shared 60s cooldown via CumBearAdState:
+ *   - Dismissing sticky OR slider hides BOTH for 60s
+ *   - After 60s both reappear
  * ==========================================================================
  */
 (function () {
@@ -30,18 +31,17 @@
   }
 
   /* ==========================================================================
-     SHARED AD STATE — 60s cooldown after any dismiss
+     SHARED 60s COOLDOWN
      ========================================================================== */
   const COOLDOWN_MS = 60000;
-  const COOLDOWN_KEY = 'cumbear_ads_cooldown_ts';
+  const COOLDOWN_KEY = 'cumbear_ads_cooldown_ts_v2';
 
   const AdState = {
     getCooldownRemaining: function () {
       try {
         const ts = parseInt(localStorage.getItem(COOLDOWN_KEY) || '0', 10);
         if (!ts) return 0;
-        const elapsed = Date.now() - ts;
-        const remaining = COOLDOWN_MS - elapsed;
+        const remaining = COOLDOWN_MS - (Date.now() - ts);
         return remaining > 0 ? remaining : 0;
       } catch (e) { return 0; }
     },
@@ -85,6 +85,18 @@
   }
 
   /* ==========================================================================
+     VIEW HELPERS
+     ========================================================================== */
+  function isShortsView() {
+    return document.body.classList.contains('shorts-mode') ||
+      (document.getElementById('shortsView')?.classList.contains('active'));
+  }
+  function isPlayerView() {
+    return document.body.classList.contains('player-mode') ||
+      (document.getElementById('playerView')?.classList.contains('active'));
+  }
+
+  /* ==========================================================================
      BANNER VISIBILITY
      ========================================================================== */
   function setBannerVisible(wrapper, visible) {
@@ -101,6 +113,7 @@
   function serveVisibleBanners() {
     if (!consentAllows()) return;
 
+    /* Top banner */
     if (currentView === 'homeView' || currentView === 'categoriesView') {
       if (document.querySelector('#globalTopBannerWrapper .ad-banner-mobile ins[data-zoneid]')) {
         serveOnce(CFG.exo.zones.mobileBanner);
@@ -110,11 +123,13 @@
       }
     }
 
+    /* Home bottom */
     if (currentView === 'homeView' && document.getElementById('homeBottomBanner')) {
       serveOnce(CFG.exo.zones.mobileBanner);
       serveOnce(CFG.exo.zones.desktopLeaderboard);
     }
 
+    /* Search */
     if (currentView === 'categoriesView') {
       const resultsVisible = !document.getElementById('searchResultsSection')?.classList.contains('hidden');
       if (resultsVisible && document.getElementById('searchBottomBanner')) {
@@ -127,22 +142,21 @@
       }
     }
 
-    if (currentView === 'playerView' && document.getElementById('playerTopBanner')) {
-      serveOnce(CFG.exo.zones.mobileBanner);
-      serveOnce(CFG.exo.zones.desktopLeaderboard);
+    /* Player — leaderboard above + mobile 300x100 below + bottom banner */
+    if (currentView === 'playerView') {
+      if (document.getElementById('playerTopBanner')) {
+        serveOnce(CFG.exo.zones.mobileBanner);
+        serveOnce(CFG.exo.zones.desktopLeaderboard);
+      }
+      /* NEW: mobile 300x100 mid banner (zone 6061614) */
+      if (document.getElementById('playerMidBanner')) {
+        serveOnce(CFG.exo.zones.playerMobileMid);
+      }
+      if (document.getElementById('playerBottomBanner')) {
+        serveOnce(CFG.exo.zones.mobileBanner);
+        serveOnce(CFG.exo.zones.desktopLeaderboard);
+      }
     }
-  }
-
-  /* ==========================================================================
-     VIEW HELPERS
-     ========================================================================== */
-  function isShortsView() {
-    return document.body.classList.contains('shorts-mode') ||
-      (document.getElementById('shortsView')?.classList.contains('active'));
-  }
-  function isPlayerView() {
-    return document.body.classList.contains('player-mode') ||
-      (document.getElementById('playerView')?.classList.contains('active'));
   }
 
   /* ==========================================================================
@@ -172,12 +186,11 @@
     if (markClosed) {
       sliderClosedByUser = true;
       AdState.startCooldown();
-      hideSticky(false); /* ALSO hide sticky — shared cooldown */
+      hideSticky(false);
       if (sliderReopenTimer) clearTimeout(sliderReopenTimer);
       sliderReopenTimer = setTimeout(function () {
         sliderClosedByUser = false;
         if (!isShortsView()) showSlider();
-        /* Sticky reopens via its own timer */
       }, COOLDOWN_MS);
     }
   }
@@ -188,12 +201,13 @@
   function stickyEl() { return document.getElementById('stickyVideoBanner'); }
   function stickyVideoEl() { return document.getElementById('stickyVideoEl'); }
   function stickyCloseBtn() { return document.getElementById('stickyVideoCloseBtn'); }
+  function stickyLinkEl() { return document.getElementById('stickyVideoLink'); }
 
   function showSticky() {
     const el = stickyEl();
     if (!el) return;
     if (!consentAllows()) return;
-    if (isShortsView()) return; /* never on shorts */
+    if (isShortsView()) return;
     if (AdState.isInCooldown()) return;
 
     el.classList.remove('hidden');
@@ -203,7 +217,7 @@
       vid.muted = true;
       const p = vid.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(function () { /* autoplay blocked, thumbnail shows */ });
+        p.catch(function () { /* autoplay blocked */ });
       }
     }
   }
@@ -233,7 +247,6 @@
     if (!consentAllows()) return;
     if (isShortsView()) return;
     if (AdState.isInCooldown()) {
-      /* Re-check when cooldown ends */
       const remaining = AdState.getCooldownRemaining();
       if (remaining > 0) {
         stickyTimer = setTimeout(scheduleSticky, remaining + 200);
@@ -242,7 +255,34 @@
     }
     stickyTimer = setTimeout(function () {
       if (!isShortsView() && !AdState.isInCooldown()) showSticky();
-    }, 2000); /* 2s initial delay — matches config.stickyDelayMs */
+    }, 2000); /* 2s after consent */
+  }
+
+  /* ==========================================================================
+     STICKY CLICK HANDLER — CrakRevenue redirect (URL hidden)
+     ========================================================================== */
+  function wireStickyClick() {
+    const link = stickyLinkEl();
+    if (!link || link.dataset.wired === '1') return;
+    link.dataset.wired = '1';
+
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      /* Get affiliate URL from config (not from href) */
+      const affiliateUrl = CFG.crak && CFG.crak.smartlinkDating
+        ? CFG.crak.smartlinkDating
+        : 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN';
+
+      window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    /* Block right-click context menu on sticky video */
+    const vid = stickyVideoEl();
+    if (vid) {
+      vid.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    }
   }
 
   /* ==========================================================================
@@ -267,11 +307,9 @@
       }
     }
 
-    /* Sticky: hide on player? Keep visible — user asked for it, but shorts hides */
     if (isShortsView()) {
       hideSticky(false);
     } else if (!AdState.isInCooldown()) {
-      /* Re-show sticky if it was hidden by view change (but not by user) */
       const el = stickyEl();
       if (el && el.classList.contains('hidden')) {
         scheduleSticky();
@@ -301,7 +339,7 @@
       e.preventDefault();
       e.stopPropagation();
       hideSlider(true);
-    });
+    }, true);
   }
 
   function wireStickyClose() {
@@ -309,12 +347,11 @@
     if (!close || close.dataset.wired) return;
     close.dataset.wired = '1';
     close.addEventListener('click', function (e) {
-      /* Stop propagation so this NEVER triggers the CrakRevenue link */
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
       hideSticky(true);
-    }, true); /* capture phase to catch it first */
+    }, true);
   }
 
   function wireFirstScrollTrigger() {
@@ -327,9 +364,9 @@
       }
     };
     window.addEventListener('scroll', function () {
-      if (window.scrollY > CFG.ux.sliderPopScrollTriggerPx) arm();
+      if (window.scrollY > (CFG.ux.sliderPopScrollTriggerPx || 120)) arm();
     }, { passive: true });
-    setTimeout(arm, CFG.ux.sliderPopFirstDelayMs);
+    setTimeout(arm, CFG.ux.sliderPopFirstDelayMs || 500);
   }
 
   function wrapSwitchViewOnce() {
@@ -349,6 +386,7 @@
   function boot() {
     wireSliderClose();
     wireStickyClose();
+    wireStickyClick();
     wrapSwitchViewOnce();
     wireFirstScrollTrigger();
 
@@ -366,31 +404,6 @@
       });
     }
   }
-
-  /* Ad health check — logs which zones rendered vs which didn't
-     Run once after 8s to see if the network is slow/blocking. */
-  function adHealthCheck() {
-    if (!consentAllows()) return;
-    const zones = [
-      { name: 'top-mobile', sel: '#globalTopBannerWrapper .ad-banner-mobile ins[data-zoneid]' },
-      { name: 'top-desktop', sel: '#globalTopBannerWrapper .ad-banner-desktop ins[data-zoneid]' },
-      { name: 'slider', sel: '#videoSliderPopup ins[data-zoneid]' },
-      { name: 'home-bottom', sel: '#homeBottomBanner ins[data-zoneid]' },
-      { name: 'player-top', sel: '#playerTopBanner ins[data-zoneid]' }
-    ];
-    const report = [];
-    zones.forEach(function (z) {
-      const el = document.querySelector(z.sel);
-      if (!el) return;
-      /* An <ins> renders when it has a child iframe or img */
-      const rendered = el.querySelector('iframe, img') !== null;
-      report.push(z.name + ': ' + (rendered ? '✅' : '⏳'));
-    });
-    if (report.length > 0) {
-      console.log('[CumBearAds] ' + report.join(' | '));
-    }
-  }
-  setTimeout(adHealthCheck, 8000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

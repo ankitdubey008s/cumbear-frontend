@@ -33,7 +33,8 @@
         mobilePopunder: '6056600',             // class-trigger popunder (mobile)
         webPopunder: '6056598',                // class-trigger popunder (desktop)
         playerVast: '6056604',                 // 16:9 pre-roll on player
-        shortsVast: '6056608'                  // 9:16 vertical in-stream on shorts
+        shortsVast: '6056608',                 // 9:16 vertical in-stream on shorts
+        playerMobileMid: '6061614'             // mobile 300x100 below player
       }),
       vastBaseUrl: 'https://s.magsrv.com/v1/vast.php',
       clickBaseUrl: 'https://s.magsrv.com/click.php',

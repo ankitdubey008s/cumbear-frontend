@@ -2,21 +2,18 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <!-- CUMBEAR FORCE DARK: guarantees black background before CSS loads -->
-  <style>
-    html, body {
-      background-color: #000 !important;
-      color: #fff;
-    }
-    html[data-theme="light"], html[data-theme="light"] body {
-      background-color: #fafafa !important;
-      color: #0f0f14;
-    }
-  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#7c1d40">
+  <meta name="theme-color" content="#000000">
   <title>CumBear — Premium Adult Entertainment</title>
   <meta name="description" content="CumBear — premium adult video streaming. Browse categories, watch shorts, discover new scenes every day.">
+
+  <!-- Force dark theme BEFORE any CSS loads -->
+  <style>
+    html, body { background-color: #000 !important; color: #fff; }
+    html[data-theme="light"], html[data-theme="light"] body {
+      background-color: #fafafa !important; color: #0f0f14;
+    }
+  </style>
 
   <meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.magsrv.com; Sec-CH-UA-Mobile https://s.magsrv.com; Sec-CH-UA-Arch https://s.magsrv.com; Sec-CH-UA-Model https://s.magsrv.com; Sec-CH-UA-Platform https://s.magsrv.com; Sec-CH-UA-Platform-Version https://s.magsrv.com; Sec-CH-UA-Bitness https://s.magsrv.com; Sec-CH-UA-Full-Version-List https://s.magsrv.com; Sec-CH-UA-Full-Version https://s.magsrv.com;">
   <meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.pemsrv.com; Sec-CH-UA-Mobile https://s.pemsrv.com; Sec-CH-UA-Arch https://s.pemsrv.com; Sec-CH-UA-Model https://s.pemsrv.com; Sec-CH-UA-Platform https://s.pemsrv.com; Sec-CH-UA-Platform-Version https://s.pemsrv.com; Sec-CH-UA-Bitness https://s.pemsrv.com; Sec-CH-UA-Full-Version-List https://s.pemsrv.com; Sec-CH-UA-Full-Version https://s.pemsrv.com;">
@@ -26,16 +23,24 @@
   <link rel="apple-touch-icon" href="/cumb.png">
   <link rel="icon" type="image/png" href="/cumb.png">
 
-  <!-- Playfair Display (headings) + Lora (body) -->
+  <!-- Ad CDN preconnect -->
+  <link rel="preconnect" href="https://a.magsrv.com" crossorigin>
+  <link rel="preconnect" href="https://s.magsrv.com" crossorigin>
+  <link rel="preconnect" href="https://a.pemsrv.com" crossorigin>
+  <link rel="preconnect" href="https://s.pemsrv.com" crossorigin>
+  <link rel="dns-prefetch" href="https://a.magsrv.com">
+  <link rel="dns-prefetch" href="https://s.magsrv.com">
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- ExoClick provider -->
+  <!-- ExoClick (preload + async) -->
   <link rel="preload" as="script" href="https://a.magsrv.com/ad-provider.js">
   <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
 
-  <!-- Google Translate (deferred, hidden) -->
+  <!-- Google Translate (deferred) -->
   <div id="google_translate_element" style="display:none;"></div>
   <script type="text/javascript">
     function googleTranslateElementInit() {
@@ -56,19 +61,6 @@
   <link rel="stylesheet" href="/ads.css">
   <link rel="stylesheet" href="/craksmart.css">
   <link rel="stylesheet" href="/consent.css">
-
-  <!-- ExoClick + ad CDN performance: preconnect saves ~600ms per ad zone -->
-  <link rel="preconnect" href="https://a.magsrv.com" crossorigin>
-  <link rel="preconnect" href="https://s.magsrv.com" crossorigin>
-  <link rel="preconnect" href="https://a.pemsrv.com" crossorigin>
-  <link rel="preconnect" href="https://s.pemsrv.com" crossorigin>
-  <link rel="preconnect" href="https://cdn.tsyndicate.com" crossorigin>
-  <link rel="dns-prefetch" href="https://a.magsrv.com">
-  <link rel="dns-prefetch" href="https://s.magsrv.com">
-  <link rel="dns-prefetch" href="https://a.pemsrv.com">
-  <link rel="dns-prefetch" href="https://s.pemsrv.com">
-  <link rel="dns-prefetch" href="https://cdn.tsyndicate.com">
-
 </head>
 <body>
 
@@ -110,7 +102,7 @@
       <button class="h-cat-chip active" data-cat="all">All</button>
     </div>
 
-    <!-- ===== TOP BANNER (mobile rectangle 300x250 / desktop leaderboard 728x90) ===== -->
+    <!-- TOP BANNER (mobile rectangle 300x250 / desktop leaderboard 728x90) -->
     <div class="global-ad-banner-wrapper" id="globalTopBannerWrapper">
       <div class="ad-banner-mobile">
         <ins class="eas6a97888e2" data-zoneid="6057032"></ins>
@@ -231,10 +223,8 @@
           </div>
         </div>
 
-        <!-- Edge-to-edge 16:9 grid -->
         <div class="video-grid e2e" id="videoGrid"></div>
 
-        <!-- Bottom banner (all devices) -->
         <div class="ad-banner-bottom-wrapper" id="homeBottomBanner">
           <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
           <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
@@ -266,8 +256,6 @@
 
       <!-- ============ SHORTS ============ -->
       <section id="shortsView" class="view-section hidden">
-        <!-- Shorts leaderboard (added by shorts.js dynamically) -->
-        <div class="shorts-leaderboard-container" id="shortsLeaderboard"></div>
         <div class="shorts-container" id="shortsContainer"></div>
       </section>
 
@@ -296,7 +284,6 @@
             <h3 id="searchResultTitle">Results</h3>
           </div>
 
-          <!-- Search banner (mobile rectangle / desktop leaderboard) — above results, not above hub -->
           <div class="global-ad-banner-wrapper" id="searchTopBanner">
             <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
             <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
@@ -317,12 +304,13 @@
       <section id="playerView" class="view-section hidden">
         <div class="player-wrapper">
 
-          <!-- PLAYER LEADERBOARD (728x90 desktop / 300x250 mobile) -->
+          <!-- LEADERBOARD above video (desktop) + MOBILE 300x250 (mobile) -->
           <div class="player-top-banner" id="playerTopBanner">
             <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
             <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
           </div>
 
+          <!-- Player -->
           <div class="player-aspect-box" id="playerAspectBox">
             <div id="playerPosterCover" class="player-poster-cover">
               <img id="playerPosterImg" src="/cumb.png" alt="poster">
@@ -335,6 +323,11 @@
               <button id="playerVastSkipBtn" class="vast-skip-btn">Skip in 5s</button>
             </div>
             <video id="mainPlayerVideo" class="player-main-video" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata"></video>
+          </div>
+
+          <!-- NEW: Mobile-only 300x100 banner BELOW the player (zone 6061614) -->
+          <div class="player-mobile-mid-banner" id="playerMidBanner">
+            <ins class="eas6a97888e10" data-zoneid="6061614"></ins>
           </div>
 
           <div class="player-meta-box">
@@ -354,6 +347,12 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Bottom banner below player (mobile rectangle / desktop leaderboard) -->
+        <div class="ad-banner-bottom-wrapper" id="playerBottomBanner">
+          <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
+          <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
         </div>
 
         <div class="related-section">
@@ -386,16 +385,16 @@
       <ins class="eas6a97888e31" data-zoneid="6056606"></ins>
     </div>
 
-    <!-- STICKY VIDEO BANNER (bottom of screen, dismissible) -->
-    <div id="stickyVideoBanner" class="sticky-video-banner hidden" role="complementary" aria-label="Sponsored video">
+    <!-- STICKY VIDEO BANNER (bottom of screen) -->
+    <div id="stickyVideoBanner" class="sticky-video-banner sticky-video-small hidden" role="complementary" aria-label="Sponsored video">
       <button id="stickyVideoCloseBtn" class="sticky-video-close" aria-label="Close sponsored banner">✕</button>
       <a id="stickyVideoLink" class="sticky-video-link"
-         href="https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN"
+         href="#"
+         data-affiliate="true"
          target="_blank" rel="noopener sponsored">
         <video id="stickyVideoEl" src="/sticky-ad.mp4" muted loop playsinline webkit-playsinline preload="metadata"></video>
         <span class="sticky-video-overlay">
           <span class="sticky-video-title">Sponsored</span>
-          <span class="sticky-video-sub">Tap to learn more →</span>
         </span>
       </a>
     </div>
@@ -420,11 +419,11 @@
       </div>
     </div>
 
-    <!-- COOKIE CONSENT (glass morphism, OK only) -->
-    <div id="cookieConsent" class="cookie-consent hidden" role="dialog" aria-live="polite" aria-label="Cookie consent">
+    <!-- COOKIE CONSENT (compact glass) -->
+    <div id="cookieConsent" class="cookie-consent cookie-consent-compact hidden" role="dialog" aria-live="polite" aria-label="Cookie consent">
       <div class="cookie-consent-inner">
         <p class="cookie-consent-text">
-          We use cookies to personalize content and ads. By continuing, you agree to this use.
+          We use cookies for ads and personalization.
         </p>
         <button id="consentAcceptBtn" type="button" class="cookie-consent-ok">OK</button>
       </div>
@@ -432,7 +431,7 @@
 
   </div><!-- /#mainApp -->
 
-  <!-- SCRIPTS (all deferred, ordered by dependency) -->
+  <!-- SCRIPTS -->
   <script defer src="/config.js"></script>
   <script defer src="/script.js"></script>
   <script defer src="/consent.js"></script>

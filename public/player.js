@@ -1,15 +1,16 @@
 /**
  * ==========================================================================
- * CUMBEAR — VIDEO PLAYER CONTROLLER (v2)
+ * CUMBEAR — VIDEO PLAYER CONTROLLER (v3)
  * --------------------------------------------------------------------------
- * - Leaderboard above player (in HTML)
- * - First-play popunder (once per 24h)
- * - 5s skippable ExoClick pre-roll (with safe fallback)
- * - Related videos with FapHouse injection
- * - Per-video URL: /watch/:id
- * - Persistent like state
- * - Edge-to-edge 16:9 cards
- * - Chrome auto-captions enabled via <video crossorigin="anonymous">
+ * Per user spec:
+ *   - Every video: poster → tap → pre-roll VAST → main video plays
+ *   - FIRST video only: fire popunder once per 24h (not every video)
+ *   - Right-click blocked on player + poster
+ *   - No crossorigin attribute (w4nkr.com has no CORS → would break playback)
+ *   - Related videos use edge-to-edge grid + FapHouse injection
+ *   - Per-video URL: /watch/:id
+ *   - Like state persisted per video
+ *   - Share copies /watch/:id URL
  * ==========================================================================
  */
 (function () {
@@ -35,7 +36,9 @@
   let exoclickClickUrl = CFG.helpers.clickUrl(ZONES.playerVast);
   let currentLoadId    = 0;
 
-  /* ---------- utils ---------- */
+  /* ==========================================================================
+     UTILS
+     ========================================================================== */
   function escapeHtml(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -56,7 +59,6 @@
     }
     return h >>> 0;
   }
-
   function stableViews(id) { return 10000 + (hashString(String(id) + 'v') % 9990000); }
   function stableLikeRate(id) { return 55 + (hashString(String(id) + 'l') % 44); }
 
@@ -77,7 +79,9 @@
     setTimeout(function () { t.classList.remove('visible'); }, 2200);
   }
 
-  /* ---------- stop ---------- */
+  /* ==========================================================================
+     STOP PLAYER (cleanup)
+     ========================================================================== */
   window.stopPlayer = function () {
     if (adTimer) { clearInterval(adTimer); adTimer = null; }
     adFinished = false;
@@ -99,7 +103,9 @@
     }
   };
 
-  /* ---------- load video ---------- */
+  /* ==========================================================================
+     LOAD VIDEO
+     ========================================================================== */
   window.loadPlayerVideoById = function (videoId) {
     if (!videoId) return;
 
@@ -142,7 +148,6 @@
       });
   };
 
-  /* ---------- error ---------- */
   function showPlayerError() {
     const container = document.getElementById('playerAspectBox');
     if (container) {
@@ -156,7 +161,9 @@
     if (titleEl) titleEl.textContent = 'Video unavailable';
   }
 
-  /* ---------- mount ---------- */
+  /* ==========================================================================
+     MOUNT PLAYER
+     ========================================================================== */
   function mountPlayer() {
     const container = document.getElementById('playerAspectBox');
     const titleEl   = document.getElementById('playerTitle');
@@ -174,6 +181,8 @@
     const likeRate  = stableLikeRate(currentVideoData._id);
     const likeCount = Math.max(1, Math.round(stableViews(currentVideoData._id) * likeRate / 100));
 
+    /* IMPORTANT: no crossorigin attribute — w4nkr.com has no CORS headers
+       and adding crossorigin would break playback. */
     container.innerHTML =
       '<div class="player-poster-cover" id="playerPosterCover">' +
         '<img class="player-poster-img" src="' + (currentVideoData.thumbnailUrl || '/cumb.png') + '" alt="' + safeTitle + '">' +
@@ -193,11 +202,7 @@
         '</button>' +
       '</div>' +
 
-      /* crossorigin="anonymous" enables Chrome auto-captions.
-         If the CDN lacks CORS headers, remove the attribute to allow playback. */
-      '<video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata">' +
-        '<track kind="captions" src="data:text/vtt;base64,V0VCVlRUCg==" srclang="en" label="English (auto)" default>' +
-      '</video>';
+      '<video class="player-main-video" id="playerMainVideo" controls controlslist="nodownload noremoteplayback" playsinline webkit-playsinline preload="metadata"></video>';
 
     /* Meta */
     const likeCountEl = document.getElementById('playerLikeCount');
@@ -211,7 +216,9 @@
     bindPlayerEngine();
   }
 
-  /* ---------- bind ---------- */
+  /* ==========================================================================
+     BIND PLAYER
+     ========================================================================== */
   function bindPlayerEngine() {
     const posterCover = document.getElementById('playerPosterCover');
     const adOverlay   = document.getElementById('playerVastOverlay');
@@ -224,12 +231,18 @@
 
     if (!posterCover || !mainVideo) return;
 
-    /* ---------- poster click → popunder + pre-roll ---------- */
+    /* Block right-click on all video elements */
+    [posterCover, mainVideo].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+
+    /* ---------- poster tap → (popunder if first) → pre-roll → play ---------- */
     posterCover.addEventListener('click', function () {
       posterCover.classList.add('hidden');
       posterCover.style.display = 'none';
 
-      /* First-play popunder — once per 24h */
+      /* FIRST-PLAY POPUNDER — only fires ONCE per 24h across ALL videos */
       try {
         if (
           consentAllows() &&
@@ -249,13 +262,19 @@
       startPreRollAd();
     }, { once: true });
 
-    /* ---------- pre-roll ---------- */
+    /* ---------- pre-roll (plays EVERY video) ---------- */
     async function startPreRollAd() {
       if (!adOverlay || !adVideo) { finishAd(); return; }
       if (!consentAllows())      { finishAd(); return; }
 
       adOverlay.classList.remove('hidden');
       adOverlay.style.display = '';
+
+      /* Reset ad-finished flag for this new play */
+      adFinished = false;
+
+      /* Block right-click on ad video */
+      adVideo.addEventListener('contextmenu', function (e) { e.preventDefault(); }, { once: false });
 
       let adMediaSrc = null;
       let adError    = false;
@@ -334,6 +353,7 @@
       if (adVisitBtn) adVisitBtn.onclick = openAdClick;
     }
 
+    /* ---------- finish ad, start main video ---------- */
     function finishAd() {
       if (adFinished) return;
       adFinished = true;
@@ -352,6 +372,10 @@
       }
 
       if (!mainVideo || !currentVideoData) return;
+
+      /* Block right-click on main video */
+      mainVideo.addEventListener('contextmenu', function (e) { e.preventDefault(); }, { once: false });
+
       mainVideo.src = currentVideoData.playableUrl;
       mainVideo.load();
       const p = mainVideo.play();
@@ -396,7 +420,9 @@
     }
   }
 
-  /* ---------- related ---------- */
+  /* ==========================================================================
+     RELATED VIDEOS (50 videos + 10 FapHouse, e2e grid)
+     ========================================================================== */
   function loadRelatedVideos(category) {
     const grid = document.getElementById('relatedVideoGrid');
     if (!grid) return;
@@ -404,8 +430,9 @@
 
     const myId = currentLoadId;
 
+    /* Fetch 50 videos instead of 12 for consistency with home */
     fetch(CFG.helpers.videoListUrl({
-      limit: 12,
+      limit: 50,
       category: category || 'all',
       _: Date.now()
     }), { credentials: 'omit' })
@@ -442,7 +469,6 @@
             return;
           }
 
-          /* Fallback */
           const card = document.createElement('div');
           card.className = 'video-card e2e';
           const safe = escapeHtml(v.title || 'Untitled');

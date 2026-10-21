@@ -597,3 +597,66 @@ body.shorts-mode:not(.shorts-mode) .shorts-leaderboard-container {
 body:not(.shorts-mode) .shorts-leaderboard-container {
   display: none !important;
 }
+
+/* ==========================================================================
+   CUMBEAR — SHORTS BANNER (per short, below top-bar)
+   Mobile 300x100 (zone 6061614) / Desktop 728x90 (zone 6056586)
+   ========================================================================== */
+.short-banner-wrapper {
+  position: absolute;
+  top: 56px;  /* below top-bar which has back/mute */
+  left: 0;
+  right: 0;
+  z-index: 55;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  min-height: 100px;
+  padding: 4px 0;
+}
+
+@media (min-width: 768px) {
+  .short-banner-wrapper {
+    min-height: 90px;
+  }
+}
+
+.short-mobile-banner {
+  display: flex;
+  justify-content: center;
+  width: 300px;
+  height: 100px;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .short-mobile-banner { display: none !important; }
+}
+
+.short-desktop-banner {
+  display: none;
+  justify-content: center;
+  width: 728px;
+  height: 90px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .short-desktop-banner { display: flex !important; }
+}
+
+/* Push video content down so banner doesn't cover it */
+.short-card-item .short-video-stage {
+  margin-top: 100px;
+}
+
+@media (min-width: 768px) {
+  .short-card-item .short-video-stage {
+    margin-top: 90px;
+  }
+}

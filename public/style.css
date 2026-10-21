@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CUMBEAR — GLOBAL DESIGN SYSTEM (Production v3.0)
+   CUMBEAR — GLOBAL DESIGN SYSTEM (v4, 2026-10-21)
    Fonts: Playfair Display (headings) + Lora (body)
    Theme: dark default, light optional
    Cards: 16:9 edge-to-edge, no radius
@@ -10,38 +10,31 @@
    1. DESIGN TOKENS — DARK (default)
    ========================================================================== */
 :root {
-  /* Backgrounds */
   --bg-primary: #000000;
   --bg-secondary: #0a0a0f;
   --bg-card: #0f0f1a;
   --bg-elevated: #1a1a2e;
   --bg-overlay: rgba(0, 0, 0, 0.92);
 
-  /* Text */
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
   --text-muted: #6a6a72;
 
-  /* Borders */
   --border-color: #1f1f2a;
   --border-strong: #2a2a38;
 
-  /* Accent (brand burgundy) */
   --accent-burgundy: #7c1d40;
   --accent-burgundy-light: #9b2d52;
   --accent-burgundy-soft: rgba(124, 29, 64, 0.18);
   --accent-dark: #5a1528;
 
-  /* Typography */
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Lora', Georgia, serif;
 
-  /* Layout */
   --header-height: 56px;
   --footer-height: 64px;
   --grid-cols: 1;
 
-  /* Motion */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -84,6 +77,9 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
   background-color: var(--bg-primary);
+  /* Prevent horizontal overflow on all devices */
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -96,6 +92,7 @@ body {
   overflow-x: hidden;
   line-height: 1.55;
   font-size: 15px;
+  max-width: 100vw;
 }
 
 button, input, textarea {
@@ -107,23 +104,42 @@ button, input, textarea {
 
 button { cursor: pointer; border: none; background: none; }
 a { color: inherit; text-decoration: none; }
-img { display: block; max-width: 100%; }
+img, video { display: block; max-width: 100%; }
 
 .hidden { display: none !important; }
 
-/* Cards must never trigger context menus / text selection */
+/* ==========================================================================
+   4. BLOCK CHROME CONTEXT MENU ON VIDEO THUMBNAILS
+   (user complaint: holding thumbnail shows "Save image" / "Open in new tab")
+   ========================================================================== */
 .video-card,
 .video-thumb,
 .video-thumb img,
+.video-thumb video,
+.preview-video-holder video,
 .image-cat-card,
-.short-card-item {
+.short-card-item,
+.short-video-stage,
+.affiliate-video-card,
+#stickyVideoEl {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
   user-select: none !important;
 }
 
+/* Kill the browser context menu listener via CSS */
+.video-thumb img,
+.video-thumb video,
+.preview-video-holder video {
+  pointer-events: auto;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
 /* ==========================================================================
-   4. TYPOGRAPHY — Playfair Display for headings, Lora for body
+   5. TYPOGRAPHY
    ========================================================================== */
 h1, h2, h3, h4, h5, h6,
 .gate-title,
@@ -152,14 +168,13 @@ h3 { font-size: 1.1rem; }
 
 p { line-height: 1.65; color: var(--text-secondary); }
 
-/* Video titles specifically use body font (Playfair is too elegant at 14px) */
 .video-title {
   font-family: var(--font-body);
   font-weight: 600;
 }
 
 /* ==========================================================================
-   5. AGE GATE
+   6. AGE GATE
    ========================================================================== */
 .age-gate-overlay {
   position: fixed;
@@ -172,10 +187,6 @@ p { line-height: 1.65; color: var(--text-secondary); }
   padding: 1rem;
 }
 
-[data-theme="light"] .age-gate-overlay {
-  background: radial-gradient(ellipse at center, rgba(124, 29, 64, 0.08) 0%, rgba(250, 250, 250, 0.98) 60%);
-}
-
 .age-gate-container {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -184,7 +195,7 @@ p { line-height: 1.65; color: var(--text-secondary); }
   width: 100%;
   max-width: 500px;
   text-align: center;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(124, 29, 64, 0.3);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9);
 }
 
 .brand-logo {
@@ -200,7 +211,6 @@ p { line-height: 1.65; color: var(--text-secondary); }
   font-size: 1.55rem;
   font-weight: 700;
   margin-bottom: 1.15rem;
-  color: var(--text-primary);
 }
 
 .disclaimer-box {
@@ -219,7 +229,6 @@ p { line-height: 1.65; color: var(--text-secondary); }
   line-height: 1.6;
   color: var(--text-secondary);
   margin-bottom: 0.65rem;
-  font-family: var(--font-body);
 }
 .disclaimer-text:last-child { margin-bottom: 0; }
 .disclaimer-text strong { color: var(--text-primary); font-weight: 700; }
@@ -235,12 +244,11 @@ p { line-height: 1.65; color: var(--text-secondary); }
   width: 100%;
   padding: 0.95rem;
   border-radius: 12px;
-  font-family: var(--font-body);
+  font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   border: none;
-  transition: transform var(--transition-fast);
 }
 
 .btn-exit {
@@ -248,24 +256,21 @@ p { line-height: 1.65; color: var(--text-secondary); }
   border: 1.5px solid var(--border-strong);
   color: var(--text-secondary);
 }
-.btn-exit:active { transform: scale(0.98); }
 
 .btn-enter {
   background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
   color: #ffffff;
   box-shadow: 0 8px 24px rgba(124, 29, 64, 0.35);
 }
-.btn-enter:active { transform: scale(0.98); }
 
 .security-note {
   font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 500;
-  font-family: var(--font-body);
 }
 
 /* ==========================================================================
-   6. MAIN LAYOUT
+   7. MAIN LAYOUT
    ========================================================================== */
 @media (min-width: 600px) { :root { --grid-cols: 2; } }
 @media (min-width: 1024px) { :root { --grid-cols: 4; } }
@@ -276,26 +281,23 @@ main {
   min-height: 100vh;
 }
 
-/* Shorts mode: no padding */
 body.shorts-mode main {
   padding-top: 0;
   padding-bottom: 0;
 }
 
 /* ==========================================================================
-   7. VIDEO GRID — Standard vs Edge-to-edge
+   8. VIDEO GRID
    ========================================================================== */
 .video-grid {
   display: grid;
   grid-template-columns: repeat(var(--grid-cols, 1), 1fr);
   gap: 14px 10px;
   padding: 12px 10px;
-  /* Perf: avoid stacked layers */
   content-visibility: auto;
   contain-intrinsic-size: auto 56vw;
 }
 
-/* Edge-to-edge 16:9 grid — no gaps, no radius, cards touch screen edges */
 .video-grid.e2e {
   grid-template-columns: 1fr;
   gap: 6px 0;
@@ -325,17 +327,15 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   8. VIDEO CARD
+   9. VIDEO CARD
    ========================================================================== */
 .video-card {
   display: flex;
   flex-direction: column;
   content-visibility: auto;
   contain-intrinsic-size: auto 56vw;
-  transition: background var(--transition-fast);
 }
 
-/* Default card (inside padding grid) keeps radius */
 .video-grid:not(.e2e) .video-thumb {
   border-radius: 10px;
 }
@@ -344,13 +344,11 @@ body.shorts-mode main {
   padding-bottom: 4px;
 }
 
-/* Edge-to-edge card: no radius, no margins, no outer padding */
 .video-grid.e2e .video-card {
   padding: 0;
   margin: 0;
 }
 
-/* Thumbnail — 16:9 aspect ratio (both modes) */
 .video-thumb {
   position: relative;
   width: 100%;
@@ -358,7 +356,6 @@ body.shorts-mode main {
   background: var(--bg-secondary);
   overflow: hidden;
   margin-bottom: 0;
-  transition: opacity var(--transition-fast);
 }
 
 .video-grid:not(.e2e) .video-thumb {
@@ -370,11 +367,8 @@ body.shorts-mode main {
   height: 100%;
   object-fit: cover;
   display: block;
-  /* Perf: hint to browser that this is a media element */
-  content-visibility: auto;
 }
 
-/* Preview video overlay (rendered by attach-preview.js) */
 .preview-video-holder video {
   position: absolute;
   inset: 0;
@@ -392,7 +386,23 @@ body.shorts-mode main {
 
 .video-thumb.previewing img { opacity: 0; }
 
-/* Duration badge */
+/* FapHouse auto-preview video */
+.video-thumb .faphouse-autoplay-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.video-thumb .faphouse-autoplay-video.playing {
+  opacity: 1;
+}
+
 .duration-badge {
   position: absolute;
   bottom: 8px;
@@ -404,11 +414,8 @@ body.shorts-mode main {
   font-size: 0.7rem;
   font-weight: 600;
   z-index: 3;
-  letter-spacing: 0.02em;
-  font-family: var(--font-body);
 }
 
-/* Preview progress bar */
 .preview-timeline {
   position: absolute;
   bottom: 0;
@@ -418,7 +425,7 @@ body.shorts-mode main {
   background: rgba(124, 29, 64, 0.25);
   z-index: 10;
   opacity: 0;
-  transition: opacity var(--transition-fast);
+  transition: opacity 0.15s;
 }
 .preview-timeline.active { opacity: 1; }
 
@@ -428,7 +435,6 @@ body.shorts-mode main {
   background: var(--accent-burgundy-light);
 }
 
-/* Preview loading — single pseudo spinner (perf) */
 .preview-loading {
   position: absolute;
   inset: 0;
@@ -439,11 +445,9 @@ body.shorts-mode main {
   z-index: 5;
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--transition-fast);
 }
 .preview-loading.active { opacity: 1; pointer-events: auto; }
 
-.preview-spinner,
 .preview-loading::after {
   content: '';
   width: 32px;
@@ -454,14 +458,10 @@ body.shorts-mode main {
   animation: cumbear-spin 0.8s linear infinite;
 }
 
-.preview-spinner { position: absolute; }
-
 @keyframes cumbear-spin { to { transform: rotate(360deg); } }
 
-/* Video info */
 .video-info {
   padding: 8px 10px 10px;
-  background: transparent;
 }
 
 .video-grid.e2e .video-info {
@@ -480,19 +480,13 @@ body.shorts-mode main {
   overflow: hidden;
 }
 
-.video-thumb.previewing ~ .video-info .video-title {
-  color: var(--accent-burgundy-light);
-}
-
 .video-meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 0.72rem;
   color: var(--text-muted);
-  font-weight: 400;
   flex-wrap: wrap;
-  font-family: var(--font-body);
 }
 
 .video-meta-row .provider-tag {
@@ -501,7 +495,7 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   9. BOTTOM SECTION
+   10. BOTTOM SECTIONS
    ========================================================================== */
 .bottom-categories-section {
   padding: 24px 10px 10px;
@@ -513,7 +507,6 @@ body.shorts-mode main {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 14px;
-  color: var(--text-primary);
 }
 
 .image-categories-grid {
@@ -532,9 +525,7 @@ body.shorts-mode main {
   cursor: pointer;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
-  transition: transform var(--transition-fast);
 }
-.image-cat-card:active { transform: scale(0.97); }
 .image-cat-card img {
   width: 100%;
   height: 100%;
@@ -555,13 +546,11 @@ body.shorts-mode main {
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-  font-family: var(--font-body);
 }
 
 /* ==========================================================================
-   10. PAGINATION
+   11. PAGINATION
    ========================================================================== */
 .pagination-wrapper {
   display: flex;
@@ -582,10 +571,7 @@ body.shorts-mode main {
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  font-family: var(--font-body);
 }
-.page-btn:active { transform: scale(0.94); }
 .page-btn.active {
   background: var(--accent-burgundy);
   border-color: var(--accent-burgundy);
@@ -593,7 +579,7 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   11. FOOTER
+   12. FOOTER
    ========================================================================== */
 .site-footer {
   margin-top: 32px;
@@ -615,15 +601,12 @@ body.shorts-mode main {
   color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
-  font-family: var(--font-body);
-  transition: color var(--transition-fast);
 }
 .footer-links a:hover { color: var(--accent-burgundy-light); }
 
 .copyright {
   font-size: 0.78rem;
   color: var(--text-muted);
-  font-family: var(--font-body);
 }
 .copyright a {
   color: var(--accent-burgundy-light);
@@ -631,7 +614,7 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   12. AD BANNERS — reserved heights (CLS = 0)
+   13. AD BANNERS — reserved heights (CLS = 0)
    ========================================================================== */
 .global-ad-banner-wrapper {
   width: 100%;
@@ -643,7 +626,6 @@ body.shorts-mode main {
   background: transparent;
   position: relative;
   z-index: 10;
-  clear: both;
   min-height: 250px;
 }
 
@@ -693,6 +675,21 @@ body.shorts-mode main {
   .ad-banner-bottom-wrapper { min-height: 90px; }
 }
 
+/* Player mid banner — new zone 6061614 (mobile only, 300x100) */
+.player-mobile-mid-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100px;
+  margin: 8px auto;
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .player-mobile-mid-banner { display: none !important; }
+}
+
 /* Hide top banner on Shorts / Player */
 body.shorts-mode .global-ad-banner-wrapper,
 body.player-mode .global-ad-banner-wrapper,
@@ -701,14 +698,13 @@ body.player-mode .global-ad-banner-wrapper,
 }
 
 /* ==========================================================================
-   13. VIEW TABS
+   14. VIEW TABS
    ========================================================================== */
 .view-tabs {
   display: flex;
   justify-content: center;
   gap: 10px;
   padding: 10px 10px 4px;
-  width: 100%;
 }
 
 .view-tab {
@@ -723,17 +719,12 @@ body.player-mode .global-ad-banner-wrapper,
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  font-family: var(--font-body);
 }
-.view-tab:active { transform: scale(0.94); }
 .view-tab.active {
   background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
   border-color: var(--accent-burgundy);
   color: #ffffff;
-  box-shadow: 0 3px 14px rgba(124, 29, 64, 0.35);
 }
 .view-tab svg {
   width: 16px; height: 16px;
@@ -741,7 +732,7 @@ body.player-mode .global-ad-banner-wrapper,
 }
 
 /* ==========================================================================
-   14. GRID STATUS / EMPTY / ERROR STATES
+   15. GRID STATUS / EMPTY STATES
    ========================================================================== */
 .grid-status,
 .grid-empty {
@@ -751,26 +742,12 @@ body.player-mode .global-ad-banner-wrapper,
   color: var(--text-muted);
   font-weight: 500;
   font-size: 0.9rem;
-  font-family: var(--font-body);
 }
 
 .grid-empty p { margin-bottom: 0.5rem; color: var(--text-secondary); }
 
-.grid-status::before {
-  content: '';
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  margin-right: 10px;
-  vertical-align: -3px;
-  border: 2px solid var(--border-color);
-  border-top-color: var(--accent-burgundy-light);
-  border-radius: 50%;
-  animation: cumbear-spin 0.8s linear infinite;
-}
-
 /* ==========================================================================
-   15. STICKY VIDEO BANNER (bottom of screen, dismissible)
+   16. STICKY VIDEO BANNER — SMALLER (was too big)
    ========================================================================== */
 .sticky-video-banner {
   position: fixed;
@@ -780,47 +757,51 @@ body.player-mode .global-ad-banner-wrapper,
   z-index: 9955;
   background: rgba(0, 0, 0, 0.95);
   border-top: 1px solid var(--border-color);
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  max-height: 180px;
   display: flex;
   justify-content: center;
-  animation: cumbear-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sticky-video-banner.hidden { display: none !important; }
 
-@keyframes cumbear-slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
+/* Compact variant — used in index.html */
+.sticky-video-banner.sticky-video-small {
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  max-height: 140px;
+}
+
+@media (max-width: 767px) {
+  .sticky-video-banner.sticky-video-small {
+    /* 40vh max on mobile — smaller than before */
+    max-height: 40vh;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+  }
 }
 
 .sticky-video-close {
   position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
+  top: -8px;
+  right: 6px;
+  /* 44x44 tap target (was 26x26 — too small) */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(200, 20, 20, 0.95);
   color: #ffffff;
   border: 2px solid #ffffff;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 9956;
-  /* Perf: big touch target but small visual */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
-  transition: transform 0.15s;
+  z-index: 9957;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
 }
-.sticky-video-close:active { transform: scale(0.9); }
 
 .sticky-video-link {
   position: relative;
   display: block;
-  max-width: 480px;
+  max-width: 360px;
   width: 100%;
   text-decoration: none;
   border-radius: 8px;
@@ -828,12 +809,24 @@ body.player-mode .global-ad-banner-wrapper,
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+@media (min-width: 768px) {
+  .sticky-video-link {
+    max-width: 280px;
+  }
+}
+
 #stickyVideoEl {
   width: 100%;
-  max-height: 130px;
+  max-height: 120px;
   display: block;
   background: #000;
   object-fit: cover;
+}
+
+@media (max-width: 767px) {
+  #stickyVideoEl {
+    max-height: 100px;
+  }
 }
 
 .sticky-video-overlay {
@@ -842,94 +835,94 @@ body.player-mode .global-ad-banner-wrapper,
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 8px 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 60%);
+  padding: 6px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent 55%);
   pointer-events: none;
 }
 
 .sticky-video-title {
   color: #ffffff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   opacity: 0.85;
-  font-family: var(--font-body);
 }
 
 .sticky-video-sub {
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  font-family: var(--font-body);
 }
 
-/* Don't show sticky on Shorts (full immersion) */
 body.shorts-mode .sticky-video-banner {
   display: none !important;
 }
 
 /* ==========================================================================
-   16. COOKIE CONSENT — glass morphism, OK only
+   17. COOKIE CONSENT — MUCH SMALLER + GLASS
    ========================================================================== */
 .cookie-consent {
   position: fixed;
   left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(12px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 9970;
-  max-width: 420px;
-  width: calc(100% - 24px);
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(15, 15, 20, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  /* Was too big — now max 280px on mobile, 320px on desktop */
+  max-width: 280px;
+  width: calc(100% - 20px);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 15, 20, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
   color: #ffffff;
-  animation: cumbear-consent-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cumbear-consent-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 768px) {
+  .cookie-consent {
+    max-width: 320px;
+  }
 }
 
 .cookie-consent.hidden { display: none !important; }
 
 @keyframes cumbear-consent-in {
-  from { transform: translate(-50%, 40px); opacity: 0; }
+  from { transform: translate(-50%, 30px); opacity: 0; }
   to   { transform: translate(-50%, 0); opacity: 1; }
 }
 
 .cookie-consent-inner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cookie-consent-text {
   flex: 1;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.88);
   margin: 0;
-  font-family: var(--font-body);
 }
 
 .cookie-consent-ok {
   flex-shrink: 0;
-  padding: 8px 18px;
-  border-radius: 10px;
-  font-size: 0.82rem;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
-  transition: transform var(--transition-fast);
-  font-family: var(--font-body);
 }
-.cookie-consent-ok:active { transform: scale(0.95); }
 
 /* ==========================================================================
-   17. UTILITY
+   18. UTILITY
    ========================================================================== */
 .cumbear-toast {
   position: fixed;
@@ -947,17 +940,13 @@ body.shorts-mode .sticky-video-banner {
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
   max-width: 90vw;
-  text-overflow: ellipsis;
-  overflow: hidden;
   white-space: nowrap;
-  font-family: var(--font-body);
 }
 .cumbear-toast.visible {
   opacity: 1;
   transform: translate(-50%, 0);
 }
 
-/* Player error state */
 .player-error-state {
   position: absolute;
   inset: 0;
@@ -970,184 +959,45 @@ body.shorts-mode .sticky-video-banner {
   background: var(--bg-primary);
   color: var(--text-secondary);
   text-align: center;
-  font-family: var(--font-body);
 }
-.player-error-state p { font-weight: 600; font-size: 0.95rem; }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-burgundy); }
 
 /* ==========================================================================
-   18. DISABLE EXPENSIVE EFFECTS ON LOW-END / SLOW DEVICES
+   19. DEVICE-SPECIFIC ADJUSTMENTS (retained)
    ========================================================================== */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Backdrop-filter only on capable devices (>768px width AND pointer:fine).
-   On mobile, solid semi-transparent backgrounds are used instead. */
-@media (max-width: 767px) {
-  .site-header {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: var(--bg-primary) !important;
-  }
-  .cookie-consent {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(15, 15, 20, 0.92) !important;
-  }
-}
-
-/* ==========================================================================
-   CUMBEAR — ALL-DEVICE COMPATIBILITY
-   Mobile / Tablet / Laptop / Desktop / TV / Projector / Smartwatch
-   ========================================================================== */
-
-/* ===== 1. SMARTWATCH (≤ 400px) =====
-   Video site unusable at this size. Show a message, disable ads. */
 @media (max-width: 400px) and (max-height: 400px) {
-  body::before {
-    content: '📱 For the best experience, open CumBear on your phone or computer';
-    display: flex;
-    position: fixed;
-    inset: 0;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    color: #fff;
-    font-size: 14px;
-    padding: 24px;
-    text-align: center;
-    z-index: 9999999;
-    font-family: var(--font-body);
-  }
   .global-ad-banner-wrapper,
   .sticky-video-banner,
   .video-slider-popup-wrapper { display: none !important; }
 }
 
-/* ===== 2. SMALL PHONE (≤ 380px) ===== */
 @media (max-width: 380px) {
   .ad-banner-mobile { width: 300px !important; height: 250px !important; }
   .h-cat-chip { font-size: 0.72rem; padding: 5px 11px; }
   .view-tab { font-size: 0.75rem; padding: 7px 16px; }
   .video-title { font-size: 0.8rem; }
-  .video-meta-row { font-size: 0.68rem; }
 }
 
-/* ===== 3. PHONE (381-767px) ===== */
-@media (min-width: 381px) and (max-width: 767px) {
-  /* 1 column edge-to-edge — already default */
-  .ad-banner-mobile { width: 320px !important; height: 250px !important; }
-}
-
-/* ===== 4. TABLET (768-1023px) ===== */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .video-grid.e2e {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-  .ad-banner-desktop {
-    width: 728px !important;
-    height: 90px !important;
-  }
-  .ad-banner-bottom-wrapper { min-height: 90px !important; }
-}
-
-/* ===== 5. LAPTOP (1024-1439px) ===== */
-@media (min-width: 1024px) and (max-width: 1439px) {
-  .video-grid.e2e {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-}
-
-/* ===== 6. DESKTOP (1440-2559px) ===== */
-@media (min-width: 1440px) and (max-width: 2559px) {
-  .video-grid.e2e {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 12px !important;
-    max-width: 2000px;
-    margin: 0 auto;
-    padding: 0 16px;
-  }
-  .ad-banner-desktop { width: 970px !important; height: 90px !important; }
-}
-
-/* ===== 7. HUGE / TV / PROJECTOR (≥ 2560px) ===== */
 @media (min-width: 2560px) {
-  html { font-size: 20px; }  /* everything scales up */
-  .video-grid.e2e {
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 16px !important;
-    max-width: 2800px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-  .ad-banner-desktop { width: 970px !important; height: 250px !important; }
-  .site-header { height: 80px !important; }
-  .header-logo-container img { height: 60px !important; }
-  .h-cat-chip { font-size: 1rem; padding: 8px 18px; }
-  .video-title { font-size: 1.1rem; }
+  html { font-size: 20px; }
+  .video-grid.e2e { grid-template-columns: repeat(5, 1fr) !important; }
 }
 
-/* ===== 8. TV / REMOTE-CONTROLLED DEVICES =====
-   Detect via CSS: @media (hover: none) + (pointer: coarse) with big screen */
 @media (min-width: 1280px) and (hover: none) {
-  /* Bigger focus rings for D-pad navigation */
   .video-card:focus,
   .video-card:focus-visible {
     outline: 4px solid var(--accent-burgundy-light) !important;
     outline-offset: 4px !important;
   }
-  .h-cat-chip:focus,
-  .view-tab:focus,
-  .header-btn:focus,
-  .nav-link:focus {
-    outline: 4px solid var(--accent-burgundy-light) !important;
-    outline-offset: 2px !important;
-    box-shadow: 0 0 0 6px rgba(155, 45, 82, 0.35) !important;
-  }
-  /* Remove hover effects (no mouse) */
-  .video-card:hover,
-  .h-cat-chip:hover { transform: none !important; box-shadow: none !important; }
-  /* Larger touch targets */
   .header-btn { min-width: 60px !important; min-height: 60px !important; }
-  .page-btn { min-width: 50px !important; height: 50px !important; font-size: 1rem; }
+  .page-btn { min-width: 50px !important; height: 50px !important; }
 }
 
-/* ===== 9. LANDSCAPE PHONE =====
-   When rotated, video grid should fit in the short viewport */
-@media (orientation: landscape) and (max-height: 500px) {
-  main { padding-top: 60px !important; }
-  .site-header { height: 48px !important; }
-  .global-ad-banner-wrapper { min-height: 90px !important; }
-  .video-grid.e2e {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 4px !important;
-  }
-}
-
-/* ===== 10. PREVENT HORIZONTAL OVERFLOW (all devices) ===== */
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden !important;
-  -webkit-text-size-adjust: 100%;
-}
-img, video { max-width: 100%; }
-* { box-sizing: border-box; }
-
-/* ===== 11. SAFE AREAS (notched phones) ===== */
+/* Safe areas */
 body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
@@ -1156,14 +1006,21 @@ body {
   padding-left: max(14px, env(safe-area-inset-left));
   padding-right: max(14px, env(safe-area-inset-right));
 }
-.sticky-video-banner,
-.video-slider-popup-wrapper {
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
+
+/* ==========================================================================
+   20. DISABLE EXPENSIVE EFFECTS ON LOW-END DEVICES
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-/* ===== 12. FOLDABLE PHONES ===== */
-@media (spanning: single-fold-vertical) {
-  .video-grid.e2e {
-    grid-template-columns: repeat(2, 1fr) !important;
+@media (max-width: 767px) {
+  .site-header {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--bg-primary) !important;
   }
 }

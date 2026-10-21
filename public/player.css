@@ -258,3 +258,53 @@
   aspect-ratio: 16/9;
 }
 
+
+/* ==========================================================================
+   CUMBEAR — PLAYER FULL-WIDTH FIX
+   ========================================================================== */
+.player-wrapper {
+  width: 100%;
+  max-width: 100% !important;   /* was 1200px */
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .player-wrapper {
+    max-width: 1400px !important;
+  }
+}
+
+.player-aspect-box {
+  width: 100% !important;
+  aspect-ratio: 16/9 !important;
+  background: #000;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .player-aspect-box {
+    border-radius: 12px;
+    margin: 10px auto;
+    max-width: 1280px;
+  }
+}
+
+/* Related videos grid — edge-to-edge like home */
+#relatedVideoGrid.video-grid.e2e {
+  grid-template-columns: 1fr !important;
+  gap: 6px 0 !important;
+  padding: 0 !important;
+}
+
+@media (min-width: 600px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}

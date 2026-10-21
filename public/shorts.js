@@ -1,13 +1,14 @@
 /**
  * ==========================================================================
- * CUMBEAR — SHORTS CONTROLLER (v2)
+ * CUMBEAR — SHORTS CONTROLLER (v3)
  * --------------------------------------------------------------------------
- * - Leaderboard below top-bar (mobile rectangle / desktop leaderboard)
- * - First short: poster + play button; first tap fires popunder
- * - After first tap: autoplay subsequent shorts
- * - Vertical ExoClick VAST every 3 shorts (5s skip, 6s hard timeout)
- * - Network isolation: only visible short has src set
+ * - Sticky leaderboard at TOP of shorts feed (mobile 300x100 / desktop 728x90)
+ * - First short: always shows poster + play button → tap fires popunder
+ * - After first tap: all shorts autoplay
+ * - Vertical ExoClick VAST every 3 shorts (5s skip, 2.5s fetch, 6s hard timeout)
+ * - Network isolation: only visible short has src
  * - Per-short URL: /shorts/:id
+ * - Right-click blocked on all videos
  * ==========================================================================
  */
 (function () {
@@ -61,7 +62,6 @@
     }
     return h >>> 0;
   }
-
   function stableViews(id) { return 10000 + (hashString(String(id) + 'v') % 9990000); }
   function stableLikes(id) { return 1000 + (hashString(String(id) + 'l') % 99000); }
 
@@ -76,33 +76,15 @@
     } catch (e) { return true; }
   }
 
-  /* ---------- leaderboard ---------- */
-  function mountLeaderboard() {
-    const slot = document.getElementById('shortsLeaderboard');
-    if (!slot || slot.dataset.mounted) return;
-    slot.dataset.mounted = '1';
-
-    slot.innerHTML =
-      '<div class="ad-banner-mobile">' +
-        '<ins class="eas6a97888e2" data-zoneid="6057032"></ins>' +
-      '</div>' +
-      '<div class="ad-banner-desktop">' +
-        '<ins class="eas6a97888e2" data-zoneid="6056586"></ins>' +
-      '</div>';
-
-    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
-      try { window.CumBearAds.refreshBanners(); } catch (e) { /* ignore */ }
-    }
-  }
-
-  /* ---------- load ---------- */
+  /* ==========================================================================
+     LOAD SHORTS
+     ========================================================================== */
   window.loadShorts = function (targetId) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
 
     document.body.classList.add('shorts-mode');
     firstInteraction = false;
-    mountLeaderboard();
 
     container.innerHTML = '<div class="shorts-loading">Loading CumBear Shorts…</div>';
 
@@ -133,7 +115,9 @@
       });
   };
 
-  /* ---------- render ---------- */
+  /* ==========================================================================
+     RENDER FEED
+     ========================================================================== */
   function renderFeed() {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
@@ -153,7 +137,9 @@
     setupObserver();
   }
 
-  /* ---------- short card ---------- */
+  /* ==========================================================================
+     BUILD SHORT CARD
+     ========================================================================== */
   function buildShortCard(video, index) {
     const card = document.createElement('div');
     card.className = 'short-card-item';
@@ -168,6 +154,7 @@
     const isFirst = index === 0;
 
     card.innerHTML =
+      /* Top bar with back + mute */
       '<div class="shorts-top-bar">' +
         '<button class="shorts-nav-btn back-btn-trigger" aria-label="Back">' +
           '<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>' +
@@ -179,6 +166,17 @@
         '</button>' +
       '</div>' +
 
+      /* BANNER BELOW TOP BAR — mobile 300x100 (zone 6061614) / desktop 728x90 (zone 6056586) */
+      '<div class="short-banner-wrapper">' +
+        '<div class="ad-banner-mobile short-mobile-banner">' +
+          '<ins class="eas6a97888e10" data-zoneid="6061614"></ins>' +
+        '</div>' +
+        '<div class="ad-banner-desktop short-desktop-banner">' +
+          '<ins class="eas6a97888e2" data-zoneid="6056586"></ins>' +
+        '</div>' +
+      '</div>' +
+
+      /* Video stage */
       '<div class="short-video-stage">' +
         '<img class="short-poster-img" src="' + thumb + '" loading="' + eager + '" alt="poster">' +
         '<video class="short-video-element" playsinline webkit-playsinline loop preload="none" ' +
@@ -250,7 +248,9 @@
     return card;
   }
 
-  /* ---------- VAST card ---------- */
+  /* ==========================================================================
+     BUILD VAST AD CARD (every 3rd short)
+     ========================================================================== */
   function buildVastCard(index) {
     const card = document.createElement('div');
     card.className = 'exoclick-short-vast-card';
@@ -294,7 +294,9 @@
     return card;
   }
 
-  /* ---------- short card gestures ---------- */
+  /* ==========================================================================
+     WIRE SHORT CARD GESTURES
+     ========================================================================== */
   function wireShortCard(card, video, index) {
     const videoEl      = card.querySelector('video.short-video-element');
     const poster       = card.querySelector('.short-poster-img');
@@ -316,7 +318,11 @@
 
     videoEl.playbackRate = 1.0;
 
-    /* First short: tap to fire popunder + play */
+    /* Block right-click on video + poster */
+    videoEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    poster.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+    /* First short: tap play → popunder → play */
     if (index === 0 && firstPlay) {
       firstPlay.addEventListener('click', function (e) {
         e.preventDefault();
@@ -334,9 +340,8 @@
             window.CumBearPopunder.trigger('shorts-first-tap');
             CFG.helpers.markCooldown(COOLDOWNS.shortsFirstTap, CONSENT.shortsFirstTapCooldownMs);
           }
-        } catch (err) { /* never block */ }
+        } catch (err) { /* ignore */ }
 
-        /* Load + play */
         if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
           videoEl.src = videoEl.dataset.src;
           videoEl.load();
@@ -380,7 +385,7 @@
       });
     });
 
-    /* Like / share / more */
+    /* Like */
     if (likeBtn) {
       likeBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -393,18 +398,20 @@
       });
     }
 
+    /* Share */
     if (shareBtn) {
       shareBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         const url = window.location.origin + '/shorts/' + encodeURIComponent(video._id);
         if (navigator.share) {
-          navigator.share({ title: video.title, url: url }).catch(function () { /* ignore */ });
+          navigator.share({ title: video.title, url: url }).catch(function () {});
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(function () { /* toasts go through player */ });
+          navigator.clipboard.writeText(url).then(function () {}).catch(function () {});
         }
       });
     }
 
+    /* More */
     if (moreBtn) {
       moreBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -422,7 +429,7 @@
       setTimeout(function () { hud.classList.remove('show'); }, 400);
     }
 
-    /* Progress + 3-min stop */
+    /* Progress */
     videoEl.addEventListener('timeupdate', function () {
       if (progressFill) {
         progressFill.style.width = Math.min(100, (videoEl.currentTime / PREVIEW_MAX) * 100) + '%';
@@ -442,7 +449,7 @@
       if (!videoEl.paused) return;
       const p = videoEl.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(function () { /* user gesture needed */ });
+        p.catch(function () { /* ignore */ });
       }
     }, { once: true });
 
@@ -459,7 +466,8 @@
           e.target.closest('.watch-full-btn') ||
           e.target.closest('.shorts-top-bar') ||
           e.target.closest('#firstShortPlayCover') ||
-          e.target.closest('.preview-ended-overlay')) return;
+          e.target.closest('.preview-ended-overlay') ||
+          e.target.closest('.short-banner-wrapper')) return;
 
       if (isHoldingSpeed) return;
 
@@ -488,7 +496,7 @@
         singleTapTimer = setTimeout(function () {
           singleTapTimer = null;
           if (videoEl.paused) {
-            videoEl.play().catch(function () { /* ignore */ });
+            videoEl.play().catch(function () {});
             showCenterHud(false);
           } else {
             videoEl.pause();
@@ -498,7 +506,7 @@
       }
     });
 
-    /* 2x hold */
+    /* 2x speed */
     sideZones.forEach(function (zone) {
       zone.addEventListener('pointerdown', function (e) {
         holdStartY = e.clientY;
@@ -535,7 +543,9 @@
     });
   }
 
-  /* ---------- mute sync ---------- */
+  /* ==========================================================================
+     MUTE SYNC
+     ========================================================================== */
   function syncMute() {
     document.querySelectorAll('.short-card-item').forEach(function (card) {
       const v = card.querySelector('video.short-video-element');
@@ -551,7 +561,9 @@
     });
   }
 
-  /* ---------- observer ---------- */
+  /* ==========================================================================
+     OBSERVER
+     ========================================================================== */
   function setupObserver() {
     if (observer) { observer.disconnect(); observer = null; }
     const container = document.getElementById('shortsContainer');
@@ -573,7 +585,6 @@
         const id      = el.dataset.id;
 
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-          /* First short: don't autoplay until cover tapped */
           if (idx === 0 && !firstInteraction) {
             const cover = el.querySelector('#firstShortPlayCover');
             if (cover && !cover.classList.contains('hidden')) {
@@ -582,7 +593,6 @@
             }
           }
 
-          /* Pause others */
           document.querySelectorAll('video.short-video-element').forEach(function (v) {
             if (v !== videoEl && !v.paused) v.pause();
           });
@@ -626,7 +636,9 @@
     });
   }
 
-  /* ---------- VAST activation ---------- */
+  /* ==========================================================================
+     VAST ACTIVATION
+     ========================================================================== */
   async function activateVast(card, container) {
     if (activeVideoEl) {
       try { activeVideoEl.pause(); } catch (e) { /* ignore */ }
@@ -634,6 +646,9 @@
     const adVideo = card.querySelector('.vast-vertical-video');
     const skipBtn = card.querySelector('.vast-ad-skip-pill');
     if (!adVideo || !skipBtn) return;
+
+    /* Block right-click on VAST video */
+    adVideo.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
     if (card.dataset.adLoaded === '1') {
       try { adVideo.play().catch(function () {}); } catch (e) { /* ignore */ }
@@ -734,7 +749,9 @@
     }
   }
 
-  /* ---------- static ---------- */
+  /* ==========================================================================
+     STATIC BUTTONS
+     ========================================================================== */
   function wireStaticButtons() {
     const modal = document.getElementById('shortsMoreModal');
     const closeBtn = document.getElementById('closeMoreModal');
@@ -744,9 +761,16 @@
         if (modal) modal.classList.add('hidden');
       });
     }
+
+    /* Serve all short banner zones once */
+    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
+      try { window.CumBearAds.refreshBanners(); } catch (e) {}
+    }
   }
 
-  /* ---------- stop ---------- */
+  /* ==========================================================================
+     STOP
+     ========================================================================== */
   window.stopShorts = function () {
     if (observer) { observer.disconnect(); observer = null; }
     if (adSkipTimer) { clearInterval(adSkipTimer); adSkipTimer = null; }
