@@ -157,7 +157,7 @@
      THEME
      ============================================================ */
   function applyTheme(theme) {
-    theme = (theme === 'dark') ? 'dark' : 'light';
+    theme = (theme === 'light') ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
     safeSet('cumbear_theme', theme);
 
@@ -175,6 +175,14 @@
     } catch (e) { /* ignore */ }
   }
 
+  /* One-time migration: force dark for existing users (v3) */
+  try {
+    if (!localStorage.getItem('cumbear_theme_v3_migrated')) {
+      localStorage.removeItem('cumbear_theme');
+      localStorage.setItem('cumbear_theme_v3_migrated', '1');
+    }
+  } catch (e) { /* ignore */ }
+
   function wireThemeToggle() {
     const btn = document.getElementById('themeToggleBtn');
     if (!btn || btn.dataset.wired) return;
@@ -186,7 +194,7 @@
     });
 
     /* Init */
-    const saved = safeGet('cumbear_theme') || 'light';
+    const saved = safeGet('cumbear_theme') || 'dark';
     applyTheme(saved);
   }
 
