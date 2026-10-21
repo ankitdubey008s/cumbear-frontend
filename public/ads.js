@@ -242,7 +242,7 @@
     }
     stickyTimer = setTimeout(function () {
       if (!isShortsView() && !AdState.isInCooldown()) showSticky();
-    }, 3000); /* 3s initial delay — matches config.stickyDelayMs */
+    }, 2000); /* 2s initial delay — matches config.stickyDelayMs */
   }
 
   /* ==========================================================================

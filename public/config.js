@@ -47,7 +47,7 @@
       smartlinkDating: 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN',
       smartlinkNative: 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN',
       /* Sticky banner: first-show delay + dismiss cooldown (ms) */
-      stickyDelayMs: 3000,
+      stickyDelayMs: 2000,
       stickyDismissCooldownMs: 6 * 60 * 60 * 1000,   // 6 hours
       /* Timed header slot: interval between promotions */
       timedIntervalMs: 2 * 60 * 1000,                 // every 2 min
@@ -98,7 +98,7 @@
       cardPreviewMaxSeconds: 60,        // preview auto-stops here
       shortsPreviewMaxSeconds: 180,     // shorts hard-stop
       adsVisibleViews: Object.freeze(['homeView', 'categoriesView', 'playerView']),
-      sliderPopFirstDelayMs: 2000,
+      sliderPopFirstDelayMs: 500,
       sliderPopScrollTriggerPx: 120,
       sliderPopDismissCooldownMs: 45000
     })

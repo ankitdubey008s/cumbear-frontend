@@ -32,6 +32,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- ExoClick provider -->
+  <link rel="preload" as="script" href="https://a.magsrv.com/ad-provider.js">
   <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
 
   <!-- Google Translate (deferred, hidden) -->
@@ -55,6 +56,19 @@
   <link rel="stylesheet" href="/ads.css">
   <link rel="stylesheet" href="/craksmart.css">
   <link rel="stylesheet" href="/consent.css">
+
+  <!-- ExoClick + ad CDN performance: preconnect saves ~600ms per ad zone -->
+  <link rel="preconnect" href="https://a.magsrv.com" crossorigin>
+  <link rel="preconnect" href="https://s.magsrv.com" crossorigin>
+  <link rel="preconnect" href="https://a.pemsrv.com" crossorigin>
+  <link rel="preconnect" href="https://s.pemsrv.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.tsyndicate.com" crossorigin>
+  <link rel="dns-prefetch" href="https://a.magsrv.com">
+  <link rel="dns-prefetch" href="https://s.magsrv.com">
+  <link rel="dns-prefetch" href="https://a.pemsrv.com">
+  <link rel="dns-prefetch" href="https://s.pemsrv.com">
+  <link rel="dns-prefetch" href="https://cdn.tsyndicate.com">
+
 </head>
 <body>
 
