@@ -47,8 +47,9 @@
       enabled: true,
       smartlinkDating: 'https://t.datsk3.com/425367/9986/0?target=pops&po=6456&aff_sub5=SF_006OG000004lmDN',
       smartlinkNative: 'https://t.datsk3.com/425367/3788/0?target=nativeads&po=6456&aff_sub5=SF_006OG000004lmDN',
+      smartlinkVideo: 'https://t.datsk3.com/425367/5165?aff_sub5=SF_006OG000004lmDN',
       /* Sticky banner: first-show delay + dismiss cooldown (ms) */
-      stickyDelayMs: 2000,
+      stickyDelayMs: 10000,
       stickyDismissCooldownMs: 6 * 60 * 60 * 1000,   // 6 hours
       /* Timed header slot: interval between promotions */
       timedIntervalMs: 2 * 60 * 1000,                 // every 2 min

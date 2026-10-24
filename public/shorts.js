@@ -762,10 +762,13 @@
       });
     }
 
-    /* Serve all short banner zones once */
-    if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
-      try { window.CumBearAds.refreshBanners(); } catch (e) {}
-    }
+    /* CRITICAL: refresh ads AFTER shorts cards are rendered in the DOM,
+       so the per-short <ins> elements get served. Otherwise zones stay empty. */
+    setTimeout(function () {
+      if (window.CumBearAds && typeof window.CumBearAds.refreshBanners === 'function') {
+        try { window.CumBearAds.refreshBanners(); } catch (e) {}
+      }
+    }, 100);
   }
 
   /* ==========================================================================
