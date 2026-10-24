@@ -621,7 +621,7 @@ body.shorts-mode main {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 10px auto;
+  margin: 0 auto;   /* was 10px auto — no extra gap */
   padding: 0;
   background: transparent;
   position: relative;
@@ -630,7 +630,7 @@ body.shorts-mode main {
 }
 
 @media (min-width: 768px) {
-  .global-ad-banner-wrapper { min-height: 90px; }
+  .global-ad-banner-wrapper { min-height: 90px; margin-bottom: 0; }
 }
 
 .ad-banner-mobile {
@@ -704,7 +704,8 @@ body.player-mode .global-ad-banner-wrapper,
   display: flex;
   justify-content: center;
   gap: 10px;
-  padding: 10px 10px 4px;
+  padding: 4px 10px 4px;   /* minimal spacing */
+  margin: 0;
 }
 
 .view-tab {
@@ -862,30 +863,51 @@ body.shorts-mode .sticky-video-banner {
 /* ==========================================================================
    17. COOKIE CONSENT — MUCH SMALLER + GLASS
    ========================================================================== */
+/* ==========================================================================
+   COOKIE CONSENT — SMALL BURGUNDY GLASS PILL
+   Single line, transparent burgundy glass, very bottom of screen
+   ========================================================================== */
 .cookie-consent {
   position: fixed;
   left: 50%;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  bottom: 8px;                            /* very bottom, no safe-area */
   transform: translateX(-50%);
   z-index: 9970;
-  /* Was too big — now max 280px on mobile, 320px on desktop */
-  max-width: 280px;
-  width: calc(100% - 20px);
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(15, 15, 20, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  max-width: 300px;                        /* fits on mobile without wrapping */
+  width: calc(100% - 16px);                /* tiny side gap */
+  padding: 6px 8px;                        /* thin pill */
+  border-radius: 20px;                     /* pill shape */
+  /* BURGUNDY GLASS MORPHISM */
+  background: rgba(124, 29, 64, 0.45);     /* semi-transparent burgundy */
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #ffffff;
   animation: cumbear-consent-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 768px) {
   .cookie-consent {
-    max-width: 320px;
+    max-width: 340px;                      /* slightly bigger on desktop */
+    bottom: 12px;
+    padding: 8px 12px;
   }
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(20px)) {
+  .cookie-consent {
+    background: rgba(124, 29, 64, 0.88);
+  }
+}
+
+/* Light theme — still burgundy glass but readable */
+[data-theme="light"] .cookie-consent {
+  background: rgba(124, 29, 64, 0.85);
+  color: #ffffff;
 }
 
 .cookie-consent.hidden { display: none !important; }
@@ -898,27 +920,39 @@ body.shorts-mode .sticky-video-banner {
 .cookie-consent-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;                     /* force single line */
 }
 
 .cookie-consent-text {
   flex: 1;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.68rem;                      /* very small text */
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;                 /* single line only */
+  white-space: nowrap;
 }
 
 .cookie-consent-ok {
   flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;                       /* tiny button */
+  border-radius: 14px;                     /* pill */
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.95);   /* white button for contrast */
+  color: #7c1d40;                          /* burgundy text */
+  border: none;
   cursor: pointer;
+  transition: transform 0.1s ease, background 0.1s ease;
+  letter-spacing: 0.02em;
+}
+
+.cookie-consent-ok:active {
+  transform: scale(0.94);
+  background: #ffffff;
 }
 
 /* ==========================================================================
