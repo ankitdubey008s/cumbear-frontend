@@ -1,9 +1,9 @@
 /* ==========================================================================
-   CUMBEAR — GLOBAL DESIGN SYSTEM (v4, 2026-10-21)
+   CUMBEAR — GLOBAL DESIGN SYSTEM (v5, 2026-10-24)
    Fonts: Playfair Display (headings) + Lora (body)
    Theme: dark default, light optional
-   Cards: 16:9 edge-to-edge, no radius
-   Perf: no per-card GPU layers, no per-card box-shadow
+   Cards: 16:9 edge-to-edge, no radius on e2e grids
+   Fixes: no 100vw, no fake ad heights, no orphan close buttons
    ========================================================================== */
 
 /* ==========================================================================
@@ -32,17 +32,15 @@
   --font-body: 'Lora', Georgia, serif;
 
   --header-height: 56px;
+  --cats-height: 46px;
   --footer-height: 64px;
   --grid-cols: 1;
 
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==========================================================================
-   2. LIGHT THEME (opt-in via [data-theme="light"])
-   ========================================================================== */
+/* Light theme */
 [data-theme="light"] {
   --bg-primary: #fafafa;
   --bg-secondary: #f4f4f5;
@@ -61,7 +59,7 @@
 }
 
 /* ==========================================================================
-   3. RESET & BASE
+   2. RESET — NO HORIZONTAL SCROLL (100% not 100vw)
    ========================================================================== */
 *, *::before, *::after {
   margin: 0;
@@ -77,8 +75,8 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
   background-color: var(--bg-primary);
-  /* Prevent horizontal overflow on all devices */
-  max-width: 100vw;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
@@ -89,10 +87,11 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   line-height: 1.55;
   font-size: 15px;
-  max-width: 100vw;
 }
 
 button, input, textarea {
@@ -104,14 +103,11 @@ button, input, textarea {
 
 button { cursor: pointer; border: none; background: none; }
 a { color: inherit; text-decoration: none; }
-img, video { display: block; max-width: 100%; }
+img, video { display: block; max-width: 100%; height: auto; }
 
 .hidden { display: none !important; }
 
-/* ==========================================================================
-   4. BLOCK CHROME CONTEXT MENU ON VIDEO THUMBNAILS
-   (user complaint: holding thumbnail shows "Save image" / "Open in new tab")
-   ========================================================================== */
+/* Block context menu / selection on media */
 .video-card,
 .video-thumb,
 .video-thumb img,
@@ -121,25 +117,18 @@ img, video { display: block; max-width: 100%; }
 .short-card-item,
 .short-video-stage,
 .affiliate-video-card,
+.faphouse-autoplay-video,
 #stickyVideoEl {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
-  -ms-user-select: none !important;
   user-select: none !important;
-}
-
-/* Kill the browser context menu listener via CSS */
-.video-thumb img,
-.video-thumb video,
-.preview-video-holder video {
-  pointer-events: auto;
   -webkit-user-drag: none;
   user-drag: none;
 }
 
 /* ==========================================================================
-   5. TYPOGRAPHY
+   3. TYPOGRAPHY
    ========================================================================== */
 h1, h2, h3, h4, h5, h6,
 .gate-title,
@@ -168,13 +157,10 @@ h3 { font-size: 1.1rem; }
 
 p { line-height: 1.65; color: var(--text-secondary); }
 
-.video-title {
-  font-family: var(--font-body);
-  font-weight: 600;
-}
+.video-title { font-family: var(--font-body); font-weight: 600; }
 
 /* ==========================================================================
-   6. AGE GATE
+   4. AGE GATE
    ========================================================================== */
 .age-gate-overlay {
   position: fixed;
@@ -270,15 +256,17 @@ p { line-height: 1.65; color: var(--text-secondary); }
 }
 
 /* ==========================================================================
-   7. MAIN LAYOUT
+   5. MAIN LAYOUT — header + cats bar reserved via padding
    ========================================================================== */
 @media (min-width: 600px) { :root { --grid-cols: 2; } }
 @media (min-width: 1024px) { :root { --grid-cols: 4; } }
 
 main {
-  padding-top: calc(var(--header-height) + 46px);
+  padding-top: calc(var(--header-height) + var(--cats-height));
   padding-bottom: calc(var(--footer-height) + 80px);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
 }
 
 body.shorts-mode main {
@@ -287,19 +275,20 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   8. VIDEO GRID
+   6. VIDEO GRID
    ========================================================================== */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols, 1), 1fr);
+  grid-template-columns: repeat(var(--grid-cols, 1), minmax(0, 1fr));
   gap: 14px 10px;
   padding: 12px 10px;
+  width: 100%;
   content-visibility: auto;
   contain-intrinsic-size: auto 56vw;
 }
 
 .video-grid.e2e {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 6px 0;
   padding: 0;
   margin: 0;
@@ -308,59 +297,56 @@ body.shorts-mode main {
 
 @media (min-width: 600px) {
   .video-grid.e2e {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
   }
 }
 
 @media (min-width: 1024px) {
   .video-grid.e2e {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
   }
 }
 
 @media (min-width: 1440px) {
   .video-grid.e2e {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2560px) {
+  .video-grid.e2e {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
 /* ==========================================================================
-   9. VIDEO CARD
+   7. VIDEO CARD
    ========================================================================== */
 .video-card {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
   content-visibility: auto;
   contain-intrinsic-size: auto 56vw;
 }
 
-.video-grid:not(.e2e) .video-thumb {
-  border-radius: 10px;
-}
-
-.video-grid:not(.e2e) .video-card {
-  padding-bottom: 4px;
-}
-
-.video-grid.e2e .video-card {
-  padding: 0;
-  margin: 0;
-}
+.video-grid:not(.e2e) .video-thumb { border-radius: 10px; }
+.video-grid:not(.e2e) .video-card { padding-bottom: 4px; }
+.video-grid.e2e .video-card { padding: 0; margin: 0; }
 
 .video-thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   background: var(--bg-secondary);
   overflow: hidden;
   margin-bottom: 0;
 }
 
-.video-grid:not(.e2e) .video-thumb {
-  margin-bottom: 8px;
-}
+.video-grid:not(.e2e) .video-thumb { margin-bottom: 8px; }
 
 .video-thumb img {
   width: 100%;
@@ -386,23 +372,6 @@ body.shorts-mode main {
 
 .video-thumb.previewing img { opacity: 0; }
 
-/* FapHouse auto-preview video */
-.video-thumb .faphouse-autoplay-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  background: #000;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.video-thumb .faphouse-autoplay-video.playing {
-  opacity: 1;
-}
-
 .duration-badge {
   position: absolute;
   bottom: 8px;
@@ -425,7 +394,7 @@ body.shorts-mode main {
   background: rgba(124, 29, 64, 0.25);
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast);
 }
 .preview-timeline.active { opacity: 1; }
 
@@ -445,6 +414,7 @@ body.shorts-mode main {
   z-index: 5;
   opacity: 0;
   pointer-events: none;
+  transition: opacity var(--transition-fast);
 }
 .preview-loading.active { opacity: 1; pointer-events: auto; }
 
@@ -460,13 +430,8 @@ body.shorts-mode main {
 
 @keyframes cumbear-spin { to { transform: rotate(360deg); } }
 
-.video-info {
-  padding: 8px 10px 10px;
-}
-
-.video-grid.e2e .video-info {
-  padding: 8px 10px 12px;
-}
+.video-info { padding: 8px 10px 10px; }
+.video-grid.e2e .video-info { padding: 8px 10px 12px; }
 
 .video-title {
   font-size: 0.875rem;
@@ -494,12 +459,25 @@ body.shorts-mode main {
   font-weight: 600;
 }
 
-/* ==========================================================================
-   10. BOTTOM SECTIONS
-   ========================================================================== */
-.bottom-categories-section {
-  padding: 24px 10px 10px;
+/* FapHouse autoplay video */
+.faphouse-autoplay-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
+
+.faphouse-autoplay-video.playing { opacity: 1; }
+
+/* ==========================================================================
+   8. BOTTOM SECTIONS
+   ========================================================================== */
+.bottom-categories-section { padding: 24px 10px 10px; }
 
 .bottom-section-title {
   font-size: 1.1rem;
@@ -519,13 +497,14 @@ body.shorts-mode main {
 
 .image-cat-card {
   position: relative;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
 }
+
 .image-cat-card img {
   width: 100%;
   height: 100%;
@@ -550,7 +529,7 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   11. PAGINATION
+   9. PAGINATION
    ========================================================================== */
 .pagination-wrapper {
   display: flex;
@@ -572,6 +551,7 @@ body.shorts-mode main {
   font-size: 0.85rem;
   cursor: pointer;
 }
+
 .page-btn.active {
   background: var(--accent-burgundy);
   border-color: var(--accent-burgundy);
@@ -579,7 +559,7 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   12. FOOTER
+   10. FOOTER
    ========================================================================== */
 .site-footer {
   margin-top: 32px;
@@ -614,23 +594,19 @@ body.shorts-mode main {
 }
 
 /* ==========================================================================
-   13. AD BANNERS — reserved heights (CLS = 0)
+   11. AD BANNERS — DIMENSIONED (no fake min-heights)
    ========================================================================== */
-.global-ad-banner-wrapper {
+.global-ad-banner-wrapper,
+.ad-banner-bottom-wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0 auto;   /* was 10px auto — no extra gap */
+  margin: 8px 0;
   padding: 0;
   background: transparent;
   position: relative;
   z-index: 10;
-  min-height: 250px;
-}
-
-@media (min-width: 768px) {
-  .global-ad-banner-wrapper { min-height: 90px; margin-bottom: 0; }
 }
 
 .ad-banner-mobile {
@@ -641,7 +617,6 @@ body.shorts-mode main {
   height: 250px;
   max-width: 100%;
   margin: 0 auto;
-  background: transparent;
   overflow: hidden;
 }
 
@@ -653,41 +628,12 @@ body.shorts-mode main {
   height: 90px;
   max-width: 100%;
   margin: 0 auto;
-  background: transparent;
   overflow: hidden;
 }
 
 @media (min-width: 768px) {
   .ad-banner-mobile { display: none !important; }
   .ad-banner-desktop { display: flex !important; }
-}
-
-.ad-banner-bottom-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin: 14px auto;
-  min-height: 250px;
-}
-
-@media (min-width: 768px) {
-  .ad-banner-bottom-wrapper { min-height: 90px; }
-}
-
-/* Player mid banner — new zone 6061614 (mobile only, 300x100) */
-.player-mobile-mid-banner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100px;
-  margin: 8px auto;
-  background: transparent;
-}
-
-@media (min-width: 768px) {
-  .player-mobile-mid-banner { display: none !important; }
 }
 
 /* Hide top banner on Shorts / Player */
@@ -697,15 +643,30 @@ body.player-mode .global-ad-banner-wrapper,
   display: none !important;
 }
 
+/* Mobile-only banner above player (zone 6061614) */
+.player-mobile-top-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100px;
+  margin: 8px 0;
+}
+
+@media (min-width: 768px) {
+  .player-mobile-top-banner { display: none !important; }
+}
+
 /* ==========================================================================
-   14. VIEW TABS
+   12. VIEW TABS
    ========================================================================== */
 .view-tabs {
   display: flex;
   justify-content: center;
   gap: 10px;
-  padding: 4px 10px 4px;   /* minimal spacing */
+  padding: 4px 10px;
   margin: 0;
+  width: 100%;
 }
 
 .view-tab {
@@ -722,18 +683,20 @@ body.player-mode .global-ad-banner-wrapper,
   text-transform: uppercase;
   cursor: pointer;
 }
+
 .view-tab.active {
   background: linear-gradient(135deg, var(--accent-burgundy) 0%, var(--accent-dark) 100%);
   border-color: var(--accent-burgundy);
   color: #ffffff;
 }
+
 .view-tab svg {
   width: 16px; height: 16px;
   stroke: currentColor; stroke-width: 2.2; fill: none;
 }
 
 /* ==========================================================================
-   15. GRID STATUS / EMPTY STATES
+   13. GRID STATUS / EMPTY
    ========================================================================== */
 .grid-status,
 .grid-empty {
@@ -748,79 +711,105 @@ body.player-mode .global-ad-banner-wrapper,
 .grid-empty p { margin-bottom: 0.5rem; color: var(--text-secondary); }
 
 /* ==========================================================================
-   16. STICKY VIDEO BANNER — SMALLER (was too big)
+   14. STICKY VIDEO BANNER — small burgundy ad-style, bottom of screen
    ========================================================================== */
 .sticky-video-banner {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9955;
-  background: rgba(0, 0, 0, 0.95);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: center;
+  width: auto;
+  max-width: 220px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  animation: cumbear-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 768px) {
+  .sticky-video-banner {
+    max-width: 280px;
+    bottom: 12px;
+  }
 }
 
 .sticky-video-banner.hidden { display: none !important; }
 
-/* Compact variant — used in index.html */
-
-
-@media (max-width: 767px) {
-  
+@keyframes cumbear-slide-up {
+  from { transform: translate(-50%, 30px); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
 }
 
 .sticky-video-close {
   position: absolute;
-  top: -8px;
-  right: 6px;
-  /* 44x44 tap target (was 26x26 — too small) */
-  width: 44px;
-  height: 44px;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(200, 20, 20, 0.95);
+  background: rgba(124, 29, 64, 0.95);
   color: #ffffff;
-  border: 2px solid #ffffff;
-  font-size: 18px;
+  border: 1.5px solid #ffffff;
+  font-size: 11px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 9957;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
+  padding: 0;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.sticky-video-close::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+}
+
+.sticky-video-close:active {
+  transform: scale(0.9);
+  background: #8a1538;
 }
 
 .sticky-video-link {
   position: relative;
   display: block;
-  max-width: 360px;
   width: 100%;
   text-decoration: none;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1.5px solid #9b2d52;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(155, 45, 82, 0.4);
+  cursor: pointer;
+  background: #000;
 }
 
-@media (min-width: 768px) {
-  .sticky-video-link {
-    max-width: 280px;
-  }
+.sticky-video-link:hover {
+  border-color: #b82356;
+  box-shadow:
+    0 4px 20px rgba(124, 29, 64, 0.6),
+    0 0 0 1px rgba(155, 45, 82, 0.6);
 }
 
 #stickyVideoEl {
   width: 100%;
-  max-height: 120px;
+  height: auto;
+  max-height: 100px;
   display: block;
   background: #000;
   object-fit: cover;
 }
 
-@media (max-width: 767px) {
-  #stickyVideoEl {
-    max-height: 100px;
-  }
+@media (min-width: 768px) {
+  #stickyVideoEl { max-height: 130px; }
 }
 
 .sticky-video-overlay {
@@ -828,50 +817,41 @@ body.player-mode .global-ad-banner-wrapper,
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 6px 10px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent 55%);
+  justify-content: flex-start;
+  padding: 4px 6px;
   pointer-events: none;
+  background: linear-gradient(to bottom, rgba(124, 29, 64, 0.7) 0%, transparent 40%);
 }
 
 .sticky-video-title {
+  align-self: flex-start;
   color: #ffffff;
-  font-size: 0.65rem;
-  font-weight: 800;
+  background: rgba(124, 29, 64, 0.95);
+  font-size: 0.55rem;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.85;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
-.sticky-video-sub {
-  color: #ffffff;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-body.shorts-mode .sticky-video-banner {
-  display: none !important;
-}
+body.shorts-mode .sticky-video-banner { display: none !important; }
 
 /* ==========================================================================
-   17. COOKIE CONSENT — MUCH SMALLER + GLASS
-   ========================================================================== */
-/* ==========================================================================
-   COOKIE CONSENT — SMALL BURGUNDY GLASS PILL
-   Single line, transparent burgundy glass, very bottom of screen
+   15. COOKIE CONSENT — small burgundy glass pill (single line)
    ========================================================================== */
 .cookie-consent {
   position: fixed;
   left: 50%;
-  bottom: 8px;                            /* very bottom, no safe-area */
+  bottom: 8px;
   transform: translateX(-50%);
   z-index: 9970;
-  max-width: 300px;                        /* fits on mobile without wrapping */
-  width: calc(100% - 16px);                /* tiny side gap */
-  padding: 6px 8px;                        /* thin pill */
-  border-radius: 20px;                     /* pill shape */
-  /* BURGUNDY GLASS MORPHISM */
-  background: rgba(124, 29, 64, 0.45);     /* semi-transparent burgundy */
+  max-width: 300px;
+  width: calc(100% - 16px);
+  padding: 6px 8px;
+  border-radius: 20px;
+  background: rgba(124, 29, 64, 0.45);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -884,20 +864,16 @@ body.shorts-mode .sticky-video-banner {
 
 @media (min-width: 768px) {
   .cookie-consent {
-    max-width: 340px;                      /* slightly bigger on desktop */
+    max-width: 340px;
     bottom: 12px;
     padding: 8px 12px;
   }
 }
 
-/* Fallback for browsers without backdrop-filter */
 @supports not (backdrop-filter: blur(20px)) {
-  .cookie-consent {
-    background: rgba(124, 29, 64, 0.88);
-  }
+  .cookie-consent { background: rgba(124, 29, 64, 0.88); }
 }
 
-/* Light theme — still burgundy glass but readable */
 [data-theme="light"] .cookie-consent {
   background: rgba(124, 29, 64, 0.85);
   color: #ffffff;
@@ -915,31 +891,30 @@ body.shorts-mode .sticky-video-banner {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  white-space: nowrap;                     /* force single line */
+  white-space: nowrap;
 }
 
 .cookie-consent-text {
   flex: 1;
-  font-size: 0.68rem;                      /* very small text */
+  font-size: 0.68rem;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.92);
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipsis;                 /* single line only */
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .cookie-consent-ok {
   flex-shrink: 0;
-  padding: 4px 10px;                       /* tiny button */
-  border-radius: 14px;                     /* pill */
+  padding: 4px 10px;
+  border-radius: 14px;
   font-size: 0.7rem;
   font-weight: 800;
-  background: rgba(255, 255, 255, 0.95);   /* white button for contrast */
-  color: #7c1d40;                          /* burgundy text */
+  background: rgba(255, 255, 255, 0.95);
+  color: #7c1d40;
   border: none;
   cursor: pointer;
-  transition: transform 0.1s ease, background 0.1s ease;
   letter-spacing: 0.02em;
 }
 
@@ -949,7 +924,7 @@ body.shorts-mode .sticky-video-banner {
 }
 
 /* ==========================================================================
-   18. UTILITY
+   16. UTILITY
    ========================================================================== */
 .cumbear-toast {
   position: fixed;
@@ -966,7 +941,7 @@ body.shorts-mode .sticky-video-banner {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
-  max-width: 90vw;
+  max-width: 90%;
   white-space: nowrap;
 }
 .cumbear-toast.visible {
@@ -994,69 +969,7 @@ body.shorts-mode .sticky-video-banner {
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-burgundy); }
 
 /* ==========================================================================
-   19. DEVICE-SPECIFIC ADJUSTMENTS (retained)
-   ========================================================================== */
-@media (max-width: 400px) and (max-height: 400px) {
-  .global-ad-banner-wrapper,
-  .sticky-video-banner,
-  .video-slider-popup-wrapper { display: none !important; }
-}
-
-@media (max-width: 380px) {
-  .ad-banner-mobile { width: 300px !important; height: 250px !important; }
-  .h-cat-chip { font-size: 0.72rem; padding: 5px 11px; }
-  .view-tab { font-size: 0.75rem; padding: 7px 16px; }
-  .video-title { font-size: 0.8rem; }
-}
-
-@media (min-width: 2560px) {
-  html { font-size: 20px; }
-  .video-grid.e2e { grid-template-columns: repeat(5, 1fr) !important; }
-}
-
-@media (min-width: 1280px) and (hover: none) {
-  .video-card:focus,
-  .video-card:focus-visible {
-    outline: 4px solid var(--accent-burgundy-light) !important;
-    outline-offset: 4px !important;
-  }
-  .header-btn { min-width: 60px !important; min-height: 60px !important; }
-  .page-btn { min-width: 50px !important; height: 50px !important; }
-}
-
-/* Safe areas */
-body {
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-.site-header {
-  padding-left: max(14px, env(safe-area-inset-left));
-  padding-right: max(14px, env(safe-area-inset-right));
-}
-
-/* ==========================================================================
-   20. DISABLE EXPENSIVE EFFECTS ON LOW-END DEVICES
-   ========================================================================== */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-@media (max-width: 767px) {
-  .site-header {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: var(--bg-primary) !important;
-  }
-}
-
-
-/* ==========================================================================
-   FIX: ORPHAN CLOSE BUTTON
-   The video-slider-close has position absolute -10px top/right — it can
-   render outside its hidden parent. Force it to hide when parent is hidden.
+   17. ORPHAN CLOSE BUTTON — never show without visible parent
    ========================================================================== */
 #videoSliderPopup[hidden] #videoSliderCloseBtn,
 #videoSliderPopup.hidden #videoSliderCloseBtn,
@@ -1068,154 +981,159 @@ body {
   pointer-events: none !important;
 }
 
-/* Also: no floating close button should ever render without visible parent */
-.video-slider-close:not(:has(> *)) {
-  /* no-op fallback for old browsers */
-}
-
-
-/* NEW STICKY VIDEO (fallback) */
 /* ==========================================================================
-   STICKY VIDEO BANNER — SMALL AD-STYLE BURGUNDY (bottom of screen)
+   18. PLAYER — premium card + yellow CTA
    ========================================================================== */
-.sticky-video-banner {
-  position: fixed;
-  bottom: 8px;                                  /* same as cookie banner */
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9955;
-  /* SMALL — was too big */
-  width: auto;
-  max-width: 220px;                             /* compact mobile */
-  padding: 0;
-  background: transparent;
-  border: none;
-  animation: cumbear-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+.player-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 8px;
 }
 
-@media (min-width: 768px) {
-  .sticky-video-banner {
-    max-width: 280px;                           /* slightly bigger on desktop */
-    bottom: 12px;
+@media (min-width: 1024px) {
+  .player-wrapper {
+    max-width: 1280px;
+    padding: 0;
   }
 }
 
-.sticky-video-banner.hidden { display: none !important; }
-
-@keyframes cumbear-slide-up {
-  from { transform: translate(-50%, 30px); opacity: 0; }
-  to   { transform: translate(-50%, 0); opacity: 1; }
-}
-
-/* ==========================================================================
-   STICKY VIDEO CLOSE — SMALL VISUAL, LARGE HIT AREA
-   ========================================================================== */
-
-
-/* Expand hit area without changing visual size */
-.sticky-video-close::before {
-  content: '';
-  position: absolute;
-  top: -12px;
-  left: -12px;
-  right: -12px;
-  bottom: -12px;
-  /* Invisible 44x44 tap target */
-}
-
-.sticky-video-close:active {
-  transform: scale(0.9);
-  background: #8a1538;
-}
-
-/* ==========================================================================
-   STICKY VIDEO LINK — AD-STYLE WRAPPER
-   ========================================================================== */
-.sticky-video-link {
+.player-premium-card {
   position: relative;
-  display: block;
   width: 100%;
-  text-decoration: none;
-  border-radius: 8px;
+  margin: 12px auto;
+  border-radius: 14px;
+  border: 1.5px solid var(--accent-burgundy-light);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(155, 45, 82, 0.3),
+    0 0 24px rgba(124, 29, 64, 0.35);
   overflow: hidden;
-  /* THIN BURGUNDY OUTLINE */
-  border: 1.5px solid #9b2d52;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(155, 45, 82, 0.4);
-  cursor: pointer;
   background: #000;
-}
-
-.sticky-video-link:hover {
-  border-color: #b82356;
-  box-shadow:
-    0 4px 20px rgba(124, 29, 64, 0.6),
-    0 0 0 1px rgba(155, 45, 82, 0.6);
-}
-
-/* Video — small aspect ratio */
-#stickyVideoEl {
-  width: 100%;
-  height: auto;
-  max-height: 100px;
-  display: block;
-  background: #000;
-  object-fit: cover;
 }
 
 @media (min-width: 768px) {
-  #stickyVideoEl {
-    max-height: 130px;
+  .player-premium-card {
+    border-width: 2px;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.7),
+      0 0 0 1px rgba(155, 45, 82, 0.4),
+      0 0 32px rgba(124, 29, 64, 0.45);
+  }
+}
+
+.player-premium-card .player-aspect-box {
+  border-radius: 12px 12px 0 0;
+  margin: 0;
+}
+
+.player-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #000000;
+  border: none;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.15);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.player-cta-btn:hover { filter: brightness(1.08); }
+.player-cta-btn:active { transform: scale(0.99); }
+
+.player-cta-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .player-cta-btn {
+    font-size: 0.82rem;
+    padding: 12px 10px;
+    gap: 8px;
+  }
+  .player-cta-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Related video grid — same e2e behavior as home */
+#relatedVideoGrid.video-grid.e2e {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 6px 0;
+  padding: 0;
+}
+
+@media (min-width: 600px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 /* ==========================================================================
-   STICKY VIDEO OVERLAY — SPONSORED LABEL
+   19. DEVICE-SPECIFIC ADJUSTMENTS   ========================================================================== */
+@media (max-width: 400px) and (max-height: 400px) {
+  /* Smartwatch — hide media UI */
+  .global-ad-banner-wrapper,
+  .sticky-video-banner,
+  .video-slider-popup-wrapper,
+  .cookie-consent { display: none !important; }
+}
+
+@media (max-width: 380px) {
+  .ad-banner-mobile { width: 300px; height: 250px; }
+  .h-cat-chip { font-size: 0.72rem; padding: 5px 11px; }
+  .view-tab { font-size: 0.75rem; padding: 7px 16px; }
+  .video-title { font-size: 0.8rem; }
+}
+
+@media (min-width: 2560px) {
+  html { font-size: 20px; }
+  .ad-banner-desktop { width: 970px; height: 250px; }
+}
+
+@media (min-width: 1280px) and (hover: none) {
+  .video-card:focus,
+  .video-card:focus-visible {
+    outline: 4px solid var(--accent-burgundy-light);
+    outline-offset: 4px;
+  }
+  .header-btn { min-width: 60px; min-height: 60px; }
+  .page-btn { min-width: 50px; height: 50px; }
+}
+
+/* ==========================================================================
+   20. LOW-END DEVICE OPTIMIZATIONS
    ========================================================================== */
-.sticky-video-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;      /* top: badge, bottom: sub-text */
-  padding: 6px 8px;
-  pointer-events: none;
-  background:
-    linear-gradient(to bottom,
-      rgba(124, 29, 64, 0.7) 0%,
-      transparent 40%,
-      transparent 60%,
-      rgba(0, 0, 0, 0.85) 100%);
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.sticky-video-title {
-  align-self: flex-start;
-  /* SPONSORED BADGE */
-  color: #ffffff;
-  background: rgba(124, 29, 64, 0.95);
-  font-size: 0.58rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+@media (max-width: 767px) {
+  .site-header {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-primary);
+  }
 }
-
-.sticky-video-sub {
-  align-self: flex-end;
-  color: #ffffff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-/* Don't show sticky on Shorts */
-body.shorts-mode .sticky-video-banner {
-  display: none !important;
-}
-
