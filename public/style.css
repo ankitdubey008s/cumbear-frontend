@@ -765,17 +765,10 @@ body.player-mode .global-ad-banner-wrapper,
 .sticky-video-banner.hidden { display: none !important; }
 
 /* Compact variant — used in index.html */
-.sticky-video-banner.sticky-video-small {
-  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
-  max-height: 140px;
-}
+
 
 @media (max-width: 767px) {
-  .sticky-video-banner.sticky-video-small {
-    /* 40vh max on mobile — smaller than before */
-    max-height: 40vh;
-    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
-  }
+  
 }
 
 .sticky-video-close {
@@ -1058,3 +1051,171 @@ body {
     background: var(--bg-primary) !important;
   }
 }
+
+
+/* ==========================================================================
+   FIX: ORPHAN CLOSE BUTTON
+   The video-slider-close has position absolute -10px top/right — it can
+   render outside its hidden parent. Force it to hide when parent is hidden.
+   ========================================================================== */
+#videoSliderPopup[hidden] #videoSliderCloseBtn,
+#videoSliderPopup.hidden #videoSliderCloseBtn,
+#videoSliderPopup[hidden] .video-slider-close,
+#videoSliderPopup.hidden .video-slider-close {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Also: no floating close button should ever render without visible parent */
+.video-slider-close:not(:has(> *)) {
+  /* no-op fallback for old browsers */
+}
+
+
+/* NEW STICKY VIDEO (fallback) */
+/* ==========================================================================
+   STICKY VIDEO BANNER — SMALL AD-STYLE BURGUNDY (bottom of screen)
+   ========================================================================== */
+.sticky-video-banner {
+  position: fixed;
+  bottom: 8px;                                  /* same as cookie banner */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9955;
+  /* SMALL — was too big */
+  width: auto;
+  max-width: 220px;                             /* compact mobile */
+  padding: 0;
+  background: transparent;
+  border: none;
+  animation: cumbear-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 768px) {
+  .sticky-video-banner {
+    max-width: 280px;                           /* slightly bigger on desktop */
+    bottom: 12px;
+  }
+}
+
+.sticky-video-banner.hidden { display: none !important; }
+
+@keyframes cumbear-slide-up {
+  from { transform: translate(-50%, 30px); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* ==========================================================================
+   STICKY VIDEO CLOSE — SMALL VISUAL, LARGE HIT AREA
+   ========================================================================== */
+
+
+/* Expand hit area without changing visual size */
+.sticky-video-close::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  /* Invisible 44x44 tap target */
+}
+
+.sticky-video-close:active {
+  transform: scale(0.9);
+  background: #8a1538;
+}
+
+/* ==========================================================================
+   STICKY VIDEO LINK — AD-STYLE WRAPPER
+   ========================================================================== */
+.sticky-video-link {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  border-radius: 8px;
+  overflow: hidden;
+  /* THIN BURGUNDY OUTLINE */
+  border: 1.5px solid #9b2d52;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(155, 45, 82, 0.4);
+  cursor: pointer;
+  background: #000;
+}
+
+.sticky-video-link:hover {
+  border-color: #b82356;
+  box-shadow:
+    0 4px 20px rgba(124, 29, 64, 0.6),
+    0 0 0 1px rgba(155, 45, 82, 0.6);
+}
+
+/* Video — small aspect ratio */
+#stickyVideoEl {
+  width: 100%;
+  height: auto;
+  max-height: 100px;
+  display: block;
+  background: #000;
+  object-fit: cover;
+}
+
+@media (min-width: 768px) {
+  #stickyVideoEl {
+    max-height: 130px;
+  }
+}
+
+/* ==========================================================================
+   STICKY VIDEO OVERLAY — SPONSORED LABEL
+   ========================================================================== */
+.sticky-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;      /* top: badge, bottom: sub-text */
+  padding: 6px 8px;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom,
+      rgba(124, 29, 64, 0.7) 0%,
+      transparent 40%,
+      transparent 60%,
+      rgba(0, 0, 0, 0.85) 100%);
+}
+
+.sticky-video-title {
+  align-self: flex-start;
+  /* SPONSORED BADGE */
+  color: #ffffff;
+  background: rgba(124, 29, 64, 0.95);
+  font-size: 0.58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.sticky-video-sub {
+  align-self: flex-end;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Don't show sticky on Shorts */
+body.shorts-mode .sticky-video-banner {
+  display: none !important;
+}
+
