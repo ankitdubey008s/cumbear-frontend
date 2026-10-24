@@ -322,7 +322,7 @@
     videoEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     poster.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
-    /* First short: tap play → popunder → play */
+    /* First short: tap play → start video → popunder → play */
     if (index === 0 && firstPlay) {
       firstPlay.addEventListener('click', function (e) {
         e.preventDefault();
@@ -330,27 +330,51 @@
         firstPlay.classList.add('hidden');
         firstInteraction = true;
 
-        try {
-          if (
-            consentAllows() &&
-            cooldownAllows(COOLDOWNS.shortsFirstTap) &&
-            window.CumBearPopunder &&
-            typeof window.CumBearPopunder.trigger === 'function'
-          ) {
-            window.CumBearPopunder.trigger('shorts-first-tap');
-            CFG.helpers.markCooldown(COOLDOWNS.shortsFirstTap, CONSENT.shortsFirstTapCooldownMs);
-          }
-        } catch (err) { /* ignore */ }
-
+        /* STEP 1: Start the video FIRST — this is the user gesture that
+           grants autoplay permission. If we trigger popunder first, the
+           new tab may steal focus and the play() will be rejected. */
         if (!videoEl.src || videoEl.src !== videoEl.dataset.src) {
           videoEl.src = videoEl.dataset.src;
           videoEl.load();
         }
         videoEl.muted = isGlobalMuted;
-        videoEl.play().catch(function () {
-          videoEl.muted = true;
-          videoEl.play().catch(function () { /* ignore */ });
-        });
+
+        /* STEP 2: Play immediately — user gesture allows it */
+        const playPromise = videoEl.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {
+            videoEl.muted = true;
+            videoEl.play().catch(function () { /* ignore */ });
+          });
+        }
+
+        /* STEP 3: Wait for canplay to ensure video actually loaded,
+           then retry play if it didn't start */
+        if (videoEl.readyState < 3) {
+          const onCanPlay = function () {
+            if (videoEl.paused) {
+              videoEl.play().catch(function () { /* ignore */ });
+            }
+            videoEl.removeEventListener('canplay', onCanPlay);
+          };
+          videoEl.addEventListener('canplay', onCanPlay);
+        }
+
+        /* STEP 4: Fire popunder AFTER starting playback (new tab may open
+           but video keeps playing in this tab) */
+        setTimeout(function () {
+          try {
+            if (
+              consentAllows() &&
+              cooldownAllows(COOLDOWNS.shortsFirstTap) &&
+              window.CumBearPopunder &&
+              typeof window.CumBearPopunder.trigger === 'function'
+            ) {
+              window.CumBearPopunder.trigger('shorts-first-tap');
+              CFG.helpers.markCooldown(COOLDOWNS.shortsFirstTap, CONSENT.shortsFirstTapCooldownMs);
+            }
+          } catch (err) { /* ignore */ }
+        }, 100); /* 100ms delay so play() has time to fire first */
       });
     }
 
@@ -617,12 +641,27 @@
               videoEl.play().catch(function () { /* ignore */ });
             });
           }
+
+          /* PRELOAD the NEXT short so scrolling feels instant */
+          const nextCard = el.nextElementSibling;
+          if (nextCard && !nextCard.dataset.isVastAd) {
+            const nextVideo = nextCard.querySelector('video.short-video-element');
+            if (nextVideo && (!nextVideo.src || nextVideo.src !== nextVideo.dataset.src)) {
+              nextVideo.preload = 'auto';
+              nextVideo.src = nextVideo.dataset.src;
+              nextVideo.load();
+            }
+          }
         } else {
+          /* TEAR DOWN COMPLETELY — frees bandwidth for the current short.
+             Instagram Reels does this: previous video stops AND its network
+             request is aborted. Just pause() keeps the connection alive
+             and slows down the next short's buffering. */
           if (videoEl) {
             try {
               videoEl.pause();
               videoEl.removeAttribute('src');
-              videoEl.load();
+              videoEl.load();       /* aborts in-flight request */
               videoEl.currentTime = 0;
             } catch (err) { /* ignore */ }
             if (poster) poster.classList.remove('loaded');
