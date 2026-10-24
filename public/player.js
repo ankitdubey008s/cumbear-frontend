@@ -502,4 +502,51 @@
         grid.innerHTML = '';
       });
   }
+
+  /* ==========================================================================
+     YELLOW CTA "Watch more" — fires popunder on EVERY click
+     ========================================================================== */
+  function wirePlayerCta() {
+    const cta = document.getElementById('playerCtaBtn');
+    if (!cta || cta.dataset.wired === '1') return;
+    cta.dataset.wired = '1';
+
+    cta.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      /* Fire popunder EVERY click (no cooldown for this button) */
+      if (window.CumBearPopunder && typeof window.CumBearPopunder.trigger === 'function') {
+        try { window.CumBearPopunder.trigger('player-cta'); } catch (err) { /* ignore */ }
+      }
+
+      /* Also open CrakRevenue as backup in a new tab */
+      try {
+        window.open(
+          'https://t.datsk3.com/425367/5165?aff_sub5=SF_006OG000004lmDN',
+          '_blank',
+          'noopener,noreferrer'
+        );
+      } catch (err) { /* ignore */ }
+    });
+  }
+
+  /* Wire CTA on initial load */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wirePlayerCta);
+  } else {
+    wirePlayerCta();
+  }
+
+  /* Re-wire whenever a new video is loaded */
+  const origLoadFn = window.loadPlayerVideoById;
+  if (origLoadFn && !origLoadFn.__wiredCta) {
+    window.loadPlayerVideoById = function () {
+      const ret = origLoadFn.apply(this, arguments);
+      setTimeout(wirePlayerCta, 50);
+      return ret;
+    };
+    window.loadPlayerVideoById.__wiredCta = true;
+  }
+
 })();

@@ -302,34 +302,46 @@
 
       <!-- ============ PLAYER ============ -->
       <section id="playerView" class="view-section hidden">
+
+        <!-- 1. MOBILE-ONLY 300x100 banner (below category bar, above video) -->
+        <div class="player-mobile-top-banner" id="playerMobileTopBanner">
+          <ins class="eas6a97888e10" data-zoneid="6061614"></ins>
+        </div>
+
         <div class="player-wrapper">
 
-          <!-- LEADERBOARD above video (desktop) + MOBILE 300x250 (mobile) -->
+          <!-- LEADERBOARD above video (desktop) + 300x250 (mobile) -->
           <div class="player-top-banner" id="playerTopBanner">
             <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
             <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
           </div>
 
-          <!-- Player -->
-          <div class="player-aspect-box" id="playerAspectBox">
-            <div id="playerPosterCover" class="player-poster-cover">
-              <img id="playerPosterImg" src="/cumb.png" alt="poster">
-              <div class="player-big-play-btn">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <!-- PREMIUM PLAYER CARD with burgundy outline -->
+          <div class="player-premium-card">
+            <div class="player-aspect-box" id="playerAspectBox">
+              <div id="playerPosterCover" class="player-poster-cover">
+                <img id="playerPosterImg" src="/cumb.png" alt="poster">
+                <div class="player-big-play-btn">
+                  <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </div>
               </div>
+              <div id="playerVastOverlay" class="player-vast-overlay hidden">
+                <video id="playerVastVideo" playsinline webkit-playsinline muted preload="none"></video>
+                <button id="playerVastSkipBtn" class="vast-skip-btn">Skip in 5s</button>
+              </div>
+              <video id="mainPlayerVideo" class="player-main-video" controls controlslist="nodownload noremoteplayback" playsinline webkit-playsinline preload="metadata"></video>
             </div>
-            <div id="playerVastOverlay" class="player-vast-overlay hidden">
-              <video id="playerVastVideo" playsinline webkit-playsinline muted preload="none"></video>
-              <button id="playerVastSkipBtn" class="vast-skip-btn">Skip in 5s</button>
-            </div>
-            <video id="mainPlayerVideo" class="player-main-video" controls controlslist="nodownload" playsinline webkit-playsinline preload="metadata"></video>
+
+            <!-- Yellow "Watch more" CTA (fires popunder on click) -->
+            <button class="player-cta-btn" id="playerCtaBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              <span>Watch more — Click here to get videos ad-free</span>
+            </button>
           </div>
 
-          <!-- NEW: Mobile-only 300x100 banner BELOW the player (zone 6061614) -->
-          <div class="player-mobile-mid-banner" id="playerMidBanner">
-            <ins class="eas6a97888e10" data-zoneid="6061614"></ins>
-          </div>
-
+          <!-- Metadata + actions -->
           <div class="player-meta-box">
             <h1 class="player-title" id="playerTitle">Loading video...</h1>
             <div class="player-actions-row">
@@ -349,15 +361,22 @@
           </div>
         </div>
 
-        <!-- Bottom banner below player (mobile rectangle / desktop leaderboard) -->
-        <div class="ad-banner-bottom-wrapper" id="playerBottomBanner">
+        <!-- RECTANGULAR BANNER below metadata (mobile 300x250 / desktop 728x90) -->
+        <div class="ad-banner-bottom-wrapper" id="playerRectBanner">
           <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
           <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
         </div>
 
+        <!-- Related videos (50 organic + 10 FapHouse = 60 total) -->
         <div class="related-section">
           <h2 class="bottom-section-title">Related Videos</h2>
           <div class="video-grid e2e" id="relatedVideoGrid"></div>
+        </div>
+
+        <!-- Bottom banner after 60 suggestions -->
+        <div class="ad-banner-bottom-wrapper" id="playerBottomBanner">
+          <div class="ad-banner-mobile"><ins class="eas6a97888e2" data-zoneid="6057032"></ins></div>
+          <div class="ad-banner-desktop"><ins class="eas6a97888e2" data-zoneid="6056586"></ins></div>
         </div>
 
         <footer class="site-footer">
