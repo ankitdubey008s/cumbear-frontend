@@ -1,0 +1,216 @@
+/* CUMBEAR — PLAYER VIEW */
+
+.player-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 8px;
+}
+
+@media (min-width: 1024px) {
+  .player-wrapper { max-width: 1280px; padding: 0; }
+}
+
+.player-premium-card {
+  position: relative;
+  width: 100%;
+  margin: 12px auto;
+  border-radius: 14px;
+  border: 1.5px solid var(--accent-burgundy-light, #9b2d52);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(155, 45, 82, 0.3),
+    0 0 24px rgba(124, 29, 64, 0.35);
+  overflow: hidden;
+  background: #000;
+}
+
+.player-aspect-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+.player-main-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+
+.player-poster-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.player-poster-cover.hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.player-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-big-play-btn {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  background: var(--accent-burgundy, #7c1d40);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 32px rgba(124, 29, 64, 0.9);
+  pointer-events: none;
+}
+
+.player-big-play-btn svg {
+  width: 34px;
+  height: 34px;
+  fill: #ffffff;
+  margin-left: 4px;
+}
+
+.player-vast-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-vast-overlay.hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+#playerVastVideo {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  background: #000;
+  cursor: pointer;
+}
+
+.vast-skip-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: default;
+  z-index: 35;
+}
+
+.vast-skip-btn.unlocked {
+  background: var(--accent-burgundy, #7c1d40) !important;
+  border-color: #ffffff !important;
+  cursor: pointer !important;
+}
+
+.player-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #000000;
+  border: none;
+  font-family: var(--font-body, inherit);
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.player-cta-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .player-cta-btn { font-size: 0.82rem; padding: 12px 10px; }
+  .player-cta-btn svg { width: 16px; height: 16px; }
+}
+
+.player-meta-box {
+  padding: 16px 14px;
+  background: var(--bg-card, #0f0f1a);
+  border-bottom: 1px solid var(--border-color, #1f1f2a);
+}
+
+.player-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.player-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.player-actions-row::-webkit-scrollbar { display: none; }
+
+.player-action-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #191924;
+  border: 1px solid var(--border-color, #1f1f2a);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.player-action-pill svg { width: 16px; height: 16px; fill: currentColor; }
+
+.player-action-pill.liked { color: #ff2d55; border-color: #ff2d55; }
+
+.related-section { padding: 18px 12px 40px; }
+
+#relatedVideoGrid.video-grid.e2e {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 6px 0;
+  padding: 0;
+}
+
+@media (min-width: 600px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #relatedVideoGrid.video-grid.e2e {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,78 @@
+/* CUMBEAR — HEADER */
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height, 56px);
+  background: var(--bg-primary, #000);
+  border-bottom: 1px solid var(--border-color, #1f1f2a);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  z-index: 1000;
+}
+
+@media (min-width: 768px) {
+  .site-header {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.88);
+    padding: 0 20px;
+  }
+}
+
+.header-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  min-height: 42px;
+  min-width: 42px;
+  outline: none;
+}
+
+.header-btn:active {
+  background: rgba(124, 29, 64, 0.2);
+  transform: scale(0.92);
+}
+
+.header-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.header-logo-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo-container img {
+  height: 36px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+@media (min-width: 768px) {
+  .header-logo-container img { height: 42px; max-width: 160px; }
+  .header-btn svg { width: 24px; height: 24px; }
+}

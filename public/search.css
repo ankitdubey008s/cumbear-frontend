@@ -1,0 +1,125 @@
+/* CUMBEAR — SEARCH VIEW */
+
+.search-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-primary, #000);
+  position: sticky;
+  top: var(--header-height, 56px);
+  z-index: 100;
+  border-bottom: 1px solid var(--border-color, #1f1f2a);
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper svg {
+  position: absolute;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-muted, #6a6a72);
+  stroke-width: 2.2;
+  fill: none;
+  pointer-events: none;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 10px 38px 10px 42px;
+  background: var(--bg-card, #0f0f1a);
+  border: 1.5px solid var(--border-color, #1f1f2a);
+  border-radius: 22px;
+  color: var(--text-primary, #fff);
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+}
+
+#searchInput:focus {
+  border-color: #7c1d40;
+  box-shadow: 0 0 0 3px rgba(124, 29, 64, 0.2);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #6a6a72);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+.search-submit-btn {
+  background: linear-gradient(135deg, #7c1d40 0%, #5a1528 100%);
+  border: none;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 22px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.search-categories-hub { padding: 16px 12px; }
+
+.search-hub-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary, #fff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+.search-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .search-categories-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .search-categories-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.search-results-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color, #1f1f2a);
+}
+
+.back-to-hub-btn {
+  background: var(--bg-card, #0f0f1a);
+  border: 1px solid var(--border-color, #1f1f2a);
+  color: var(--text-primary, #fff);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.back-to-hub-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+}

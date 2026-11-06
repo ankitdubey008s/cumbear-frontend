@@ -1,0 +1,2 @@
+# SPA routing: use wrangler.toml not_found_handling = "single-page-application"
+# Do not add /path -> /index.html 200 rules (Cloudflare Workers error 100324).
