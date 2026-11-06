@@ -1000,8 +1000,7 @@ body {
 .page-btn:active, .view-tab:active { transform: scale(0.97); }
 .view-tab.active { color: var(--accent-burgundy-light); }
 
-.ad-slot, .global-ad-banner-wrapper, .player-ad-slot {
-  min-height: 0;
+.ad-slot, .global-ad-banner-wrapper, .player-ad-slot { min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1072,5 +1071,83 @@ body.categories-mode main,
 body.categories-mode #homeView,
 body.categories-mode #categoriesView {
   padding-top: calc(var(--header-height, 56px) + 4px) !important;
+}
+
+
+/* ===== CUMBEAR GAP + STICKY FIX (ultimate) ===== */
+.global-ad-banner-wrapper,
+.ad-banner-bottom-wrapper,
+.player-top-banner,
+.player-ad-slot,
+.short-banner-wrapper,
+.ad-slot {
+  min-height: 0 !important;
+  max-height: none;
+  padding: 2px 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  overflow: visible;
+}
+.ad-banner-mobile,
+.ad-banner-desktop {
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  line-height: 0 !important;
+}
+.ad-banner-mobile ins,
+.ad-banner-desktop ins,
+.global-ad-banner-wrapper ins,
+.ad-banner-bottom-wrapper ins {
+  display: block;
+  line-height: 0 !important;
+  margin: 0 auto;
+}
+/* Hide empty reserved space: if ins has no iframe/children height stays 0 */
+.ad-banner-mobile:empty,
+.ad-banner-desktop:empty {
+  display: none !important;
+}
+
+/* View tabs tight under content */
+.view-tabs {
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  padding-top: 0 !important;
+}
+
+/* Live strip / stories — no huge spacer after */
+.live-strip,
+.live-row,
+.stories-row,
+.home-live-row {
+  margin-bottom: 4px !important;
+  padding-bottom: 0 !important;
+}
+
+/* Web sticky zone only on desktop */
+@media (max-width: 767px) {
+  ins.eas6a97888e17[data-zoneid="6072040"],
+  .sticky-banner-web-only,
+  #exoStickyWeb {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+  .sticky-video-banner {
+    display: none !important;
+  }
+}
+
+/* Categories/search: no double offset under header */
+body.categories-mode main,
+body.categories-mode #categoriesView {
+  padding-top: calc(var(--header-height, 56px) + 2px) !important;
+}
+body.categories-mode #globalHorizontalCats,
+body.categories-mode #globalTopBannerWrapper {
+  display: none !important;
 }
 
