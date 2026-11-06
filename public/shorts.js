@@ -90,6 +90,23 @@
     }
   });
 
+
+  function triggerJuicyFromShorts() {
+    try {
+      var last = parseInt(sessionStorage.getItem('cumbear_juicy_play_ms') || '0', 10);
+      if (last && Date.now() - last < 8000) return;
+      sessionStorage.setItem('cumbear_juicy_play_ms', String(Date.now()));
+    } catch (e) {}
+    var src = (window.CUMBEAR && window.CUMBEAR.juicy && window.CUMBEAR.juicy.script) ||
+      'https://js.juicyads.com/jp.php?c=4474y213u284u4r2p2d453a424&u=https%3A%2F%2Fwww.juicyads.rocks';
+    var existing = document.querySelector('script[src*="js.juicyads.com/jp.php"]');
+    if (existing) { try { existing.parentNode.removeChild(existing); } catch (e) {} }
+    var s = document.createElement('script');
+    s.type = 'text/javascript';
+    s.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+    (document.body || document.documentElement).appendChild(s);
+  }
+
   window.loadShorts = function (targetId) {
     const container = document.getElementById('shortsContainer');
     if (!container) return;
@@ -862,3 +879,4 @@
     currentVastReqId = 0;
   };
 })();
+

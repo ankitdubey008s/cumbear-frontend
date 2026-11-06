@@ -76,26 +76,55 @@
   <script src="https://quge5.com/88/tag.min.js" data-zone="304443" async data-cfasync="false"></script>
 
   <style id="cumbear-ad-slots">
-    .ad-banner-mobile, .player-mobile-top-banner {
-      min-height: 150px; width: 100%; max-width: 350px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: center;
+    /* Banner slots: NO giant empty gap — height follows ad content only */
+    .global-ad-banner-wrapper,
+    .ad-banner-bottom-wrapper,
+    .player-ad-slot,
+    .player-top-banner,
+    .short-banner-wrapper {
+      padding: 4px 0;
+      margin: 0;
+      min-height: 0 !important;
+      background: transparent;
+    }
+    .ad-banner-mobile {
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
     }
     .ad-banner-desktop {
-      min-height: 100px; width: 100%; max-width: 750px; margin: 0 auto;
-      display: none; align-items: center; justify-content: center;
+      width: 100%;
+      max-width: 728px;
+      margin: 0 auto;
+      min-height: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
+    }
+    .ad-banner-mobile ins,
+    .ad-banner-desktop ins {
+      display: block;
+      line-height: 0;
     }
     @media (min-width: 768px) {
-      .ad-banner-mobile, .player-mobile-top-banner { display: none; }
-      .ad-banner-desktop { display: flex; min-height: 100px; }
+      .ad-banner-mobile { display: none !important; }
+      .ad-banner-desktop { display: flex !important; }
     }
-    .global-ad-banner-wrapper, .ad-banner-bottom-wrapper, .player-ad-slot {
-      padding: 8px 0; background: transparent;
-    }
-    /* search: kill giant gap under header when on categories/search */
-    body.categories-mode .global-ad-banner-wrapper#globalTopBannerWrapper { display: none; }
-    #searchTopBanner { margin-top: 0; padding-top: 0; min-height: 0; }
-    .exo-overlay-slot { /* network positions overlays; keep out of flow */
-      position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;
+    /* Search: no extra top gap */
+    body.categories-mode #globalTopBannerWrapper { display: none !important; }
+    #searchTopBanner { margin: 0; padding: 0; min-height: 0 !important; }
+    /* Home / shorts tabs sit tight under content */
+    .view-tabs { margin-top: 6px !important; }
+    /* Web sticky only — never on mobile */
+    @media (max-width: 767px) {
+      ins.eas6a97888e17[data-zoneid="6072040"],
+      .sticky-banner-web-only { display: none !important; }
     }
   </style>
 </head>
@@ -486,3 +515,4 @@
 
   </body>
 </html>
+

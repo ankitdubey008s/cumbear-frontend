@@ -3,7 +3,7 @@
  * CUMBEAR — HOLD-TO-PREVIEW ENGINE v2
  * --------------------------------------------------------------------------
  * Behavior:
- *   - HOLD 1 second → preview starts (plays 60s of the video)
+ *   - HOLD 0.5 second → preview starts (plays 60s of the video)
  *   - RELEASE → preview KEEPS PLAYING (no need to keep holding)
  *   - TAP the previewing card → stops preview + opens player
  *   - TAP a different card → stops current preview, starts new (if held 1s)
@@ -68,7 +68,7 @@
       return;
     }
 
-    const HOLD_DELAY_MS      = 1000;   /* user must hold this long */
+    const HOLD_DELAY_MS      = 500;    /* half second hold */
     const MAX_PREVIEW_SEC    = 60;     /* preview plays for up to 60s */
 
     let holdTimer         = null;
@@ -81,7 +81,10 @@
     let suppressClickOnce = false;
 
     /* Prevent long-press context menu / image drag */
-    thumb.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    thumb.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); return false; });
+    thumb.style.webkitTouchCallout = 'none';
+    thumb.style.webkitUserSelect = 'none';
+    thumb.style.userSelect = 'none';
     thumb.querySelectorAll('img').forEach(function (img) {
       img.addEventListener('dragstart', function (e) { e.preventDefault(); });
     });
@@ -298,3 +301,4 @@
   window.attachHoldAndSlidePreview = attachHoldAndSlidePreview;
   window.CumBearPreview = { stop: stopActive };
 })();
+

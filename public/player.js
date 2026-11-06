@@ -126,7 +126,7 @@
 
     try {
       if (window.history && window.history.pushState) {
-        window.history.pushState({ view: 'playerView', id: videoId }, '', '/watch/' + encodeURIComponent(videoId));
+        window.history.pushState({ view: 'playerView', id: videoId }, '', '/video/' + encodeURIComponent(videoId));
       }
     } catch (e) { /* ignore */ }
 
@@ -354,49 +354,103 @@
     }
   }
 
-  async function startPreRollAd() {
-    const vastOverlay = document.getElementById('playerVastOverlay');
-    const adVideo = document.getElementById('playerVastVideo');
-    const mainVideo = document.getElementById('mainPlayerVideo');
-    const posterCover = document.getElementById('playerPosterCover');
 
-    if (!mainVideo || !currentVideoData) {
+  var fluidLoading = null;
+  function loadFluidPlayer() {
+    if (window.fluidPlayer) return Promise.resolve();
+    if (fluidLoading) return fluidLoading;
+    fluidLoading = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js';
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { fluidLoading = null; reject(new Error('fluid load')); };
+      document.head.appendChild(s);
+    });
+    return fluidLoading;
+  }
+
+  var fluidInstance = null;
+  function destroyFluid() {
+    try {
+      if (fluidInstance && typeof fluidInstance.destroy === 'function') {
+        fluidInstance.destroy();
+      }
+    } catch (e) {}
+    fluidInstance = null;
+  }
+
+
+  async function startPreRollAd() {
+    var vastOverlay = document.getElementById('playerVastOverlay');
+    var adVideo = document.getElementById('playerVastVideo');
+    var posterCover = document.getElementById('playerPosterCover');
+    var mainVideo = document.getElementById('mainPlayerVideo');
+    adFinished = false;
+
+    if (!currentVideoData || !currentVideoData.playableUrl) {
       finishAdAndPlayMain();
       return;
     }
-
-    adFinished = false;
 
     if (posterCover) posterCover.classList.add('hidden');
 
-    /* Skip pre-roll if no consent or no VAST helper */
-    if (!consentAllows() || !CFG.helpers || !CFG.helpers.vastUrl || !CFG.exo || !CFG.exo.zones) {
-      finishAdAndPlayMain();
-      return;
-    }
+    var vastTag =
+      (CFG.exo && CFG.exo.vastPlayerUrl) ||
+      'https://s.magsrv.com/v1/vast.php?idz=6072046';
 
-    if (!vastOverlay || !adVideo) {
-      finishAdAndPlayMain();
-      return;
-    }
-
-    vastOverlay.classList.remove('hidden');
-    vastOverlay.style.display = '';
-
-    let mediaUrl = null;
-    let clickUrl = null;
-
+    /* Prefer Fluid Player (ExoClick recommended) */
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(function () {
-        controller.abort();
-      }, 6000);
-      const zone = (CFG.exo.zones && CFG.exo.zones.playerVast) || '6072046';
-      const vastEndpoint = (CFG.exo && CFG.exo.vastPlayerUrl) || CFG.helpers.vastUrl(zone || '6072046');
-      const res = await fetch(vastEndpoint, { signal: controller.signal, credentials: 'omit' });
+      await loadFluidPlayer();
+      if (window.fluidPlayer && mainVideo) {
+        destroyFluid();
+        if (vastOverlay) {
+          vastOverlay.classList.add('hidden');
+          vastOverlay.style.display = 'none';
+        }
+        mainVideo.removeAttribute('src');
+        /* Fluid needs a source element or src */
+        mainVideo.src = currentVideoData.playableUrl;
+        fluidInstance = window.fluidPlayer(mainVideo, {
+          layoutControls: {
+            fillToContainer: true,
+            autoPlay: true,
+            mute: false,
+            allowTheatre: false
+          },
+          vastOptions: {
+            adList: [{ roll: 'preRoll', vastTag: vastTag }],
+            adText: 'Ad',
+            maxAllowedVastTagRedirects: 3
+          },
+          onBeforePlay: function () {}
+        });
+        return;
+      }
+    } catch (err) {
+      /* fall through to manual VAST */
+    }
+
+    /* Manual VAST fallback on playerVastVideo */
+    if (!consentAllows() || !adVideo) {
+      finishAdAndPlayMain();
+      return;
+    }
+
+    if (vastOverlay) {
+      vastOverlay.classList.remove('hidden');
+      vastOverlay.style.display = '';
+    }
+
+    var mediaUrl = null;
+    var clickUrl = null;
+    try {
+      var controller = new AbortController();
+      var timer = setTimeout(function () { controller.abort(); }, 6000);
+      var res = await fetch(vastTag, { signal: controller.signal, credentials: 'omit' });
       clearTimeout(timer);
       if (!res.ok) throw new Error('VAST HTTP ' + res.status);
-      const xml = await res.text();
+      var xml = await res.text();
       mediaUrl = parseVastMediaUrl(xml);
       clickUrl = parseVastClickUrl(xml);
     } catch (e) {
@@ -413,20 +467,17 @@
     adVideo.playsInline = true;
     adVideo.src = mediaUrl;
 
-    const skipBtn = document.getElementById('playerVastSkipBtn');
-    let remaining = 5;
-
+    var skipBtn = document.getElementById('playerVastSkipBtn');
+    var remaining = 5;
     if (skipBtn) {
       skipBtn.textContent = 'Skip in ' + remaining + 's';
       skipBtn.disabled = true;
       skipBtn.onclick = null;
     }
 
-    const playPromise = adVideo.play();
+    var playPromise = adVideo.play();
     if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(function () {
-        finishAdAndPlayMain();
-      });
+      playPromise.catch(function () { finishAdAndPlayMain(); });
     }
 
     if (adTimer) clearInterval(adTimer);
@@ -438,31 +489,27 @@
         if (skipBtn) {
           skipBtn.disabled = false;
           skipBtn.textContent = 'Skip Ad';
-          skipBtn.onclick = function (e) {
-            e.preventDefault();
-            finishAdAndPlayMain();
-          };
+          skipBtn.onclick = function () { finishAdAndPlayMain(); };
         }
+        finishAdAndPlayMain();
       } else if (skipBtn) {
         skipBtn.textContent = 'Skip in ' + remaining + 's';
       }
     }, 1000);
 
-    adVideo.onended = function () {
-      finishAdAndPlayMain();
-    };
-
-    if (clickUrl) {
-      adVideo.onclick = function (e) {
-        e.preventDefault();
-        window.open(clickUrl, '_blank', 'noopener,noreferrer');
+    adVideo.onended = function () { finishAdAndPlayMain(); };
+    if (clickUrl && vastOverlay) {
+      vastOverlay.onclick = function () {
+        try { window.open(clickUrl, '_blank', 'noopener,noreferrer'); } catch (e) {}
       };
     }
   }
 
+
   function finishAdAndPlayMain() {
     if (adFinished) return;
     adFinished = true;
+    destroyFluid();
 
     if (adTimer) {
       clearInterval(adTimer);
@@ -536,7 +583,7 @@
     btn.addEventListener('click', function () {
       const url =
         window.location.origin +
-        '/watch/' +
+        '/video/' +
         encodeURIComponent((currentVideoData && currentVideoData._id) || '');
       if (navigator.share) {
         navigator.share({ title: (currentVideoData && currentVideoData.title) || 'CumBear', url: url }).catch(function () {});
@@ -642,3 +689,4 @@
     boot();
   }
 })();
+

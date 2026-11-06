@@ -123,3 +123,22 @@
   stroke-width: 2.2;
   fill: none;
 }
+
+
+/* Kill giant gap under site header on search/categories */
+body.categories-mode #mainApp main,
+body.categories-mode .view-section#categoriesView {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+body.categories-mode .search-header-bar {
+  margin-top: 0 !important;
+  padding-top: 8px !important;
+}
+body.categories-mode #globalHorizontalCats {
+  display: none !important;
+}
+body.categories-mode #globalTopBannerWrapper {
+  display: none !important;
+}
+

@@ -326,10 +326,11 @@
 
   function openPlayer(videoId) {
     if (!videoId) return;
+    var id = String(videoId);
     function go() {
-      if (window.switchView) window.switchView('playerView', true);
+      if (window.switchView) window.switchView('playerView', true, id);
       if (typeof window.loadPlayerVideoById === 'function') {
-        window.loadPlayerVideoById(videoId);
+        window.loadPlayerVideoById(id);
       }
     }
     if (window.CumBearAds && typeof window.CumBearAds.beforeOpenPlayer === 'function') {
@@ -469,3 +470,4 @@
     init();
   }
 })();
+

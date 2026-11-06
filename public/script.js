@@ -1,39 +1,32 @@
 /**
- * ==========================================================================
- * CUMBEAR — CORE SPA ROUTER & VIEW CONTROLLER (v3)
- * --------------------------------------------------------------------------
- * Age gate, switchView, history, deep-link /watch/:id
- * Dispatches cumbear:viewChanged for search / ads / shorts
- * ==========================================================================
+ * CUMBEAR — SPA router (v4)
+ * Routes: / , /shorts , /categories , /video/:id , /watch/:id
+ * Back from player returns to previous SPA page (usually home), not out of site.
  */
 (function () {
   'use strict';
-
   if (window.__cumbearRouterLoaded) return;
   window.__cumbearRouterLoaded = true;
 
-  const VIEWS = ['homeView', 'shortsView', 'categoriesView', 'playerView', 'notFoundView'];
-
-  const ROUTES = {
+  var VIEWS = ['homeView', 'shortsView', 'categoriesView', 'playerView', 'notFoundView'];
+  var ROUTES = {
     '/': 'homeView',
     '/shorts': 'shortsView',
     '/categories': 'categoriesView'
   };
-
-  const VIEW_ROUTES = {
+  var VIEW_ROUTES = {
     homeView: '/',
     shortsView: '/shorts',
-    categoriesView: '/categories'
+    categoriesView: '/categories',
+    notFoundView: '/'
   };
 
-  let currentView = 'homeView';
-  let ageVerified = false;
+  var currentView = 'homeView';
+  var currentVideoId = null;
 
-  
-  /* AGE GATE BYPASS — gate removed from HTML */
   function applyVerifiedState() {
-    const gate = document.getElementById('ageGate');
-    const app = document.getElementById('mainApp');
+    var gate = document.getElementById('ageGate');
+    var app = document.getElementById('mainApp');
     if (gate) gate.classList.add('hidden');
     if (app) {
       app.classList.remove('hidden');
@@ -47,9 +40,9 @@
     return true;
   }
 
-function setActiveView(targetViewId) {
+  function setActiveView(targetViewId) {
     VIEWS.forEach(function (v) {
-      const el = document.getElementById(v);
+      var el = document.getElementById(v);
       if (!el) return;
       if (v === targetViewId) {
         el.classList.add('active');
@@ -73,9 +66,7 @@ function setActiveView(targetViewId) {
       if (typeof window.loadShorts === 'function') window.loadShorts();
     } else if (prevView === 'shortsView') {
       if (typeof window.stopShorts === 'function') {
-        try {
-          window.stopShorts();
-        } catch (e) { /* ignore */ }
+        try { window.stopShorts(); } catch (e) {}
       }
     }
   }
@@ -83,16 +74,15 @@ function setActiveView(targetViewId) {
   function handlePlayerLifecycle(prevView, newView) {
     if (prevView === 'playerView' && newView !== 'playerView') {
       if (typeof window.stopPlayer === 'function') {
-        try {
-          window.stopPlayer();
-        } catch (e) { /* ignore */ }
+        try { window.stopPlayer(); } catch (e) {}
       }
+      currentVideoId = null;
     }
   }
 
   function updateTabStates(viewId) {
     document.querySelectorAll('.view-tab').forEach(function (tab) {
-      const target = tab.getAttribute('data-view');
+      var target = tab.getAttribute('data-view');
       tab.classList.toggle('active', target === viewId);
     });
   }
@@ -101,59 +91,86 @@ function setActiveView(targetViewId) {
     try {
       window.dispatchEvent(
         new CustomEvent('cumbear:viewChanged', {
-          detail: { view: viewId, prev: prevView }
+          detail: { view: viewId, prev: prevView, videoId: currentVideoId }
         })
       );
-    } catch (e) { /* ignore */ }
-
+    } catch (e) {}
     try {
-      if (typeof window.updateAdVisibility === 'function') {
-        window.updateAdVisibility(viewId);
-      }
-    } catch (e) { /* ignore */ }
-
-    try {
-      if (window.CumBearCrak && typeof window.CumBearCrak.refresh === 'function') {
-        window.CumBearCrak.refresh();
-      }
-    } catch (e) { /* ignore */ }
+      if (typeof window.updateAdVisibility === 'function') window.updateAdVisibility(viewId);
+    } catch (e) {}
   }
 
-  window.switchView = function (targetViewId, pushHistory) {
+  function pathForPlayer(videoId) {
+    return '/video/' + encodeURIComponent(videoId);
+  }
+
+  /**
+   * @param {string} targetViewId
+   * @param {boolean} [pushHistory=true]
+   * @param {string|null} [videoId]
+   */
+  window.switchView = function (targetViewId, pushHistory, videoId) {
     if (VIEWS.indexOf(targetViewId) === -1) return;
-    const prev = currentView;
-    if (targetViewId === currentView && targetViewId !== 'playerView') return;
+    var prev = currentView;
+    var doPush = pushHistory !== false;
+
+    if (targetViewId === 'playerView' && videoId) {
+      currentVideoId = String(videoId);
+    }
 
     currentView = targetViewId;
     setActiveView(targetViewId);
     toggleBodyClasses(targetViewId);
-    updateTabStates(targetViewId);
+    updateTabStates(targetViewId === 'playerView' ? 'homeView' : targetViewId);
     handleShortsLifecycle(prev, targetViewId);
     handlePlayerLifecycle(prev, targetViewId);
     notifySubscribers(targetViewId, prev);
 
-    if (pushHistory !== false && targetViewId !== 'playerView') {
-      const route = VIEW_ROUTES[targetViewId];
-      if (route && window.location.pathname !== route) {
-        try {
-          window.history.pushState({ view: targetViewId }, '', route);
-        } catch (e) { /* ignore */ }
-      }
+    if (doPush) {
+      try {
+        if (targetViewId === 'playerView' && currentVideoId) {
+          var p = pathForPlayer(currentVideoId);
+          if (window.location.pathname !== p) {
+            window.history.pushState(
+              { view: 'playerView', videoId: currentVideoId },
+              '',
+              p
+            );
+          } else {
+            window.history.replaceState(
+              { view: 'playerView', videoId: currentVideoId },
+              '',
+              p
+            );
+          }
+        } else if (targetViewId !== 'playerView') {
+          var route = VIEW_ROUTES[targetViewId] || '/';
+          if (window.location.pathname !== route) {
+            window.history.pushState({ view: targetViewId, videoId: null }, '', route);
+          } else {
+            window.history.replaceState({ view: targetViewId, videoId: null }, '', route);
+          }
+        }
+      } catch (e) {}
     }
 
-    const behavior = pushHistory === false ? 'auto' : 'smooth';
-    window.scrollTo({ top: 0, behavior: behavior });
-  };
-
-  window.getCurrentView = function () {
-    return currentView;
+    try {
+      window.scrollTo({ top: 0, behavior: doPush ? 'smooth' : 'auto' });
+    } catch (e) {
+      window.scrollTo(0, 0);
+    }
   };
 
   function parseRoute() {
-    const path = window.location.pathname || '/';
-    const watch = path.match(/^\/(?:watch|video)\/([A-Za-z0-9_-]+)\/?$/);
+    var path = window.location.pathname || '/';
+    var watch = path.match(/^\/(?:watch|video)\/([A-Za-z0-9_-]+)\/?$/);
     if (watch) {
       return { view: 'playerView', videoId: watch[1] };
+    }
+    // Shorts share → same as video share: open player if /shorts/:id
+    var shortId = path.match(/^\/shorts\/([A-Za-z0-9_-]+)\/?$/);
+    if (shortId) {
+      return { view: 'playerView', videoId: shortId[1] };
     }
     if (ROUTES[path]) {
       return { view: ROUTES[path], videoId: null };
@@ -166,7 +183,7 @@ function setActiveView(targetViewId) {
 
   function applyRoute(route, pushHistory) {
     if (route.videoId) {
-      window.switchView('playerView', false);
+      window.switchView('playerView', pushHistory === true, route.videoId);
       if (typeof window.loadPlayerVideoById === 'function') {
         window.loadPlayerVideoById(route.videoId);
       } else {
@@ -174,159 +191,146 @@ function setActiveView(targetViewId) {
           if (typeof window.loadPlayerVideoById === 'function') {
             window.loadPlayerVideoById(route.videoId);
           }
-        }, 200);
+        }, 50);
       }
       return;
     }
     window.switchView(route.view, pushHistory === true);
   }
 
+  /* Browser Back / Forward */
   window.addEventListener('popstate', function (event) {
-    const route =
-      event && event.state && event.state.view
-        ? { view: event.state.view, videoId: event.state.videoId || null }
-        : parseRoute();
+    var route;
+    if (event && event.state && event.state.view) {
+      route = {
+        view: event.state.view,
+        videoId: event.state.videoId || null
+      };
+    } else {
+      route = parseRoute();
+    }
 
-    if (route.view === currentView && !route.videoId) return;
+    /* Leaving player via Back → prefer home if state missing */
+    if (!event.state && currentView === 'playerView' && route.view === 'playerView' && !route.videoId) {
+      route = { view: 'homeView', videoId: null };
+    }
 
-    if (route.videoId && route.view === 'playerView') {
+    if (route.view === 'playerView' && route.videoId) {
+      currentVideoId = route.videoId;
+      window.switchView('playerView', false, route.videoId);
       if (typeof window.loadPlayerVideoById === 'function') {
-        window.switchView('playerView', false);
         window.loadPlayerVideoById(route.videoId);
       }
       return;
     }
-    window.switchView(route.view, false);
+
+    currentVideoId = null;
+    window.switchView(route.view || 'homeView', false);
   });
 
-  function wireViewTabs() {
-    document.querySelectorAll('.view-tab').forEach(function (tab) {
-      if (tab.dataset.wired) return;
-      tab.dataset.wired = '1';
-      tab.addEventListener('click', function (e) {
+  /* Seed history so first Back from deep-linked player goes Home, not off-site */
+  function seedHistory() {
+    var route = parseRoute();
+    try {
+      if (route.view === 'playerView' && route.videoId) {
+        /* Ensure a home entry exists under the player entry */
+        window.history.replaceState({ view: 'homeView', videoId: null }, '', '/');
+        window.history.pushState(
+          { view: 'playerView', videoId: route.videoId },
+          '',
+          pathForPlayer(route.videoId)
+        );
+      } else {
+        window.history.replaceState(
+          { view: route.view, videoId: null },
+          '',
+          window.location.pathname || '/'
+        );
+      }
+    } catch (e) {}
+    applyRoute(route, false);
+  }
+
+  function wireTabs() {
+    document.querySelectorAll('.view-tab[data-view], .nav-link[data-view]').forEach(function (btn) {
+      if (btn.dataset.routerWired) return;
+      btn.dataset.routerWired = '1';
+      btn.addEventListener('click', function (e) {
         e.preventDefault();
-        const target = tab.getAttribute('data-view');
-        if (target) window.switchView(target, true);
+        var v = btn.getAttribute('data-view');
+        if (v) window.switchView(v, true);
       });
     });
   }
 
-  function wireAgeGateButton() {
-    const btn = document.querySelector('.btn-enter');
-    if (!btn || btn.dataset.wired) return;
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', function () {
-      verifyAge();
+  function wireLogo() {
+    var logo = document.getElementById('homeLogoBtn');
+    if (!logo || logo.dataset.routerWired) return;
+    logo.dataset.routerWired = '1';
+    logo.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.switchView('homeView', true);
     });
   }
 
-  function init() {
-    wireViewTabs();
-    wireAgeGateButton();
-    try { checkAgeGate(); } catch(e) {}
-    try { var app=document.getElementById("mainApp"); if(app){ app.classList.remove("hidden"); app.style.display=""; } } catch(e) {}
-
-    const initialRoute = parseRoute();
-    if (initialRoute.view !== 'homeView' || initialRoute.videoId) {
-      const tryApply = function () {
-        const app = document.getElementById('mainApp');
-        if (app && !app.classList.contains('hidden')) {
-          applyRoute(initialRoute, false);
-        } else {
-          const gateBtn = document.querySelector('.btn-enter');
-          if (gateBtn) {
-            gateBtn.addEventListener(
-              'click',
-              function () {
-                setTimeout(function () {
-                  applyRoute(initialRoute, false);
-                }, 40);
-              },
-              { once: true }
-            );
-          }
-        }
-      };
-      tryApply();
-      setTimeout(tryApply, 250);
-    }
+  function boot() {
+    applyVerifiedState();
+    wireTabs();
+    wireLogo();
+    seedHistory();
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 
-  /* Low network hint */
-  (function netHint(){
-    function show(msg){
+  /* Low network hint (dismissible, light) */
+  (function netHint() {
+    var lastShown = 0;
+    function show(msg) {
+      var now = Date.now();
+      if (now - lastShown < 60000) return;
+      lastShown = now;
       var t = document.getElementById('cumbearNetToast');
       if (!t) {
         t = document.createElement('div');
         t.id = 'cumbearNetToast';
         t.className = 'cumbear-net-toast';
+        t.style.cssText =
+          'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;' +
+          'background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;' +
+          'max-width:90%;opacity:0;transition:opacity .25s';
         document.body.appendChild(t);
       }
       t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(function(){ t.classList.remove('show'); }, 4000);
+      t.style.opacity = '1';
+      setTimeout(function () {
+        t.style.opacity = '0';
+      }, 4000);
     }
-    function check(){
+    function check() {
       try {
         var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         if (!c) return;
-        if (c.saveData) { show('Low connection — data saver is on'); return; }
-        var dl = c.downlink; // Mbps
-        if (typeof dl === 'number' && dl > 0 && dl < 1) {
-          show('Internet speed is low — videos may buffer');
-        }
-        if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') {
+        if (c.saveData) show('Low connection — data saver is on');
+        else if (typeof c.downlink === 'number' && c.downlink > 0 && c.downlink < 1)
+          show('Internet speed looks low — videos may buffer');
+        else if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g')
           show('Very slow network detected');
-        }
-      } catch(e) {}
+      } catch (e) {}
     }
-    window.addEventListener('online', function(){ show('Back online'); });
-    window.addEventListener('offline', function(){ show('No internet connection'); });
+    window.addEventListener('online', function () {
+      lastShown = 0;
+      show('Back online');
+    });
+    window.addEventListener('offline', function () {
+      lastShown = 0;
+      show('No internet connection');
+    });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check);
     else check();
-    setInterval(check, 30000);
   })();
-
-
-  /* Low network hint */
-  (function netHint(){
-    function show(msg){
-      var t = document.getElementById('cumbearNetToast');
-      if (!t) {
-        t = document.createElement('div');
-        t.id = 'cumbearNetToast';
-        t.className = 'cumbear-net-toast';
-        document.body.appendChild(t);
-      }
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(function(){ t.classList.remove('show'); }, 4000);
-    }
-    function check(){
-      try {
-        var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        if (!c) return;
-        if (c.saveData) { show('Low connection — data saver is on'); return; }
-        var dl = c.downlink; // Mbps
-        if (typeof dl === 'number' && dl > 0 && dl < 1) {
-          show('Internet speed is low — videos may buffer');
-        }
-        if (c.effectiveType === 'slow-2g' || c.effectiveType === '2g') {
-          show('Very slow network detected');
-        }
-      } catch(e) {}
-    }
-    window.addEventListener('online', function(){ show('Back online'); });
-    window.addEventListener('offline', function(){ show('No internet connection'); });
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check);
-    else check();
-    setInterval(check, 30000);
-  })();
-
 })();
+
