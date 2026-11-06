@@ -170,25 +170,41 @@
       const card = document.createElement('div');
       card.className = 'image-cat-card';
       card.innerHTML =
-        '<img src="/categories/' +
-        i +
-        '.jpg" alt="' +
-        escapeHtml(cat.label) +
-        '" loading="lazy" decoding="async" onerror="this.src=\'/cumb.png\'">' +
-        '<div class="image-cat-overlay">' +
-        '<span class="image-cat-title">' +
-        escapeHtml(cat.label) +
+        '<div class="video-thumb" style="position:relative;overflow:hidden;-webkit-touch-callout:none;user-select:none;">' +
+        '<img src="' +
+        (video.thumbnailUrl || '/cumb.png') +
+        '" alt="' +
+        safe +
+        '" loading="lazy" draggable="false" onerror="this.src=\'/cumb.png\'">' +
+        '<div class="preview-video-holder"></div>' +
+        '<div class="preview-loading hidden">…</div>' +
+        '<div class="preview-timeline hidden"><div class="preview-timeline-fill"></div></div>' +
+        '<span class="duration-badge">' +
+        escapeHtml(dur) +
         '</span>' +
+        '</div>' +
+        '<div class="video-info">' +
+        '<div class="video-title">' +
+        safe +
+        '</div>' +
+        '<div class="video-meta-row">' +
+        '<span class="provider-tag">' +
+        escapeHtml(video.category || 'CumBear') +
+        '</span>' +
+        '<span>•</span><span>' +
+        escapeHtml(String(views)) +
+        ' views</span>' +
+        '</div>' +
         '</div>';
-
-      card.addEventListener('click', function () {
-        currentCategory = cat._id;
-        currentPage = 1;
-        renderCategoryChips(DEFAULT_CATEGORIES);
-        loadVideos();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
+      if (typeof window.attachHoldAndSlidePreview === 'function' && video.playableUrl) {
+        window.attachHoldAndSlidePreview(card, video, function () {
+          openPlayer(video._id);
+        });
+      } else {
+        card.addEventListener('click', function () {
+          openPlayer(video._id);
+        });
+      }
       frag.appendChild(card);
     }
     grid.appendChild(frag);

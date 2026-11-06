@@ -1,95 +1,112 @@
 /**
- * ==========================================================================
- * CUMBEAR — HOLD-TO-PREVIEW ENGINE v2
- * --------------------------------------------------------------------------
- * Behavior:
- *   - HOLD 0.5 second → preview starts (plays 60s of the video)
- *   - RELEASE → preview KEEPS PLAYING (no need to keep holding)
- *   - TAP the previewing card → stops preview + opens player
- *   - TAP a different card → stops current preview, starts new (if held 1s)
- *   - 60s max duration → auto-stop
- *   - Backgrounding the tab → auto-stop
- *
- * Only ONE preview plays at a time (module-scoped activePreview).
- *
- * Usage:
- *   window.attachHoldAndSlidePreview(card, video, onOpen)
- *
- * Exposed:
- *   window.CumBearPreview.stop()  → force-stop any active preview
- * ==========================================================================
+ * CUMBEAR — Hold-to-preview (ultimate)
+ * Hold 500ms → preview up to 60s
+ * Blocks Chrome long-press menu / callout / text select / image drag
  */
 (function () {
   'use strict';
-
   if (window.attachHoldAndSlidePreview) return;
-  const CFG = window.CUMBEAR;
-  if (!CFG) {
-    console.warn('[CumBearPreview] config.js not loaded — aborting');
-    return;
-  }
 
-  /* ---------- module-level: only one preview at a time ---------- */
-  let activePreview = null; /* { card, stopFn } */
+  var activePreview = null;
 
   function stopActive() {
     if (activePreview && typeof activePreview.stopFn === 'function') {
-      try { activePreview.stopFn(); } catch (e) { /* ignore */ }
+      try {
+        activePreview.stopFn();
+      } catch (e) {}
     }
     activePreview = null;
   }
 
-  /* ---------- attach to one card ---------- */
+  window.CumBearPreview = {
+    stop: stopActive
+  };
+
+  /**
+   * @param {HTMLElement} card
+   * @param {object} video  needs playableUrl
+   * @param {function} onOpen  called when user should open player
+   */
   function attachHoldAndSlidePreview(card, video, onOpen) {
     if (!card || !video) return;
 
-    const thumb        = card.querySelector('.video-thumb');
-    const infoEl       = card.querySelector('.video-info');
-    const title        = card.querySelector('.video-title');
-    const holder       = card.querySelector('.preview-video-holder');
-    const timeline     = card.querySelector('.preview-timeline');
-    const timelineFill = card.querySelector('.preview-timeline-fill');
-    const loading      = card.querySelector('.preview-loading');
+    var thumb = card.querySelector('.video-thumb') || card.querySelector('.thumb') || card;
+    var holder =
+      card.querySelector('.preview-video-holder') ||
+      thumb.querySelector('.preview-video-holder');
+    var timeline = card.querySelector('.preview-timeline');
+    var timelineFill = card.querySelector('.preview-timeline-fill');
+    var loading = card.querySelector('.preview-loading');
+    var infoEl = card.querySelector('.video-info');
 
-    if (!thumb || !holder) return;
-
-    /* Attach only once per card */
     if (thumb.dataset.previewAttached === '1') return;
     thumb.dataset.previewAttached = '1';
 
-    /* If no playable URL — normal click to open only */
+    /* Non-playable (affiliate) — click opens only */
     if (!video.playableUrl) {
-      const openClick = function () {
+      function openOnly(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         stopActive();
         if (typeof onOpen === 'function') onOpen();
-      };
-      thumb.addEventListener('click', openClick);
-      if (infoEl) infoEl.addEventListener('click', openClick);
+      }
+      thumb.addEventListener('click', openOnly);
+      if (infoEl) infoEl.addEventListener('click', openOnly);
       return;
     }
 
-    const HOLD_DELAY_MS      = 500;    /* half second hold */
-    const MAX_PREVIEW_SEC    = 60;     /* preview plays for up to 60s */
+    var HOLD_MS = 500;
+    var MAX_SEC = 60;
 
-    let holdTimer         = null;
-    let isPreviewPlaying  = false;
-    let heldDown          = false;
-    let startX            = 0;
-    let startY            = 0;
-    let previewVideoEl    = null;
-    let previewTimeoutId  = null;
-    let suppressClickOnce = false;
+    var holdTimer = null;
+    var previewVideoEl = null;
+    var previewTimeoutId = null;
+    var suppressClickOnce = false;
+    var holding = false;
+    var pointerId = null;
 
-    /* Prevent long-press context menu / image drag */
-    thumb.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); return false; });
-    thumb.style.webkitTouchCallout = 'none';
-    thumb.style.webkitUserSelect = 'none';
-    thumb.style.userSelect = 'none';
+    /* ---- Block browser chrome long-press UI ---- */
+    function blockBrowserMenu(el) {
+      if (!el) return;
+      el.style.webkitTouchCallout = 'none';
+      el.style.webkitUserSelect = 'none';
+      el.style.userSelect = 'none';
+      el.style.touchAction = 'manipulation';
+      el.setAttribute('draggable', 'false');
+      el.addEventListener(
+        'contextmenu',
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        },
+        true
+      );
+      el.addEventListener(
+        'dragstart',
+        function (e) {
+          e.preventDefault();
+        },
+        true
+      );
+      el.addEventListener(
+        'selectstart',
+        function (e) {
+          e.preventDefault();
+        },
+        true
+      );
+    }
+
+    blockBrowserMenu(thumb);
+    blockBrowserMenu(card);
     thumb.querySelectorAll('img').forEach(function (img) {
-      img.addEventListener('dragstart', function (e) { e.preventDefault(); });
+      blockBrowserMenu(img);
+      img.setAttribute('draggable', 'false');
     });
 
-    /* ---------- stop preview ---------- */
     function stopPreview() {
       if (holdTimer) {
         clearTimeout(holdTimer);
@@ -99,206 +116,175 @@
         clearTimeout(previewTimeoutId);
         previewTimeoutId = null;
       }
-      if (!isPreviewPlaying) return;
-
-      isPreviewPlaying = false;
-
+      holding = false;
       if (previewVideoEl) {
         try {
           previewVideoEl.pause();
           previewVideoEl.removeAttribute('src');
           previewVideoEl.load();
-          previewVideoEl.remove();
-        } catch (e) { /* ignore */ }
+          if (previewVideoEl.parentNode) previewVideoEl.parentNode.removeChild(previewVideoEl);
+        } catch (e) {}
         previewVideoEl = null;
       }
-
       thumb.classList.remove('previewing');
-      if (title) title.classList.remove('previewing-text');
-      if (timeline) timeline.classList.remove('active');
-      if (loading) loading.classList.remove('active');
+      if (holder) holder.innerHTML = '';
+      if (timeline) timeline.classList.add('hidden');
       if (timelineFill) timelineFill.style.width = '0%';
-
-      if (activePreview && activePreview.card === card) {
-        activePreview = null;
-      }
+      if (loading) loading.classList.add('hidden');
+      if (activePreview && activePreview.card === card) activePreview = null;
     }
 
-    /* ---------- start preview ---------- */
     function startPreview() {
-      /* Cancel any existing preview */
       stopActive();
+      stopPreview();
 
-      isPreviewPlaying = true;
+      if (!holder) {
+        /* Create holder if missing */
+        holder = document.createElement('div');
+        holder.className = 'preview-video-holder';
+        holder.style.cssText =
+          'position:absolute;inset:0;overflow:hidden;background:#000;z-index:2;';
+        if (getComputedStyle(thumb).position === 'static') thumb.style.position = 'relative';
+        thumb.appendChild(holder);
+      }
 
+      if (loading) loading.classList.remove('hidden');
+
+      var v = document.createElement('video');
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.src = video.playableUrl;
+      v.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      blockBrowserMenu(v);
+      holder.innerHTML = '';
+      holder.appendChild(v);
+      previewVideoEl = v;
       thumb.classList.add('previewing');
-      if (title) title.classList.add('previewing-text');
-      if (timeline) timeline.classList.add('active');
-      if (loading) loading.classList.add('active');
 
-      previewVideoEl = document.createElement('video');
-      previewVideoEl.muted = true;
-      previewVideoEl.setAttribute('muted', '');
-      previewVideoEl.setAttribute('playsinline', '');
-      previewVideoEl.setAttribute('webkit-playsinline', '');
-      previewVideoEl.setAttribute('disablepictureinpicture', '');
-      previewVideoEl.preload = 'auto';
-      previewVideoEl.src = video.playableUrl;
-      previewVideoEl.playbackRate = 1.0;
+      activePreview = { card: card, stopFn: stopPreview };
 
-      previewVideoEl.addEventListener('canplay', function () {
-        if (!isPreviewPlaying) return;
-        if (loading) loading.classList.remove('active');
-        const p = previewVideoEl.play();
-        if (p && typeof p.catch === 'function') {
-          p.catch(function () { stopPreview(); });
+      var p = v.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(function () {
+          if (loading) loading.classList.add('hidden');
+        });
+      }
+
+      v.addEventListener(
+        'playing',
+        function () {
+          if (loading) loading.classList.add('hidden');
+        },
+        { once: true }
+      );
+
+      if (timeline) timeline.classList.remove('hidden');
+      if (timelineFill) timelineFill.style.width = '0%';
+
+      var started = Date.now();
+      function tick() {
+        if (!previewVideoEl) return;
+        var t = (Date.now() - started) / 1000;
+        if (timelineFill) {
+          timelineFill.style.width = Math.min(100, (t / MAX_SEC) * 100) + '%';
         }
-      }, { once: true });
-
-      previewVideoEl.addEventListener('timeupdate', function () {
-        if (!previewVideoEl || !isPreviewPlaying) return;
-        const t = previewVideoEl.currentTime;
-        if (t >= MAX_PREVIEW_SEC) {
+        if (t >= MAX_SEC) {
           stopPreview();
           return;
         }
-        if (timelineFill) {
-          timelineFill.style.width = Math.min(100, (t / MAX_PREVIEW_SEC) * 100) + '%';
-        }
-      });
-
-      previewVideoEl.addEventListener('error', stopPreview, { once: true });
-
-      holder.appendChild(previewVideoEl);
-
-      /* Hard 60s timeout as backup */
-      previewTimeoutId = setTimeout(function () {
-        if (isPreviewPlaying) stopPreview();
-      }, (MAX_PREVIEW_SEC + 1) * 1000);
-
-      activePreview = { card: card, stopFn: stopPreview };
+        previewTimeoutId = setTimeout(tick, 200);
+      }
+      tick();
     }
 
-    /* ---------- helper: open player ---------- */
-    function openPlayer() {
-      stopPreview();
+    function onPointerDown(e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      holding = true;
+      pointerId = e.pointerId;
+      try {
+        thumb.setPointerCapture(e.pointerId);
+      } catch (err) {}
+
+      if (holdTimer) clearTimeout(holdTimer);
+      holdTimer = setTimeout(function () {
+        holdTimer = null;
+        if (!holding) return;
+        suppressClickOnce = true;
+        startPreview();
+      }, HOLD_MS);
+    }
+
+    function onPointerUp(e) {
+      holding = false;
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      try {
+        if (pointerId != null) thumb.releasePointerCapture(pointerId);
+      } catch (err) {}
+      pointerId = null;
+    }
+
+    function onPointerCancel() {
+      holding = false;
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    }
+
+    thumb.addEventListener('pointerdown', onPointerDown, { passive: true });
+    thumb.addEventListener('pointerup', onPointerUp, { passive: true });
+    thumb.addEventListener('pointercancel', onPointerCancel, { passive: true });
+    thumb.addEventListener('pointerleave', function () {
+      /* Don't cancel hold on leave if already previewing */
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+        holding = false;
+      }
+    });
+
+    /* Click: open player (or stop preview then open) */
+    function onClick(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (suppressClickOnce) {
+        suppressClickOnce = false;
+        /* After hold started preview, first click opens player */
+        stopPreview();
+        if (typeof onOpen === 'function') onOpen();
+        return;
+      }
+      if (previewVideoEl) {
+        stopPreview();
+        if (typeof onOpen === 'function') onOpen();
+        return;
+      }
       stopActive();
       if (typeof onOpen === 'function') onOpen();
     }
 
-    /* ---------- pointerdown: start hold timer ---------- */
-    thumb.addEventListener('pointerdown', function (e) {
-      /* Only left button / touch */
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-      /* If THIS card is currently previewing → tapping it opens the player */
-      if (isPreviewPlaying) {
-        suppressClickOnce = true;
-        openPlayer();
-        return;
-      }
-
-      heldDown = true;
-      startX = e.clientX;
-      startY = e.clientY;
-
-      holdTimer = setTimeout(function () {
-        if (!heldDown) return;
-        heldDown = false;
-        startPreview();
-      }, HOLD_DELAY_MS);
-    });
-
-    /* ---------- pointermove: cancel if drag ---------- */
-    thumb.addEventListener('pointermove', function (e) {
-      if (!heldDown) return;
-
-      const dx = Math.abs(e.clientX - startX);
-      const dy = Math.abs(e.clientY - startY);
-      const thumbWidth = thumb.clientWidth || 100;
-      const tolerance = Math.max(12, thumbWidth * 0.08);
-
-      if (dx > tolerance || dy > tolerance) {
-        /* User is dragging → cancel hold */
-        heldDown = false;
-        if (holdTimer) {
-          clearTimeout(holdTimer);
-          holdTimer = null;
-        }
-      }
-    });
-
-    /* ---------- pointerup ---------- */
-    thumb.addEventListener('pointerup', function () {
-      /* Cancel hold timer */
-      if (holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
-      }
-
-      /* If preview is playing → DON'T stop it. It keeps playing per spec. */
-      if (isPreviewPlaying) {
-        /* Nothing — preview continues */
-        return;
-      }
-
-      /* If we just handled a tap-to-open above */
-      if (suppressClickOnce) {
-        suppressClickOnce = false;
-        return;
-      }
-
-      /* Regular tap (short press, not yet previewing) → open player */
-      if (heldDown) {
-        heldDown = false;
-        openPlayer();
-      }
-    });
-
-    /* ---------- pointercancel / pointerleave ---------- */
-    thumb.addEventListener('pointercancel', function () {
-      heldDown = false;
-      if (holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
-      }
-      /* Don't stop a running preview — only cancel an in-flight hold */
-    });
-
-    thumb.addEventListener('pointerleave', function () {
-      /* Mouse left the card while holding → cancel the hold
-         but don't stop a running preview */
-      if (heldDown) {
-        heldDown = false;
-        if (holdTimer) {
-          clearTimeout(holdTimer);
-          holdTimer = null;
-        }
-      }
-    });
-
-    /* ---------- info area tap (title / meta) → open player ---------- */
+    thumb.addEventListener('click', onClick);
     if (infoEl) {
       infoEl.addEventListener('click', function (e) {
-        /* Prevent double-open if thumb pointerup already handled it */
-        if (suppressClickOnce) {
-          suppressClickOnce = false;
-          e.stopPropagation();
-          return;
-        }
-        openPlayer();
+        e.preventDefault();
+        e.stopPropagation();
+        stopActive();
+        stopPreview();
+        if (typeof onOpen === 'function') onOpen();
       });
     }
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stopPreview();
+    });
   }
 
-  /* ---------- global teardown ---------- */
-  window.addEventListener('pagehide', stopActive);
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) stopActive();
-  });
-
-  /* ---------- export ---------- */
   window.attachHoldAndSlidePreview = attachHoldAndSlidePreview;
-  window.CumBearPreview = { stop: stopActive };
 })();
 
